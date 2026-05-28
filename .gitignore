@@ -30,6 +30,9 @@ web-build/
 # TypeScript incremental build cache
 *.tsbuildinfo
 
+# Claude Code 运行时锁文件
+.claude/scheduled_tasks.lock
+
 # Logs
 *.log
 

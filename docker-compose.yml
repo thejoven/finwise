@@ -1,18 +1,34 @@
+# Flashfi compose. 一份 yaml 复用两个场景:
+#
+#   • 本地开发 (Mac):
+#       docker compose up -d              # 只起 postgres + nats
+#   • 服务器全栈部署:
+#       docker compose --profile prod up -d --build
+#   • 跑迁移 (一次性):
+#       docker compose --profile migrate run --rm migrator up
+#
+# 应用容器都打了 profile, 不带 --profile 不启动. 这样 Makefile 里现有的
+# `make dev` (= docker compose up -d) 行为没变.
+
+name: flashfi
+
 services:
+  # --- Infrastructure ---
+
   postgres:
     image: pgvector/pgvector:pg16
     container_name: flashfi-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: flashfi
-      POSTGRES_USER: flashfi
-      POSTGRES_PASSWORD: dev_password_change_me
+      POSTGRES_DB: ${POSTGRES_DB:-flashfi}
+      POSTGRES_USER: ${POSTGRES_USER:-flashfi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_me}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flashfi -d flashfi"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-flashfi} -d ${POSTGRES_DB:-flashfi}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -23,13 +39,119 @@ services:
     restart: unless-stopped
     command: ["-js", "-m", "8222"]
     ports:
-      - "4222:4222"
-      - "8222:8222"
+      - "${NATS_HOST_PORT:-4222}:4222"
+      - "${NATS_MONITOR_HOST_PORT:-8222}:8222"
     healthcheck:
       test: ["CMD", "wget", "-q", "-O-", "http://localhost:8222/healthz"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # --- Application (profile: prod) ---
+
+  api:
+    profiles: ["prod"]
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      args:
+        GOPROXY: ${GOPROXY:-https://proxy.golang.org,direct}
+    image: flashfi/api:local
+    container_name: flashfi-api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    environment:
+      # Compose 这里的 environment 优先级高于 env_file, 所以网络相关的 URL 固定写死.
+      DATABASE_URL: postgres://${POSTGRES_USER:-flashfi}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-flashfi}?sslmode=disable
+      NATS_URL: nats://nats:4222
+      PORT: "8080"
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DEV_USER_ID: ${DEV_USER_ID:?DEV_USER_ID required, run uuidgen and set it in .env}
+      DEV_BEARER_TOKEN: ${DEV_BEARER_TOKEN:?DEV_BEARER_TOKEN required}
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN:?INTERNAL_TOKEN required}
+      # docker 网络上, mastra 容器对 api 不是 loopback, 必须 false.
+      INTERNAL_LOOPBACK: "false"
+      MASTRA_HTTP_URL: http://mastra:9091
+      OUTBOX_POLL_MS: ${OUTBOX_POLL_MS:-500}
+      OUTBOX_BATCH: ${OUTBOX_BATCH:-10}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-5}
+    ports:
+      - "${API_HOST_PORT:-8080}:8080"
+
+  mastra:
+    profiles: ["prod"]
+    build:
+      context: ./mastra
+      dockerfile: Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+    image: flashfi/mastra:local
+    container_name: flashfi-mastra
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
+      nats:
+        condition: service_healthy
+    environment:
+      NATS_URL: nats://nats:4222
+      FLASHFI_API_URL: http://api:8080
+      INTERNAL_TOKEN: ${INTERNAL_TOKEN}
+      LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY required for mastra}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.deepseek.com}
+      ANALYST_MODEL: ${ANALYST_MODEL:-deepseek-chat}
+      # 容器里必须 bind 0.0.0.0, 否则 api 容器调不到.
+      MASTRA_HTTP_BIND: "0.0.0.0"
+      MASTRA_HTTP_PORT: "9091"
+      DATABASE_URL: postgres://${POSTGRES_USER:-flashfi}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-flashfi}?sslmode=disable
+      # Optional. 不填走静默 no-op / fallback. 详见 mastra/.env.example.
+      EXA_API_KEY: ${EXA_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      MASTRA_PG_SCHEMA: ${MASTRA_PG_SCHEMA:-mastra}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    # Mastra 不绑宿主端口, 只通过 docker 网络给 api 调.
+    expose:
+      - "9091"
+
+  web-admin:
+    profiles: ["prod"]
+    build:
+      context: ./web-admin
+      dockerfile: Dockerfile
+      args:
+        NPM_REGISTRY: ${NPM_REGISTRY:-https://registry.npmjs.org/}
+    image: flashfi/web-admin:local
+    container_name: flashfi-web-admin
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${ADMIN_HOST_PORT:-8082}:80"
+
+  # --- Migrator (profile: migrate, one-shot) ---
+
+  migrator:
+    profiles: ["migrate"]
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER:-flashfi}
+      PGPASSWORD: ${POSTGRES_PASSWORD:-dev_password_change_me}
+      PGDATABASE: ${POSTGRES_DB:-flashfi}
+    volumes:
+      - ./server/migrations:/migrations:ro
+      - ./scripts/migrate-docker.sh:/usr/local/bin/migrate.sh:ro
+    entrypoint: ["sh", "/usr/local/bin/migrate.sh"]
+    command: ["up"]
 
 volumes:
   pgdata:

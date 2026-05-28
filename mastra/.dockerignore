@@ -1,0 +1,13 @@
+node_modules/
+README.md
+
+# 评测脚本 & fixture 不进 worker 镜像 (评测在本地或 CI 跑).
+tests/
+
+.env
+.env.local
+.env.*.local
+
+.DS_Store
+.vscode/
+.idea/

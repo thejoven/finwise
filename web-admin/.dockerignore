@@ -1,0 +1,15 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+.env
+.env.local
+.env.*.local
+
+# 部署脚本是宿主 nginx 那条路用的, 不进容器.
+deploy/deploy.sh
+deploy/flashfi-admin.nginx.conf
+
+.DS_Store
+.vscode/
+.idea/

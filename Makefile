@@ -1,5 +1,6 @@
 .PHONY: dev down logs migrate migrate-down migrate-status run test fmt lint tidy ent-gen healthz \
-	admin-dev admin-build admin-deploy
+	admin-dev admin-build admin-deploy \
+	docker-build docker-up docker-down docker-logs docker-migrate docker-migrate-status docker-deploy
 
 # Load .env if present (silent if missing).
 -include .env
@@ -67,3 +68,28 @@ admin-build:
 
 admin-deploy:
 	cd web-admin && ./deploy/deploy.sh
+
+# --- Docker (全栈) ---
+# 用 profile=prod 把 api + mastra + web-admin 一起拉起来.
+# 详见 README.md 的 "Docker 部署" 段.
+
+docker-build:
+	docker compose --profile prod build
+
+docker-up:
+	docker compose --profile prod up -d --build
+
+docker-down:
+	docker compose --profile prod down
+
+docker-logs:
+	docker compose --profile prod logs -f api mastra
+
+docker-migrate:
+	docker compose --profile migrate run --rm migrator up
+
+docker-migrate-status:
+	docker compose --profile migrate run --rm migrator status
+
+docker-deploy:
+	./scripts/docker-deploy.sh

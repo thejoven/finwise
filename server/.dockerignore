@@ -1,0 +1,19 @@
+# 构建 context 只需要源码 + 依赖清单.
+README.md
+bin/
+tmp/
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+
+# Migration SQL 是 migrator 用的, 不进 api 镜像.
+migrations/
+
+# 不要把本地构建出来的二进制带进 context.
+flashfi-api
