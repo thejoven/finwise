@@ -1,0 +1,9 @@
+{
+  "asset_name": "Apple Inc",
+  "opens_today": 3,
+  "reasons_for_future_self": [
+    "群里在抢 Mac Studio 512G, 大家都说带宽吃紧",
+    "本地 LLM 推理需求是个新兴市场, Apple 是少数能跨设备/工作站的供应商",
+    "你的退出条件是: 如果云推理价格回到 GPT-3.5 时代的水平, 那本地推理需求会跌"
+  ]
+}

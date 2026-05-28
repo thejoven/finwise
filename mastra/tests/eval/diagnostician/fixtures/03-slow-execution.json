@@ -1,0 +1,11 @@
+{
+  "commitment_asset": "Advantest",
+  "commitment_thesis_summary": "action=buy position=5% duration=12mo · 半导体测试机受益",
+  "answers": [
+    { "no": 1, "dim": "perception", "question": "录入这条信号的速度?", "choice": "instant", "open_text": "看到了就录" },
+    { "no": 2, "dim": "inference", "question": "推演链停在了第几阶?", "choice": "second", "open_text": "推到二阶受益方" },
+    { "no": 3, "dim": "evaluation", "question": "退出条件清晰吗?", "choice": "specific", "open_text": "价格 + 季报指引都写了" },
+    { "no": 4, "dim": "execution", "question": "从签字到行动的时间?", "choice": "weeks_later", "open_text": "签字之后我又想了 3 周, 等股价回落到我能接受的价位才下单, 错过了 25% 的涨幅" }
+  ],
+  "expected_focus_dim": "decision_speed"
+}

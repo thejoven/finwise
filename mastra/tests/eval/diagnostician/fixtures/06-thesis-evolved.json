@@ -1,0 +1,11 @@
+{
+  "commitment_asset": "Starbucks",
+  "commitment_thesis_summary": "action=buy position=5% duration=6mo · 咖啡豆涨价 brand 顶住",
+  "answers": [
+    { "no": 1, "dim": "perception", "question": "录入这条信号的速度?", "choice": "instant", "open_text": "周末就录了" },
+    { "no": 2, "dim": "inference", "question": "推演链停在了第几阶?", "choice": "wavered", "open_text": "我中途自己说服自己回退到一阶, thesis 中间变了好几次, 从'brand顶住'变成'连锁效率', 又变回来. 我没意识到自己其实在追新故事." },
+    { "no": 3, "dim": "evaluation", "question": "退出条件清晰吗?", "choice": "specific", "open_text": "退出条件清楚" },
+    { "no": 4, "dim": "execution", "question": "从签字到行动的时间?", "choice": "same_day", "open_text": "立刻" }
+  ],
+  "expected_focus_dim": "thesis_evolution"
+}

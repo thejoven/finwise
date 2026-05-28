@@ -1,0 +1,6 @@
+{
+  "asset": "Maersk",
+  "signal_text": "客户突然告诉我下个月一批货要绕开苏伊士运河走好望角.",
+  "expected_score_range": [30, 70],
+  "rationale": "中等热度: 红海地缘事件圈内人都知道, 但 Maersk 个股反应是个体观察."
+}

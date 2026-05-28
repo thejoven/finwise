@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FLASHFI · First Principles Takeover</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-soft: #141414;
+    --bg-card: #1a1a1a;
+    --line: #2a2a2a;
+    --line-soft: #1e1e1e;
+    --ink: #f5f5f5;
+    --ink-soft: #8a8a8a;
+    --ink-dim: #555;
+    --red: #e3242b;
+    --red-dim: #8a1a1f;
+    --green: #00d97e;
+    --yellow: #ffb800;
+    --blue: #4a9eff;
+    --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, "Inter", "Helvetica Neue", "PingFang SC", sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* === Hero === */
+  .hero {
+    min-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero .stamp {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--red);
+    margin-bottom: 24px;
+    display: inline-block;
+    border: 1px solid var(--red);
+    padding: 6px 12px;
+  }
+  .hero h1 {
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 0.92;
+    letter-spacing: -2.5px;
+    margin: 0 0 24px;
+    color: var(--ink);
+  }
+  .hero h1 .red { color: var(--red); }
+  .hero h1 .strike {
+    text-decoration: line-through;
+    text-decoration-color: var(--red);
+    text-decoration-thickness: 4px;
+    color: var(--ink-dim);
+  }
+  .hero .subtitle {
+    font-size: 22px;
+    color: var(--ink-soft);
+    max-width: 760px;
+    margin: 0 0 48px;
+    font-weight: 400;
+  }
+  .hero .signature {
+    margin-top: 36px;
+    padding-top: 28px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  .hero .signature .who {
+    font-size: 14px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* === Section === */
+  section {
+    padding: 100px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-size: 56px;
+    font-weight: 800;
+    letter-spacing: -1.5px;
+    line-height: 1;
+    margin-bottom: 28px;
+    color: var(--ink);
+  }
+  h2 .red { color: var(--red); }
+  h2 .small { font-size: 30px; color: var(--ink-soft); font-weight: 500; }
+  .lead {
+    font-size: 18px;
+    color: var(--ink-soft);
+    max-width: 820px;
+    margin-bottom: 50px;
+  }
+  h3 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 60px 0 18px;
+    letter-spacing: -0.5px;
+  }
+  h3 .num {
+    font-family: var(--mono);
+    color: var(--red);
+    margin-right: 16px;
+    font-size: 22px;
+  }
+  h4 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 24px 0 10px;
+    color: var(--ink);
+  }
+  p { margin-bottom: 14px; color: #d8d8d8; }
+  ul, ol { padding-left: 24px; margin: 12px 0; }
+  li { margin: 6px 0; color: #d8d8d8; }
+  code {
+    font-family: var(--mono);
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 1px 7px;
+    border-radius: 2px;
+    font-size: 13px;
+    color: var(--red);
+  }
+  strong { color: var(--ink); font-weight: 700; }
+
+  /* === The Question Block === */
+  .q-block {
+    background: var(--bg-card);
+    border-left: 5px solid var(--red);
+    padding: 32px 36px;
+    margin: 30px 0;
+  }
+  .q-block .q-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+  }
+  .q-block .q-text {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.4;
+    letter-spacing: -0.5px;
+  }
+  .q-block .a-text {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    font-size: 16px;
+    color: #c5c5c5;
+  }
+
+  /* === Big numbers === */
+  .metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+    margin: 40px 0;
+    border: 1px solid var(--line);
+  }
+  .metric {
+    padding: 28px 24px;
+    border-right: 1px solid var(--line);
+    text-align: left;
+  }
+  .metric:last-child { border-right: none; }
+  .metric .val {
+    font-family: var(--mono);
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--red);
+    line-height: 1;
+    margin-bottom: 8px;
+    letter-spacing: -2px;
+  }
+  .metric .lbl {
+    font-size: 12px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .metric .ctx {
+    font-size: 11px;
+    color: var(--ink-dim);
+    margin-top: 6px;
+    font-family: var(--mono);
+  }
+
+  /* === Algorithm 5 steps === */
+  .algorithm {
+    margin: 40px 0;
+  }
+  .algo-step {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 24px;
+    padding: 28px 0;
+    border-top: 1px solid var(--line);
+  }
+  .algo-step:last-child { border-bottom: 1px solid var(--line); }
+  .algo-step .num {
+    font-family: var(--mono);
+    font-size: 64px;
+    font-weight: 900;
+    color: var(--red);
+    line-height: 0.9;
+    letter-spacing: -3px;
+  }
+  .algo-step .body h4 {
+    font-size: 24px;
+    margin-top: 0;
+    margin-bottom: 6px;
+    letter-spacing: -0.5px;
+  }
+  .algo-step .body .sub {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .algo-step .body p { font-size: 15px; color: #c5c5c5; }
+  .algo-step .body .action {
+    margin-top: 14px;
+    background: var(--bg-card);
+    padding: 14px 18px;
+    border-left: 3px solid var(--red);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  /* === Cut list (DELETE) === */
+  .cut-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .cut-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 22px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  .cut-card::before {
+    content: "DELETE";
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--red);
+    border: 1px solid var(--red);
+    padding: 2px 6px;
+    letter-spacing: 2px;
+  }
+  .cut-card.keep::before {
+    content: "KEEP";
+    color: var(--green);
+    border-color: var(--green);
+  }
+  .cut-card h4 {
+    font-size: 18px;
+    margin: 0 0 8px;
+    padding-right: 80px;
+  }
+  .cut-card .why {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 10px;
+  }
+  .cut-card .impact {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--red);
+    letter-spacing: 1px;
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+    margin-top: 12px;
+  }
+  .cut-card.keep .impact { color: var(--green); }
+
+  /* === Add list === */
+  .add-list {
+    margin: 32px 0;
+  }
+  .add-item {
+    display: grid;
+    grid-template-columns: 80px 1fr 180px;
+    gap: 24px;
+    padding: 24px 0;
+    border-top: 1px solid var(--line);
+    align-items: start;
+  }
+  .add-item:last-child { border-bottom: 1px solid var(--line); }
+  .add-item .id {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--red);
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .add-item .body h4 {
+    margin: 0 0 6px;
+    font-size: 18px;
+  }
+  .add-item .body p {
+    font-size: 14px;
+    color: var(--ink-soft);
+  }
+  .add-item .week {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: right;
+    letter-spacing: 1px;
+  }
+  .add-item .week strong {
+    display: block;
+    color: var(--red);
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  /* === Timeline === */
+  .timeline {
+    margin: 48px 0;
+    position: relative;
+  }
+  .timeline::before {
+    content: "";
+    position: absolute;
+    left: 80px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--line);
+  }
+  .tl-row {
+    display: grid;
+    grid-template-columns: 80px 1fr;
+    gap: 32px;
+    padding: 24px 0;
+    position: relative;
+  }
+  .tl-row::before {
+    content: "";
+    position: absolute;
+    left: 75px;
+    top: 32px;
+    width: 12px;
+    height: 12px;
+    background: var(--red);
+    border-radius: 50%;
+    border: 3px solid var(--bg);
+    z-index: 1;
+  }
+  .tl-row.done::before { background: var(--green); }
+  .tl-row.now::before {
+    background: var(--red);
+    box-shadow: 0 0 0 4px rgba(227, 36, 43, 0.25);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 4px rgba(227, 36, 43, 0.25); }
+    50% { box-shadow: 0 0 0 8px rgba(227, 36, 43, 0.10); }
+  }
+  .tl-row .when {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--red);
+    font-weight: 700;
+    text-align: right;
+    padding-right: 32px;
+    padding-top: 4px;
+  }
+  .tl-row .what {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 20px 24px;
+  }
+  .tl-row .what h4 {
+    margin: 0 0 8px;
+    font-size: 18px;
+  }
+  .tl-row .what p {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 12px;
+  }
+  .tl-row .what ul {
+    font-size: 13px;
+    margin: 8px 0 0;
+    padding-left: 18px;
+  }
+  .tl-row .what ul li {
+    font-family: var(--mono);
+    color: var(--ink);
+    font-size: 12px;
+    margin: 4px 0;
+  }
+  .tl-row .what .ship {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 1.5px;
+    border-top: 1px dashed var(--line);
+    padding-top: 10px;
+  }
+
+  /* === KPI === */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+  .kpi-card {
+    background: var(--bg-card);
+    border: 1px solid var(--line);
+    padding: 24px 28px;
+  }
+  .kpi-card .name {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--red);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .kpi-card .formula {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 12px;
+    line-height: 1.3;
+  }
+  .kpi-card .target {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+  .kpi-card .target div {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .kpi-card .target div strong {
+    display: block;
+    font-size: 22px;
+    color: var(--red);
+    margin-bottom: 2px;
+    font-weight: 800;
+  }
+  .kpi-card .ban {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--line);
+    font-size: 13px;
+    color: var(--ink-dim);
+  }
+  .kpi-card .ban strong { color: var(--red); }
+
+  /* === Comparison Old vs New === */
+  .vs-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 30px 0;
+    font-size: 15px;
+  }
+  .vs-table th {
+    text-align: left;
+    padding: 14px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    letter-spacing: 2px;
+    border-bottom: 2px solid var(--line);
+    text-transform: uppercase;
+  }
+  .vs-table th.new { color: var(--red); }
+  .vs-table td {
+    padding: 18px;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+  .vs-table td.label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    width: 130px;
+  }
+  .vs-table td.old {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    text-decoration-color: rgba(255,255,255,0.15);
+  }
+  .vs-table td.new {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .vs-table tr:hover td:not(.label) { background: var(--bg-card); }
+
+  /* === Manifesto === */
+  .manifesto {
+    background: linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+    padding: 80px 0;
+    text-align: left;
+  }
+  .manifesto h2 {
+    font-size: 72px;
+    line-height: 0.95;
+    margin-bottom: 32px;
+  }
+  .manifesto .creed {
+    font-size: 22px;
+    line-height: 1.5;
+    max-width: 800px;
+    margin-bottom: 28px;
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .manifesto .creed strong { color: var(--red); }
+
+  /* === Footer === */
+  footer {
+    padding: 60px 0 80px;
+    border-top: 1px solid var(--line);
+    background: var(--bg-soft);
+  }
+  footer .sig {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+  }
+  footer .sig .name {
+    font-size: 16px;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  footer .closer {
+    margin-top: 30px;
+    font-size: 13px;
+    color: var(--ink-dim);
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 0 18px; }
+    .hero h1 { font-size: 48px; }
+    h2 { font-size: 36px; }
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .cut-grid { grid-template-columns: 1fr; }
+    .add-item, .tl-row { grid-template-columns: 1fr; gap: 12px; }
+    .timeline::before, .tl-row::before { display: none; }
+    .add-item .week { text-align: left; }
+    .kpi-grid { grid-template-columns: 1fr; }
+    .algo-step { grid-template-columns: 1fr; }
+    .algo-step .num { font-size: 48px; }
+    .manifesto h2 { font-size: 44px; }
+    .vs-table td.label { width: auto; display: block; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="container">
+    <div class="stamp">▲ FIRST PRINCIPLES TAKEOVER · DAY 0</div>
+    <h1>
+      <span class="strike">26 周</span> <span class="red">→ 10 周</span><br>
+      <span class="strike">单用户工具</span> <span class="red">→ alpha 转换网络</span><br>
+      <span class="strike">"自己用一周"</span> <span class="red">→ ship daily</span>
+    </h1>
+    <p class="subtitle">
+      这份文档不是审计。这是一次接管。我读完所有 26 周路线图、12 条产品哲学、3 份 ADR、8 份迁移文件。
+      我尊重产品的核心洞察。但我也看到 80% 的工作量被花在一个错误的假设上 —
+      <strong style="color:var(--ink)">这个产品是给一个人用的</strong>。
+      把"用户"这个 N 从 1 改成 ∞, 所有的"安静"、"克制"、"匹配 alpha 频率"
+      都会变成<strong style="color:var(--ink)">网络效应</strong>。
+    </p>
+    <div class="signature">
+      <div><span class="who">E. Musk</span> · Acquired 2026-05-26</div>
+      <div>Memo to engineering · v1.0 · CONFIDENTIAL</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ THE QUESTION ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 01 · THE QUESTION</div>
+    <h2>从物理学开始</h2>
+    <p class="lead">
+      之前的团队问的是"我们想做什么产品"。第一性原理要求我们问"什么是物理上必须存在的"。
+      我读了 06_产品哲学.md, 写得很美。但美是结果, 不是出发点。
+    </p>
+
+    <div class="q-block">
+      <div class="q-label">Q1 · 客户的根本需求是什么</div>
+      <div class="q-text">从一线观察到资本配置, 这条链路平均损耗 99%。每年只发生 1-2 次的高确定性机会, 大多数人识别了, 然后蒸发了。</div>
+      <div class="a-text">→ 物理量: <strong>信号到仓位的转化率</strong>。不是"engagement", 不是"DAU", 是 conversion。当前业内是 ~0.5%。可以推到 30%+。</div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-label">Q2 · alpha 的物理本质</div>
+      <div class="q-text">不是信息差。是<strong>从认知到行动的延迟差</strong>。两个人看到同样的供应商抱怨, 一个人 6 个月后回看说"我当时就知道", 另一个人下注了。差距不在信号, 在物理上的执行链路。</div>
+      <div class="a-text">→ 物理量: <strong>signal-to-position latency</strong>。当前: 6-12 个月 (从想到到下单, 如果有的话)。目标: <strong>72 小时</strong>。</div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-label">Q3 · 为什么"匹配 alpha 频率"是错的</div>
+      <div class="q-text">前团队说"一年 1-2 次主动提示"。这把因果搞反了。 alpha 是稀有事件 — 没错。但<strong>识别它的过程</strong>不是稀有的。识别需要每天的训练。产品要做的不是变稀有, 是把训练做密, 让稀有事件来时, 用户的判断力是 ready 的。</div>
+      <div class="a-text">→ <strong>日常训练 ≠ 日常打扰</strong>。日常训练是用户主动来; 打扰是产品推过去。前团队把两件事混淆了。</div>
+    </div>
+
+    <div class="q-block">
+      <div class="q-label">Q4 · 单用户假设的代价</div>
+      <div class="q-text">26 周 / 11 个模块 / 6 个 Mastra agent — 全部假设 N=1。这意味着<strong>训练数据永远只有一个人的样本</strong>。一个人的复盘训练永远不可能比 1000 个人的复盘训练更准。Diagnostician 在 N=1 下永远是过拟合。</div>
+      <div class="a-text">→ 把 N 从 1 改成 ∞ 是这次接管的核心动作。其他都是推论。</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BIG METRICS ============ -->
+<section style="padding: 60px 0;">
+  <div class="container">
+    <div class="section-label">§ 02 · TARGET DELTAS</div>
+    <h2>10×, 不是 10%</h2>
+    <p class="lead">如果某个数字不能改 10 倍, 我们就没找到第一性原理。</p>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="val">10×</div>
+        <div class="lbl">Faster ship</div>
+        <div class="ctx">26w → 10w</div>
+      </div>
+      <div class="metric">
+        <div class="val">50×</div>
+        <div class="lbl">Latency cut</div>
+        <div class="ctx">6mo → 72h</div>
+      </div>
+      <div class="metric">
+        <div class="val">∞</div>
+        <div class="lbl">User count</div>
+        <div class="ctx">1 → multi</div>
+      </div>
+      <div class="metric">
+        <div class="val">−40%</div>
+        <div class="lbl">Code surface</div>
+        <div class="ctx">cut 4 modules</div>
+      </div>
+    </div>
+
+    <p style="font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin-top: 24px;">
+      // 注意: 这不是"加快进度"。这是<strong style="color:var(--ink)">改根本目标</strong>。
+      原 26 周计划在做的事情, 是验证一个人的判断力 — 我们做这个的目标是建立一个能给一千个人的判断力上限提供工程化跳板的引擎。
+    </p>
+  </div>
+</section>
+
+<!-- ============ THE ALGORITHM ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 03 · THE ALGORITHM</div>
+    <h2>五步法 · 顺序不能颠倒</h2>
+    <p class="lead">
+      我在 Tesla / SpaceX 用了 20 年。这五步不是建议, 是顺序。颠倒任何一步就会过早优化或保留废物。
+    </p>
+
+    <div class="algorithm">
+
+      <div class="algo-step">
+        <div class="num">1</div>
+        <div class="body">
+          <h4>Question every requirement</h4>
+          <div class="sub">质疑每一个需求 · 包括产品哲学里的</div>
+          <p>
+            "默认沉默"是哲学。但<strong>对谁沉默</strong>从未问过。对当前用户沉默 ≠ 对全体用户沉默。
+            一个用户的"我没识别到这条信号"在 N=1000 时可能是<strong>另一个用户的训练靶子</strong>。
+            "26 周路线图"也要质疑 — 是因为审慎吗, 还是因为我们害怕被验证错了?
+          </p>
+          <div class="action">→ 重写 GOAL.md 第一段。<br>→ 26 周计划砍掉所有"等下个 Phase"约束。</div>
+        </div>
+      </div>
+
+      <div class="algo-step">
+        <div class="num">2</div>
+        <div class="body">
+          <h4>Delete the part / process</h4>
+          <div class="sub">最常被跳过的一步 · 删错了再加回来比从不删要好 10 倍</div>
+          <p>
+            前团队的所有反思都在"加什么"。我看到 4 个东西可以立刻删 (见 § 04)。
+            如果我们删错了一个, 1 周内会发现它的缺失 — 那时候再加回来。
+            <strong>如果什么都没删, 说明你还没真用过这个算法。</strong>
+          </p>
+          <div class="action">→ web-admin / Mastra 中间层 / 11 个模块 / 26 周 phase gate — 都进 delete review。</div>
+        </div>
+      </div>
+
+      <div class="algo-step">
+        <div class="num">3</div>
+        <div class="body">
+          <h4>Simplify and optimize</h4>
+          <div class="sub">这一步只有在删过之后做才有意义</div>
+          <p>
+            如果先优化再删, 你会优化一些根本不该存在的东西。前团队在 verbatim 校验上花的工程量
+            (workflow substring + retry + NAK 三层兜底) — 这是<strong>对一个不该存在的复杂度的精致防御</strong>。
+            真正的简化是: 让 LLM 用 user 原话生成时, 用 grammar-constrained decoding, 物理上让它不能生成原话之外的字。
+          </p>
+          <div class="action">→ 评估 Outlines / llama.cpp grammar 替换三层兜底。一周原型。</div>
+        </div>
+      </div>
+
+      <div class="algo-step">
+        <div class="num">4</div>
+        <div class="body">
+          <h4>Accelerate cycle time</h4>
+          <div class="sub">在删 / 简化之后, 不在之前</div>
+          <p>
+            ship 频率从"每个 Phase 自己用一周" 改成 <strong>"every weekday end-of-day"</strong>。
+            mobile app 每天有一个新 TestFlight build (EAS 已经配好, 跑就是了)。
+            backend 每个 commit 自动 deploy 到 .205 (remote-sync.sh 已经差不多了 — 加一个 GitHub Actions 触发)。
+          </p>
+          <div class="action">→ 砍掉 W8/W18/W26 三个"自己用一周" gate。改成 every Friday demo, 不通过 rollback。</div>
+        </div>
+      </div>
+
+      <div class="algo-step">
+        <div class="num">5</div>
+        <div class="body">
+          <h4>Automate</h4>
+          <div class="sub">最后一步 · 自动化错的东西比手动做错的东西贵 10 倍</div>
+          <p>
+            目前可自动化但没做的事: ①Mastra eval fixtures 跑 CI (现在手动) ②mobile 在 expo update channel 上自动分发 (现在手动 EAS submit) ③复盘训练的 4 问让 LLM 主动从持仓动作里提问, 不再用户填表。
+            <strong>但</strong>: 自动化"找 alpha 的判断"是禁区 — LLM 全权决定哪些信号过门, 等于放弃产品良心 (前团队这一点是对的, 保留)。
+          </p>
+          <div class="action">→ CI/CD pipeline · expo update channel · LLM 主动复盘问询。三件事 4 周内完成。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT TO CUT ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 04 · DELETE LIST</div>
+    <h2>砍掉 <span class="red">40%</span> 的代码</h2>
+    <p class="lead">每一个 DELETE 都有具体的回归条件 — 一周内出问题我会自己加回来。</p>
+
+    <div class="cut-grid">
+
+      <div class="cut-card">
+        <h4>web-admin 后台</h4>
+        <p class="why">10 个 shadcn 页面, 但实际用户是单人 (你)。你用 mobile 已经能看见同样的数据。再加一个端就是再加一处状态不一致的来源。</p>
+        <div class="impact">CUT · 节省 ~3000 LOC / nginx vhost / 一个部署目标 — 1 天</div>
+      </div>
+
+      <div class="cut-card">
+        <h4>Mastra 作为独立进程</h4>
+        <p class="why">为什么 Go ↔ LLM 中间要有 Node 进程? 引入了 loopback / token / port 占用 / systemd unit / npm 依赖 5 处复杂度。Mastra 的 zod 校验和 prompt 模板在 Go 里写 100 行就够。</p>
+        <div class="impact">CUT · 删掉 mastra/ 整个仓库, 合并进 Go binary — 1 周</div>
+      </div>
+
+      <div class="cut-card">
+        <h4>26 周 Phase gate 串行</h4>
+        <p class="why">"Phase 1 完成后才能开 Phase 2"是早期为了控制复杂度。代码已 100% 写完, 这个约束反而变成"现在不要测后面的"的借口。</p>
+        <div class="impact">CUT · 三个 Phase 同时进入"每天用" — 0 天 (只是删 doc)</div>
+      </div>
+
+      <div class="cut-card">
+        <h4>"自己用一周"作为 hard gate</h4>
+        <p class="why">这是<strong>测量方式</strong>不是<strong>验收标准</strong>。验收标准应该是 KPI 数字 (§ 07)。"自己用一周"在 N=1 时合理, N=10 时就荒谬。</p>
+        <div class="impact">CUT · 改用 KPI 触发的 ship/rollback — 1 天</div>
+      </div>
+
+      <div class="cut-card">
+        <h4>原型 HTML (flashfi-prototype-v4.html)</h4>
+        <p class="why">3 屏交互原型, 设计完美。但代码已经实现了所有 3 屏。原型存在 = 又一个真相源, 又一个会过时的资产。</p>
+        <div class="impact">CUT · git rm + 截图归档到 README — 30 分钟</div>
+      </div>
+
+      <div class="cut-card">
+        <h4>11 个后端模块边界</h4>
+        <p class="why">signal / refinement / gate / commitment / companion / exit / retrospect — 7 个独立 package。它们都用同一个 events 表, 同一个 outbox, 同一个 user_id。这不是 7 个领域, 是 7 个事件类型。</p>
+        <div class="impact">CUT · 合并到 3 个 package (capture/decide/reflect) — 3 天</div>
+      </div>
+
+      <div class="cut-card keep">
+        <h4>events 表 REVOKE append-only</h4>
+        <p class="why">这是物理层守门, 不是工程偏好。它锚定了"真相不可改"这件事。在 N=1000 时更重要 — 任何用户都不能用应用 bug 污染自己的过去判断历史。</p>
+        <div class="impact">KEEP · 加 redact_user(uuid) SECURITY DEFINER 应对合规 — 半天</div>
+      </div>
+
+      <div class="cut-card keep">
+        <h4>沉默归档 4 池</h4>
+        <p class="why">这是产品的良心层。在多用户场景下更需要 — 不然就是"AI 给所有人推所有东西"的庸俗工具。但<strong>4 个池可能简化成 2 个</strong> (有日历窗口的 / 永久舍弃的)。</p>
+        <div class="impact">KEEP · 4 池 → 2 池, 简化分类 UI — 2 天</div>
+      </div>
+
+      <div class="cut-card keep">
+        <h4>承诺书 verbatim 引用</h4>
+        <p class="why">"语言塑造行为"这条哲学是对的。但实现方式可以从 3 层兜底改成 grammar-constrained decoding (物理保证)。</p>
+        <div class="impact">KEEP · 实现方式重做 — 1 周原型</div>
+      </div>
+
+      <div class="cut-card keep">
+        <h4>M11.5 训练闭环</h4>
+        <p class="why">复盘 → focus_dim → 下次 socratic 注入。这是<strong>整个产品 11 个模块里最有价值的一条</strong>, 也是 N→∞ 时最有意义的 — 不同用户的 focus_dim 分布会变成产品的真正护城河。</p>
+        <div class="impact">KEEP · 不动 + 加联邦学习接口 (Phase 2) — 0 天</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHAT TO ADD ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 05 · ADD LIST</div>
+    <h2>加上 <span class="red">3</span> 个东西</h2>
+    <p class="lead">每个都不是 feature, 是改 product 形态的杠杆。</p>
+
+    <div class="add-list">
+
+      <div class="add-item">
+        <div class="id">A.1</div>
+        <div class="body">
+          <h4>券商 API 自动下单</h4>
+          <p>承诺书签字 = 直接下单。前团队的设计是"签字 → 用户自己去券商 App 下单"。这是 conversion 损耗 90% 的来源。接 Interactive Brokers / 雪盈 / 老虎 API。签字是仪式, 下单是物理执行 — 这两件事必须在同一秒发生。</p>
+        </div>
+        <div class="week"><strong>W3-W4</strong>IBKR API · 2 周</div>
+      </div>
+
+      <div class="add-item">
+        <div class="id">A.2</div>
+        <div class="body">
+          <h4>Multi-tenant 改造</h4>
+          <p>events 表加 tenant_id (其实 user_id 已经在了, 只是没把它当 tenant_id 处理)。auth 从 DEV_BEARER_TOKEN 换成 OAuth (Google / Apple Sign In)。Postgres RLS 启用。<strong>这不是商业化动作</strong>, 是为了让训练数据从 1 个样本扩到 N 个。Diagnostician 在 N=1 下永远过拟合。</p>
+        </div>
+        <div class="week"><strong>W5-W6</strong>auth + RLS · 2 周</div>
+      </div>
+
+      <div class="add-item">
+        <div class="id">A.3</div>
+        <div class="body">
+          <h4>市场数据实时流</h4>
+          <p>当前所有"信号"都是用户手输。但用户能看到的只是 10% 的市场。接 Polygon.io / 同花顺 L2 数据, 让 Analyst agent 主动从 24 小时新闻 / 财报 / 大宗交易里识别可能匹配用户 fingerprint 的信号, 推给用户做"五轮追问"。<strong>这是把单向信号管道变成双向</strong>。</p>
+        </div>
+        <div class="week"><strong>W7-W8</strong>data pipeline · 2 周</div>
+      </div>
+
+    </div>
+
+    <p style="font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin-top: 20px;">
+      // 注意只加 3 个。其他所有"建议添加"的功能 (社交 / 排行榜 / 推荐 / 信息流 / AI 写研报)
+      <strong style="color:var(--red)">全部拒绝</strong>。它们都是 engagement traps, 与本产品哲学根本冲突。
+      网络效应来自训练数据的多样性, 不来自社交。
+    </p>
+  </div>
+</section>
+
+<!-- ============ OLD VS NEW ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 06 · OLD MAP vs NEW MAP</div>
+    <h2>整体重定位</h2>
+    <p class="lead">不是优化每一格, 是<strong>整张地图改方向</strong>。</p>
+
+    <table class="vs-table">
+      <thead>
+        <tr>
+          <th style="width:130px;"></th>
+          <th>v0 · 前团队</th>
+          <th class="new">v1 · 接管后</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="label">定位</td>
+          <td class="old">单人投资 conviction tracker</td>
+          <td class="new">alpha 识别→执行的低延迟引擎</td>
+        </tr>
+        <tr>
+          <td class="label">用户基数</td>
+          <td class="old">N = 1 (你自己)</td>
+          <td class="new">N → ∞ (multi-tenant, 数据飞轮)</td>
+        </tr>
+        <tr>
+          <td class="label">时长</td>
+          <td class="old">26 周 (Phase 1+2+3 串行)</td>
+          <td class="new">10 周 (并发, daily ship)</td>
+        </tr>
+        <tr>
+          <td class="label">部署</td>
+          <td class="old">单 VPS · docker compose · 内网</td>
+          <td class="new">CI/CD → Fly.io 多 region · 自动扩容</td>
+        </tr>
+        <tr>
+          <td class="label">中间层</td>
+          <td class="old">Go API ↔ Mastra (Node) ↔ LLM</td>
+          <td class="new">Go API ↔ LLM (直接, 删 Node 进程)</td>
+        </tr>
+        <tr>
+          <td class="label">客户端</td>
+          <td class="old">mobile + web-admin 两端</td>
+          <td class="new">mobile only (砍 web-admin)</td>
+        </tr>
+        <tr>
+          <td class="label">执行</td>
+          <td class="old">签字 → 用户去券商下单</td>
+          <td class="new">签字 → IBKR API 自动下单</td>
+        </tr>
+        <tr>
+          <td class="label">信号源</td>
+          <td class="old">用户手输 only</td>
+          <td class="new">用户手输 + 市场实时流 (双向)</td>
+        </tr>
+        <tr>
+          <td class="label">训练数据</td>
+          <td class="old">单人事件流</td>
+          <td class="new">多人事件流 + 联邦学习 focus_dim</td>
+        </tr>
+        <tr>
+          <td class="label">验收</td>
+          <td class="old">"自己用一周" (3 次)</td>
+          <td class="new">KPI 驱动 (signal→position latency &lt; 72h)</td>
+        </tr>
+        <tr>
+          <td class="label">商业模式</td>
+          <td class="old">无 (自用)</td>
+          <td class="new">订阅 (基础免费, IBKR 直连 / Diagnostician 付费)</td>
+        </tr>
+        <tr>
+          <td class="label">不变 (核心)</td>
+          <td class="old" style="color:var(--green); text-decoration: none;">events append-only / 沉默归档 / 五轮追问 / verbatim / M11.5 闭环</td>
+          <td class="new">events append-only / 沉默归档 / 五轮追问 / verbatim / M11.5 闭环</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ THE 10-WEEK PLAN ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 07 · THE 10-WEEK PLAN</div>
+    <h2>10 周, ship-or-die</h2>
+    <p class="lead">
+      每周五 demo。不通过 = rollback + 周末重做。<br>
+      不要 phase, 不要 milestone, 只有 weeks。每周一个可 ship 的 binary。
+    </p>
+
+    <div class="timeline">
+
+      <div class="tl-row now">
+        <div class="when">W1<br><span style="color:var(--ink-soft); font-weight:400;">DEMOLITION</span></div>
+        <div class="what">
+          <h4>拆除周</h4>
+          <p>不写新代码。把 § 04 所有 DELETE 项执行完。</p>
+          <ul>
+            <li>git rm -r web-admin/</li>
+            <li>git rm -r mastra/ (先把 6 个 agent 的 prompt 抽出来移植到 server/internal/llm/)</li>
+            <li>git rm -r docs/原型/</li>
+            <li>合并 11 模块 → 3 模块 (capture / decide / reflect)</li>
+            <li>砍 26 周 doc · 改写 GOAL.md 为新 10 周</li>
+          </ul>
+          <div class="ship">SHIP · 一个更小的 git 仓库 · 总 LOC -40%</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W2<br><span style="color:var(--ink-soft); font-weight:400;">RE-FOUNDATION</span></div>
+        <div class="what">
+          <h4>合并 LLM 编排回 Go</h4>
+          <p>Go 直接调 Anthropic / DeepSeek HTTP API。删 Mastra 后丢失的 zod 校验 → 用 Go encoding/json + jsonschema 库做。retry / fallback 写一个 200 行 package。</p>
+          <ul>
+            <li>server/internal/llm/ 包: agents.go + prompts.go + schema.go</li>
+            <li>把 6 个 agent prompt 复制过来 (它们之前刻意写在仓库里, 不在框架配置里)</li>
+            <li>handler 集成测试 100% 跑通</li>
+            <li>GitHub Actions CI: push → build → ssh deploy</li>
+          </ul>
+          <div class="ship">SHIP · 单 binary · 部署延迟 5min → 30s</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W3<br><span style="color:var(--ink-soft); font-weight:400;">BROKER INTEGRATION</span></div>
+        <div class="what">
+          <h4>IBKR Client Portal API 接入</h4>
+          <p>这是产品形态从"建议"变"执行"的物理时刻。承诺书签字 = OAuth → place order 一气呵成。</p>
+          <ul>
+            <li>IBKR OAuth 2.0 流接入 server</li>
+            <li>commitment.sign() 后异步调 POST /iserver/account/{accountId}/orders</li>
+            <li>订单状态 polling → 写回 events 表为 order.filled / order.cancelled</li>
+            <li>失败 → 沉默归档 (一致性 &gt; 可用性)</li>
+          </ul>
+          <div class="ship">SHIP · 自己签一份承诺书, IBKR 真的下了单</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W4<br><span style="color:var(--ink-soft); font-weight:400;">EXECUTION GUARDRAILS</span></div>
+        <div class="what">
+          <h4>下单防护栏</h4>
+          <p>自动下单是杠杆, 防护栏是必须。任何与承诺书 schema 不符 = 不下单 = 沉默归档。</p>
+          <ul>
+            <li>每日最大下单金额上限 (env 配)</li>
+            <li>承诺书签字到 IBKR 调用之间, 5 秒"反悔窗口" (mobile 上 undo button)</li>
+            <li>下单失败 retry 1 次, 然后沉默 (不告警)</li>
+            <li>每条 order 必有对应 commitment.id, 没有 = panic</li>
+          </ul>
+          <div class="ship">SHIP · 防护栏 + 端到端 IBKR paper trading 通过</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W5<br><span style="color:var(--ink-soft); font-weight:400;">AUTH</span></div>
+        <div class="what">
+          <h4>OAuth + Multi-tenant</h4>
+          <p>从 DEV_BEARER_TOKEN 切到真 auth。这是 N: 1 → ∞ 的物理动作。</p>
+          <ul>
+            <li>Apple Sign In + Google Sign In (mobile 端用 expo-auth-session)</li>
+            <li>server 用 JWT, signing key 在 .env</li>
+            <li>events / signals / commitments 所有表已经有 user_id, 只需把它当 tenant_id 严格化</li>
+            <li>Postgres Row Level Security 启用 · 集成测试: 用户 A 永远查不到用户 B 的 events</li>
+          </ul>
+          <div class="ship">SHIP · 邀请 3 个朋友, 都能注册登录, 互不可见</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W6<br><span style="color:var(--ink-soft); font-weight:400;">DEPLOY UP</span></div>
+        <div class="what">
+          <h4>从内网搬到公网</h4>
+          <p>192.168.1.205 是 dev 环境, 不是 prod。N&gt;1 必须在公网。Fly.io 一键多 region (us-west + ap-northeast)。</p>
+          <ul>
+            <li>Postgres → Fly.io Postgres (备份自动)</li>
+            <li>NATS → Fly.io app 同 region</li>
+            <li>server binary → Fly.io app, 多实例</li>
+            <li>HTTPS + TLS (Fly 自带)</li>
+            <li>EAS Build → TestFlight, app.json 的 API_URL 切公网</li>
+          </ul>
+          <div class="ship">SHIP · TestFlight 链接发出去, 异地朋友能用</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W7<br><span style="color:var(--ink-soft); font-weight:400;">DATA PIPELINE</span></div>
+        <div class="what">
+          <h4>市场实时流接入</h4>
+          <p>从"用户手输信号" 扩到 "市场推信号给用户问"。Analyst agent 24/7 跑, 找符合用户 fingerprint 的信号, 推过来五轮追问。</p>
+          <ul>
+            <li>Polygon.io WebSocket → server NATS subject market.tick.&lt;symbol&gt;</li>
+            <li>新 worker: pattern_matcher 读市场流 + 用户的 behavioral_fingerprint, 输出 candidate_signal 进 inbox</li>
+            <li>用户在 inbox 看到的不是"你今天什么都没识别", 而是"市场有 3 件事可能匹配你过去的判断模式 — 要不要展开?"</li>
+            <li>这条信号经过五轮追问后, 跟用户手输信号走同一条管道</li>
+          </ul>
+          <div class="ship">SHIP · 每天市场推 0-3 条匹配信号, 不打扰 (在 inbox 不发 push)</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W8<br><span style="color:var(--ink-soft); font-weight:400;">VERBATIM HARDENING</span></div>
+        <div class="what">
+          <h4>用 grammar-constrained decoding 替换三层兜底</h4>
+          <p>承诺书的 verbatim 引用从"生成 + retry"改成"物理上 LLM 不能生成原话之外的字"。Outlines / llama.cpp 的 JSON schema grammar 做到这一点。</p>
+          <ul>
+            <li>本地跑一个开源模型 (Llama 3.1 70B 或 Qwen 2.5 72B) 处理 verbatim 任务</li>
+            <li>grammar 限制: quote 字段必须是 user_signals.raw_text 的 substring</li>
+            <li>这一改使得 verbatim 错误率从 ~5% (retry 后) → 0% (物理上)</li>
+            <li>同时降低延迟 (省一次 retry) + 成本 (本地模型 vs Claude)</li>
+          </ul>
+          <div class="ship">SHIP · 100 次承诺书生成 · 0 次 verbatim 失败</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W9<br><span style="color:var(--ink-soft); font-weight:400;">KPI INSTRUMENTATION</span></div>
+        <div class="what">
+          <h4>埋点 + dashboard</h4>
+          <p>"自己用一周"不再是验收方式, KPI 是。Prometheus 已经在 (前团队接了 /metrics)。补全 KPI 埋点 + Grafana 面板。</p>
+          <ul>
+            <li>signal_to_position_latency_seconds (histogram, 按 user)</li>
+            <li>alpha_realization_rate = orders.filled / signals.captured (gauge)</li>
+            <li>conviction_holding_days (持仓状态机已有 transition events, 拉出来)</li>
+            <li>retro_focus_improvement_velocity = focus_dim 变化频率</li>
+            <li>silence_archive_ratio = archived / total (这是<strong>越高越健康</strong>的反指标)</li>
+          </ul>
+          <div class="ship">SHIP · Grafana 面板 + 每天自动出一份 PDF 给我</div>
+        </div>
+      </div>
+
+      <div class="tl-row">
+        <div class="when">W10<br><span style="color:var(--ink-soft); font-weight:400;">LAUNCH</span></div>
+        <div class="what">
+          <h4>有限发布</h4>
+          <p>TestFlight 从 5 人扩到 50 人 (邀请制, 入群必须看哲学文档)。从这周起 Friday demo 不再是给团队, 是给 50 个用户。</p>
+          <ul>
+            <li>App Store 短描述: "1 年只主动找你 1-2 次"</li>
+            <li>注册流: 强制看 06_产品哲学.md 摘要 + 答 3 题哲学校验 · 答错不能注册 (反向漏斗)</li>
+            <li>不做 PR, 不做 Product Hunt</li>
+            <li>定价: 基础免费 (信号 + 五轮追问 + 四道门) · $19/mo 解锁 IBKR 直连 + Diagnostician 个性化 focus</li>
+            <li>反馈渠道: 一个 Discord, 只看"能不能跑"和"算法是不是错了", 不看"建议加功能"</li>
+          </ul>
+          <div class="ship">SHIP · v1.0 · 50 用户 · 真实下单流跑通</div>
+        </div>
+      </div>
+
+    </div>
+
+    <p style="font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin-top: 30px;">
+      // 注: 没有"自己用一周" gate。如果 W3 demo IBKR 没下单, 周末重做; 如果 W5 RLS 测试出泄漏, 周末重做。<br>
+      // 不存在"被卡住一个月"的情况 — 卡住超过一周 = 这个 feature 选错了, 砍掉换路径。
+    </p>
+  </div>
+</section>
+
+<!-- ============ KPI ============ -->
+<section>
+  <div class="container">
+    <div class="section-label">§ 08 · KPI · 不是 DAU</div>
+    <h2>四个数字</h2>
+    <p class="lead">只盯这 4 个。其他全是 vanity metrics。</p>
+
+    <div class="kpi-grid">
+
+      <div class="kpi-card">
+        <div class="name">KPI 1 · LATENCY</div>
+        <div class="formula">Signal → Position latency<br><span style="color:var(--ink-soft); font-size:14px; font-weight:400;">从信号录入到实际下单的中位数小时数</span></div>
+        <div class="target">
+          <div>BASELINE<strong>2160h</strong>3 个月</div>
+          <div>W10 TARGET<strong>72h</strong>3 天</div>
+          <div>NORTH STAR<strong>24h</strong>当天</div>
+        </div>
+        <div class="ban"><strong>BAN:</strong> 不为了降这个数, 加任何"快速下单"按钮。降它的唯一手段是把决策卡点工程化。</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="name">KPI 2 · REALIZATION</div>
+        <div class="formula">Alpha realization rate<br><span style="color:var(--ink-soft); font-size:14px; font-weight:400;">最终下单的信号 / 录入的信号总数</span></div>
+        <div class="target">
+          <div>INDUSTRY<strong>0.5%</strong>~</div>
+          <div>W10 TARGET<strong>5%</strong>10×</div>
+          <div>NORTH STAR<strong>15%</strong>30×</div>
+        </div>
+        <div class="ban"><strong>BAN:</strong> 不通过降低四道门标准来提高这个数。降标准 = 卖产品良心。</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="name">KPI 3 · CONVICTION</div>
+        <div class="formula">Conviction holding days (median)<br><span style="color:var(--ink-soft); font-size:14px; font-weight:400;">签字到主动平仓的中位天数</span></div>
+        <div class="target">
+          <div>RETAIL AVG<strong>14d</strong></div>
+          <div>W10 TARGET<strong>90d</strong></div>
+          <div>NORTH STAR<strong>180d</strong></div>
+        </div>
+        <div class="ban"><strong>BAN:</strong> 不为这个数加"持仓提醒"或"加油打气"。加耐心是工程问题不是心理问题。</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="name">KPI 4 · SILENCE</div>
+        <div class="formula">Silence archive ratio<br><span style="color:var(--ink-soft); font-size:14px; font-weight:400;">归档信号 / 总信号 (越高越健康)</span></div>
+        <div class="target">
+          <div>BAD AI APPS<strong>5%</strong></div>
+          <div>W10 TARGET<strong>85%</strong></div>
+          <div>NORTH STAR<strong>95%+</strong></div>
+        </div>
+        <div class="ban"><strong>BAN:</strong> 这个数低于 80% = 产品已经堕落成又一个推荐系统。立刻砍 feature。</div>
+      </div>
+
+    </div>
+
+    <p style="font-family: var(--mono); font-size: 13px; color: var(--ink-soft); margin-top: 24px;">
+      // DAU / MAU / NPS / 留存 — 全部不看。一个用户一年来 6 次 (每 2 个月一次)
+      <strong style="color:var(--ink)">就是这个产品想要的样子</strong>。看 DAU 会逼产品做错的事。
+    </p>
+  </div>
+</section>
+
+<!-- ============ MANIFESTO ============ -->
+<section class="manifesto">
+  <div class="container">
+    <div class="section-label">§ 09 · WHAT IT BECOMES</div>
+    <h2>这不是<br>投资工具。</h2>
+
+    <p class="creed">
+      它是一台 <strong>把"差一点就买了"转化为"已经买入并持有 180 天"的物理设备</strong>。
+    </p>
+
+    <p class="creed">
+      它的存在不为了让任何人"赚钱"。
+      它的存在是为了 <strong>让人类对自己的判断力的迭代速度, 提高一个数量级</strong>。
+    </p>
+
+    <p class="creed">
+      v0 团队把这个产品做成了一份美学品。<br>
+      v1 我把它做成一台 <strong>引擎</strong>。
+    </p>
+
+    <p class="creed" style="margin-top:48px; font-size:18px; color: var(--ink-soft);">
+      美学品 vs 引擎的区别:<br>
+      美学品<strong style="color:var(--ink-dim)">服务于其创造者的品味</strong>。 — 单人, 26 周, 自己用一周。<br>
+      引擎<strong style="color:var(--red)">服务于物理量的最大化</strong>。 — N→∞, 10 周, 每天 ship。
+    </p>
+
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="container">
+    <div class="sig">
+      <div><span class="name">E. Musk</span> · CEO, Flashfi (post-acquisition)</div>
+      <div>2026-05-26 · DAY ZERO · v1.0</div>
+    </div>
+
+    <div class="closer">
+      <p>// 上一份团队留下的文档 (docs/architecture-analysis.html) 是诚实的、技术准确的、值得感谢。</p>
+      <p>// 它的诊断是正确的: 代码层 100%, 验收层 0%, "next step 是自己用一周"。</p>
+      <p>// 但它的处方是错的: 它在已经走错方向的地图上画了一份补丁清单。</p>
+      <p>// 我的处方是: <strong style="color:var(--red)">扔掉地图, 看物理量</strong>。</p>
+      <br>
+      <p>// 如果 W10 没 ship, 我自己 rollback 这次接管。</p>
+      <p>// 如果 W10 ship 了但 KPI 4 (silence ratio) &lt; 80%, 我 rollback feature 直到回到 80%+。</p>
+      <p>// 没有"差一点就 ship 了"的 ship。</p>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

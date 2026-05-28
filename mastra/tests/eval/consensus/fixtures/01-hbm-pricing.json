@@ -1,0 +1,6 @@
+{
+  "asset": "SK Hynix",
+  "signal_text": "今天供应商说 HBM 又涨价了, 第三次了. 我们做 AI 推理盒的, 这季度 BOM 又要重算.",
+  "expected_score_range": [50, 90],
+  "rationale": "HBM 涨价 + SK Hynix 受益是 2024-2026 主流叙事, 应该偏高分"
+}

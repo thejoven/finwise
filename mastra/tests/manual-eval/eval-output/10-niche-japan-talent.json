@@ -1,0 +1,38 @@
+{
+  "tags": [
+    "日本半导体",
+    "工程师薪酬",
+    "人才流动",
+    "中国半导体"
+  ],
+  "related_assets": [
+    {
+      "ticker": "Tokyo Electron (TEL)",
+      "rationale": "日本半导体设备龙头, 人才流出说明本土景气度或竞争力相对下降, 薪酬溢价缩水",
+      "order": "first"
+    },
+    {
+      "ticker": "Disco Corp",
+      "rationale": "日本切割/研磨设备龙头, 工程师外流反映其国内扩张放缓或薪资竞争力减弱",
+      "order": "first"
+    },
+    {
+      "ticker": "中芯国际 (SMIC)",
+      "rationale": "内地晶圆代工龙头, 能以更低成本招到日本资深工程师, 降低人力成本, 提升良率追赶能力",
+      "order": "second"
+    },
+    {
+      "ticker": "北方华创 (NAURA)",
+      "rationale": "内地半导体设备国产替代龙头, 日本设备背景工程师流入加速技术突破和客户导入",
+      "order": "second"
+    },
+    {
+      "ticker": "ASML",
+      "rationale": "若内地设备商因人才流入加速突破, 长期可能侵蚀ASML在部分环节的不可替代性",
+      "order": "third"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "leading",
+  "one_line_summary": "日本半导体工程师要价骤降且愿意来内地, 人才流向逆转"
+}

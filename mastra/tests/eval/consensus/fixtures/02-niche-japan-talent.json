@@ -1,0 +1,6 @@
+{
+  "asset": "8035.T",
+  "signal_text": "最近几位日本半导体老工程师在中国一家设备公司站台.",
+  "expected_score_range": [0, 40],
+  "rationale": "极小众观察, 不该是市场共识. 低分代表 leading view."
+}

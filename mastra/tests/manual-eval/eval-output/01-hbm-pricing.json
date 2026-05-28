@@ -1,0 +1,38 @@
+{
+  "tags": [
+    "HBM",
+    "内存涨价",
+    "AI 推理盒",
+    "BOM 压力"
+  ],
+  "related_assets": [
+    {
+      "ticker": "SK Hynix",
+      "rationale": "HBM 主供应商, 第三次涨价直接增厚利润",
+      "order": "first"
+    },
+    {
+      "ticker": "Samsung Memory",
+      "rationale": "HBM 二供, 跟涨受益",
+      "order": "first"
+    },
+    {
+      "ticker": "Micron",
+      "rationale": "HBM 市场追赶者, 涨价周期中份额与价格双受益",
+      "order": "first"
+    },
+    {
+      "ticker": "Marvell/Astera Labs",
+      "rationale": "推理盒 BOM 压力下, 系统厂商更倾向优化互联与加速卡配置, 互联侧需求上升",
+      "order": "second"
+    },
+    {
+      "ticker": "NVIDIA",
+      "rationale": "推理盒 BOM 承压可能延缓非 GPU 方案替代, 但高端推理仍依赖 GPU, 合同密度上升",
+      "order": "second"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "aligned",
+  "one_line_summary": "HBM 第三轮涨价, 推理盒 BOM 承压外溢至互联与 GPU 方案"
+}

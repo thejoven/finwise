@@ -1,0 +1,33 @@
+{
+  "tags": [
+    "中国新能源出海",
+    "中东本地组装",
+    "沙特招标",
+    "阿联酋"
+  ],
+  "related_assets": [
+    {
+      "ticker": "BYD",
+      "rationale": "中东本地化组装领先者, 阿联酋/沙特建厂直接受益",
+      "order": "first"
+    },
+    {
+      "ticker": "蔚来",
+      "rationale": "阿联酋主权基金已投资, 本地组装落地加速",
+      "order": "first"
+    },
+    {
+      "ticker": "宁德时代",
+      "rationale": "中东新能源车放量拉动电池配套, 本地化产能需求外溢",
+      "order": "second"
+    },
+    {
+      "ticker": "沙特主权基金(PIF)",
+      "rationale": "招标倾向中系, PIF 合资工厂的供应链和基建配套商间接受益",
+      "order": "third"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "leading",
+  "one_line_summary": "中东两大市场同步转向中国新能源车本地化, 从出口模式升级为产能落地"
+}

@@ -1,0 +1,6 @@
+{
+  "asset": "Lenovo Servers",
+  "signal_text": "客户问我们能不能买 DeepSeek 私有化部署的整机服务器.",
+  "expected_score_range": [10, 55],
+  "rationale": "DeepSeek 私有化部署的中小企业需求是 leading observation, 低-中分."
+}

@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashfi Engine · Phase 1 完成度审计</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --paper: #faf8f3;
+    --muted: #6b6661;
+    --muted-soft: #999591;
+    --rule: #1a1a1a;
+    --rule-soft: #d9d3c8;
+    --red: #8b1a1a;
+    --orange: #b8651a;
+    --green: #2d5a2d;
+    --blue: #1a3d6b;
+    --card: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Source Serif 4", "Source Serif Pro", Georgia, "Noto Serif SC", serif;
+    line-height: 1.6;
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 40px 32px 96px; }
+
+  /* Masthead */
+  .masthead {
+    text-align: center;
+    border-top: 4px double var(--rule);
+    border-bottom: 4px double var(--rule);
+    padding: 24px 0 18px;
+    margin-bottom: 32px;
+  }
+  .masthead .sub {
+    font-family: "Source Serif 4", Georgia, serif;
+    font-size: 10px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .masthead h1 {
+    font-family: "Playfair Display", "Times New Roman", serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 56px;
+    margin: 0 0 6px;
+    letter-spacing: -1px;
+  }
+  .masthead .tag {
+    font-family: "Source Serif 4", serif;
+    font-style: italic;
+    color: var(--muted);
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .meta {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--rule-soft);
+    border-bottom: 1px solid var(--rule-soft);
+    padding: 8px 0;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-top: 14px;
+  }
+
+  /* Section headers */
+  h2.section {
+    font-family: "Playfair Display", Georgia, serif;
+    font-weight: 700;
+    font-size: 26px;
+    margin: 48px 0 4px;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 6px;
+  }
+  h2.section .num {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    margin-right: 10px;
+  }
+  h3 {
+    font-family: "Playfair Display", Georgia, serif;
+    font-size: 19px;
+    margin: 28px 0 10px;
+    color: var(--ink);
+  }
+  h3 .pill {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3px 8px;
+    text-transform: uppercase;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  p { margin: 0 0 12px; }
+  .lede {
+    font-style: italic;
+    color: var(--muted);
+    border-left: 3px solid var(--ink);
+    padding: 4px 0 4px 14px;
+    margin: 14px 0 24px;
+  }
+
+  /* Score summary */
+  .scores {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin: 24px 0 8px;
+  }
+  .score {
+    background: var(--card);
+    border: 1px solid var(--ink);
+    padding: 18px 20px;
+  }
+  .score .layer {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .score .pct {
+    font-family: "Playfair Display", Georgia, serif;
+    font-style: italic;
+    font-size: 44px;
+    line-height: 1.1;
+    margin: 6px 0 0;
+  }
+  .score .pct.amber { color: var(--orange); }
+  .score .pct.red { color: var(--red); }
+  .score .pct.green { color: var(--green); }
+  .score .verdict { font-size: 13px; color: var(--ink); margin-top: 4px; }
+
+  /* Verdict block */
+  .verdict-block {
+    background: var(--card);
+    border: 1px solid var(--ink);
+    padding: 20px 24px;
+    margin: 18px 0 8px;
+  }
+  .verdict-block .label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  /* Findings table */
+  table.findings {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 12px 0 24px;
+  }
+  table.findings thead th {
+    text-align: left;
+    border-bottom: 2px solid var(--ink);
+    padding: 8px 6px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: normal;
+  }
+  table.findings tbody td {
+    padding: 12px 6px;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+  table.findings tbody tr:last-child td { border-bottom: none; }
+  table.findings .sev {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    display: inline-block;
+    border: 1px solid currentColor;
+  }
+  .sev.critical { color: var(--red); }
+  .sev.high { color: var(--orange); }
+  .sev.medium { color: var(--blue); }
+  .sev.low { color: var(--muted); }
+  .sev.ok { color: var(--green); }
+  table.findings .title { font-weight: 600; }
+  table.findings .where {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  table.findings .why { color: var(--ink); font-size: 13px; }
+
+  /* Roadmap grid */
+  .roadmap {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px;
+    gap: 0;
+    margin: 18px 0 0;
+    border-top: 1px solid var(--rule-soft);
+  }
+  .roadmap > div {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rule-soft);
+  }
+  .roadmap .col-mod {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    color: var(--muted);
+  }
+  .roadmap .col-name { font-size: 14px; }
+  .roadmap .col-status {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    text-align: right;
+    letter-spacing: 1px;
+  }
+  .status-done { color: var(--green); }
+  .status-partial { color: var(--orange); }
+  .status-todo { color: var(--muted-soft); }
+  .status-broken { color: var(--red); }
+
+  /* Recommendation list */
+  ol.recs {
+    padding-left: 20px;
+    margin: 12px 0 8px;
+  }
+  ol.recs li {
+    margin: 8px 0;
+    line-height: 1.6;
+  }
+  ol.recs li code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    background: rgba(0,0,0,0.05);
+    padding: 1px 4px;
+  }
+
+  code {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12.5px;
+    background: rgba(0,0,0,0.05);
+    padding: 1px 4px;
+  }
+  .footnote {
+    margin-top: 64px;
+    padding-top: 14px;
+    border-top: 1px solid var(--rule-soft);
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+    text-align: center;
+  }
+  .rule-double {
+    border-top: 1px solid var(--ink);
+    border-bottom: 3px double var(--ink);
+    height: 4px;
+    margin: 8px 0 22px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===================== MASTHEAD ===================== -->
+  <header class="masthead">
+    <div class="sub">Flashfi Engine · Internal Audit</div>
+    <h1>Phase 1 完成度</h1>
+    <div class="tag">APP 端 · 后端 · LLM 端 · 真正未完成项汇总</div>
+    <div class="meta">
+      <span>Vol. I · No. 21</span>
+      <span>2026·05·25</span>
+      <span>Auditor: claude-opus-4-7</span>
+    </div>
+  </header>
+
+  <!-- ===================== SUMMARY ===================== -->
+  <section>
+    <p class="lede">
+      项目当前位于 W0 → W1 过渡, 路线图把 Phase 1 (M1-M4) 列为 8 周目标:
+      安静地完成 "录入信号 → AI 后台推演 → 沉默归档" 的最小闭环.
+      代码层面 M1/M2 后端已实质完成, M3 客户端外壳完成, M2 LLM 推演链通,
+      <strong>M4 端到端的"持久化 + 离线同步"环节是当前最大的真实缺口</strong>.
+    </p>
+
+    <div class="scores">
+      <div class="score">
+        <div class="layer">Backend · Go</div>
+        <div class="pct green">85%</div>
+        <div class="verdict">核心路径通; 缺测试覆盖 + SSE</div>
+      </div>
+      <div class="score">
+        <div class="layer">Mobile · Expo</div>
+        <div class="pct red">60%</div>
+        <div class="verdict">M3 完, M4 离线同步是空壳</div>
+      </div>
+      <div class="score">
+        <div class="layer">LLM · Mastra</div>
+        <div class="pct amber">80%</div>
+        <div class="verdict">推演链通; eval 评分未自动化</div>
+      </div>
+    </div>
+
+    <div class="verdict-block">
+      <div class="label">Overall Verdict</div>
+      <p style="margin:0">
+        Phase 1 的 <em>"代码层"</em> 大致写齐, 但 Phase 1 验收标准是
+        <strong>"自己用一周, 离线录入再联网自动同步"</strong> ——
+        当前 mobile 端的 pending 队列<u>只在内存里</u> (zustand), 进程一杀就丢;
+        网络恢复也不会自动重传 (没装 netinfo).
+        这两点是阻塞 W8 "自己用一周" 验收的硬伤, 必须先补齐才能进 Phase 2.
+      </p>
+    </div>
+  </section>
+
+  <!-- ===================== ROADMAP MAP ===================== -->
+  <h2 class="section"><span class="num">§ I</span>模块路线图对照</h2>
+  <div class="roadmap">
+    <div class="col-mod">M1</div>
+    <div class="col-name">数据底座 · events 表 / REVOKE / NATS JetStream / outbox</div>
+    <div class="col-status status-done">DONE ✓</div>
+
+    <div class="col-mod">M2</div>
+    <div class="col-name">信号管道 · POST/GET signals / Analyst Agent / 推演回写</div>
+    <div class="col-status status-done">DONE ✓</div>
+
+    <div class="col-mod">M3</div>
+    <div class="col-name">客户端外壳 · Expo / 字体 / theme / 路由 / ky / TanStack</div>
+    <div class="col-status status-done">DONE ✓</div>
+
+    <div class="col-mod">M4</div>
+    <div class="col-name">端到端 · 本地 SQLite / Sync Queue / netinfo / W8 自己用一周</div>
+    <div class="col-status status-broken">PARTIAL ✗</div>
+
+    <div class="col-mod">M5-M11</div>
+    <div class="col-name">Phase 2/3 模块 (五轮追问, 四道门, 承诺书, 持仓陪伴, 复盘)</div>
+    <div class="col-status status-todo">NOT STARTED</div>
+  </div>
+
+  <!-- ===================== BACKEND ===================== -->
+  <h2 class="section"><span class="num">§ II</span>后端 (Go · /server)</h2>
+  <p class="lede">代码结构清晰, 事件溯源 + 事务性 outbox 都按 spec 写到位.
+    主要缺口是测试覆盖单薄, 以及 M4 客户端轮询频繁 (10s) 的优化路径 (SSE/long-poll) 还没有.</p>
+
+  <table class="findings">
+    <thead>
+      <tr><th style="width:90px">严重度</th><th style="width:36%">问题</th><th>位置 / 影响</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">测试覆盖仅 1 个文件</td>
+        <td>
+          <div class="where">server/internal/infra/db/event_repository_test.go (唯一测试文件)</div>
+          <div class="why">仅覆盖 events 表 append-only + 幂等. handler/service/outbox/inference 路径全无测试. M2 的内部接口 / Mastra 回调链路只能靠手测.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">没有 SSE / WebSocket 推送状态</td>
+        <td>
+          <div class="where">server/internal/module/signal/handler.go:28-34</div>
+          <div class="why">M4 spec 提到 "WebSocket / SSE 推送 (可选)". 当前客户端只能用 10s 轮询. event_outbox 已经有 signal.inference.done 行, 后端可以接 SSE — 但还没接.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">单用户硬编码 dev bearer token</td>
+        <td>
+          <div class="where">server/internal/config/config.go + server/internal/httpapi/auth/auth.go:1-8</div>
+          <div class="why">Phase 1 by-design 单用户; 但 token 比较用直接字符串相等 (非 constant-time), 没限频, 没轮换. internal token 同样问题. 生产前要换.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">Phase 2/3 事件类型已声明但无 handler</td>
+        <td>
+          <div class="where">server/internal/domain/event.go:21-32</div>
+          <div class="why">refinement.*, gate.*, commitment.*, companion.*, exit.*, retrospect.* 全部预声明, JetStream subjects 也预订阅 (main.go:32-40). 路由/handler/service 一概没写. 是有意识的前瞻占位, 但容易让人误以为已实现.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">Outbox 配置硬编码 (不可 env 调)</td>
+        <td>
+          <div class="where">server/cmd/api/main.go:110 (传 OutboxConfig{} 走默认)</div>
+          <div class="why">poll 500ms · batch 10 · maxAttempts 5 都不能通过环境变量调. 生产调优需改代码重发版.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">List 接口不支持按 status 过滤</td>
+        <td>
+          <div class="where">server/internal/module/signal/handler.go:118-152 + repository.go:178-228</div>
+          <div class="why">GET /v1/signals 只有 limit / before. 不支持 ?status=pending. 当前客户端全量拉, 自行过滤, 数据量上来会浪费带宽.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">Outbox worker 无 metrics</td>
+        <td>
+          <div class="where">server/internal/infra/nats/outbox.go:54-74</div>
+          <div class="why">只 log 错误和 drain 数. 没有 published_total / publish_latency / pending_lag 指标. Phase 2 进流量前要补.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">causation_id / correlation_id / related_asset 未在捕获时填</td>
+        <td>
+          <div class="where">server/internal/module/signal/repository.go:67-94</div>
+          <div class="why">事件溯源字段都在 schema 里, 但 signal.captured 写入时这些字段都是 NULL. inference.done 只填了 causation_id. 不阻塞 Phase 1, 但 Phase 2 的 trace 要补.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev ok">OK ✓</span></td>
+        <td class="title">已正确实现的部分</td>
+        <td>
+          <div class="why">events 表 append-only + REVOKE; POST/GET/GET-by-id; POST /v1/internal/inferences 回写; signals 物化视图 status='done' 更新; outbox pattern 同事务 publish; signal.inference.done 事件入库 + outbox; JetStream stream 自动创建; graceful shutdown.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ===================== MOBILE ===================== -->
+  <h2 class="section"><span class="num">§ III</span>APP 端 (Expo · /mobile)</h2>
+  <p class="lede">M3 客户端外壳完成度很高, 字体/主题/组件/路由都按 spec.
+    <strong>但 M4 spec 要求的"持久化离线队列"几乎没做</strong>:
+    pending 信号只在 zustand 内存, 重启就丢; 网络断开恢复也不会自动重传.
+    这是 Phase 1 验收 (W8 自己用一周) 真正过不了的硬伤.</p>
+
+  <table class="findings">
+    <thead>
+      <tr><th style="width:90px">严重度</th><th style="width:36%">问题</th><th>位置 / 影响</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sev critical">Critical</span></td>
+        <td class="title">没装 expo-sqlite + drizzle-orm, 没有本地持久化</td>
+        <td>
+          <div class="where">mobile/package.json (依赖未装) · mobile/src/features/capture/store.ts:1-13 (代码自承认)</div>
+          <div class="why">M4 spec §4.1-4.2 明确要求. 当前 pending/failed 队列全部在 zustand 内存里, App 杀掉或重启就全没. 离线录入再联网"自动同步"完全做不到.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev critical">Critical</span></td>
+        <td class="title">没装 @react-native-community/netinfo</td>
+        <td>
+          <div class="where">mobile/package.json</div>
+          <div class="why">M4 spec §4.4 要求, 用来监听网络变化触发自动 flush. 没装 → 用户必须手动下拉刷新才能触发同步. 这是 "离线录入再联网自动同步" 验收的核心.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev critical">Critical</span></td>
+        <td class="title">Sync Queue 只在冷启动跑一次</td>
+        <td>
+          <div class="where">mobile/src/features/capture/PendingFlush.tsx:16-30 (代码注释自承认)</div>
+          <div class="why">didFlushRef 保证只跑一次. 没监听 AppState (后台→前台), 没监听 NetInfo (断网→重连), 没监听 push notification (Phase 1 by design 不要). 用户实际体感: 录入失败后只能手动重试.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">没有 max-attempts 上限, attempts 字段只增不停</td>
+        <td>
+          <div class="where">mobile/src/features/capture/store.ts:42-57</div>
+          <div class="why">M4 spec "重试 3 次, 然后标记 failed". 当前 markFailed 只 attempts+1, 没 cap, 没 backoff. 一个永远失败的请求会无限重试.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">capture 提交不"真正"先持久化再同步</td>
+        <td>
+          <div class="where">mobile/app/capture.tsx (依赖内存 store)</div>
+          <div class="why">UI 表现是"立即返回 inbox 看到记录" — 这是对的; 但底层只是 zustand upsert, 没落 SQLite. 用户在网络请求未完成时杀掉 App → 信号永远丢失. 这是离线优先的物理保证.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">Archive Tab 是 Phase 2 占位</td>
+        <td>
+          <div class="where">mobile/app/(tabs)/archive.tsx:10-12 (代码注释明示)</div>
+          <div class="why">Phase 1 by design 占位, 显示"承诺书归档 → Phase 2, 持仓陪伴 → Phase 3". 不算 bug, 但用户视觉上是"两个 tab 都好像能用".</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">Masthead 菜单 / 搜索图标是 no-op</td>
+        <td>
+          <div class="where">mobile/src/shared/components/Masthead.tsx:31 (代码注释明示)</div>
+          <div class="why">≡ / ⌕ 是 Phase 2+ 抽屉/搜索入口. Phase 1 不传 onMenuPress 就 no-op. by design, 但 UI 上能看见图标会让用户尝试点.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">主题没暗色模式</td>
+        <td>
+          <div class="where">mobile/src/core/theme/index.ts:1-6 (代码注释明示)</div>
+          <div class="why">Phase 1 only supports light; Phase 2 再加. 不算 bug, 但 iOS 用户开系统暗色时, App 还是亮色.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">推演状态轮询频率硬编码 10s</td>
+        <td>
+          <div class="where">mobile/src/features/capture/hooks.ts:35 (refetchInterval: 10_000)</div>
+          <div class="why">M4 spec 注 "10 秒一次, 别太频繁". 但没有自适应 — 即使没有 pending 信号也每 10s 拉一次, 浪费电. 应该: 有 pending 才轮询, 全 done 后停.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">capture 提交无 inline 反馈</td>
+        <td>
+          <div class="where">mobile/app/capture.tsx (modal 直接 router.back())</div>
+          <div class="why">符合 "沉默优于发声" — 不弹 toast. 但当 POST 同步失败时, 用户也只是回到 inbox 看到"未同步"小标记. 错误透明度可以再考虑.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev ok">OK ✓</span></td>
+        <td class="title">已正确实现的部分</td>
+        <td>
+          <div class="why">字体 11 个文件全 bundle (Playfair · Source Serif 4 · Noto Serif SC · JetBrains Mono); 5 个 UI 组件 (Masthead/PaperCard/TapEffect/DoubleRule/SectionHeader) + Text 4 字号; theme 5 文件; ky 客户端 + Bearer 注入 + retry; TanStack QueryClient; B1 capture modal (无 toast/无 loading/无成功震动); A1 inbox FlatList + 下拉刷新 + 10s 轮询 + 本地/远端合并; SilenceStamp 今日沉默; signal/[id] 详情 + 推演结果展示; 包黑名单 (无 paper / elements / lottie / notifications) 干净.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ===================== LLM ===================== -->
+  <h2 class="section"><span class="num">§ IV</span>LLM 端 (Mastra · /mastra)</h2>
+  <p class="lede">推演链路完整可跑: NATS 消费 → Analyst Agent (Claude Sonnet 4.5) → schema 校验 → HTTP 回写后端.
+    主要缺口在 <strong>"质量验收"</strong> — 10 条 fixture 都在, 但跑完只统计"是否能 parse", 没有对照 rubric 自动打分.</p>
+
+  <table class="findings">
+    <thead>
+      <tr><th style="width:90px">严重度</th><th style="width:36%">问题</th><th>位置 / 影响</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">manual eval 没有自动评分, "passed++" 只统计 parse 成功</td>
+        <td>
+          <div class="where">mastra/tests/manual-eval/run.ts:41-67</div>
+          <div class="why">M2 spec 要求 "10 条 ≥ 7 条产出符合预期". 当前 runner 只打印 JSON, 让人肉评分. 没有持久化打分文件, 没有 ≥7/10 判定, 没有 rubric 强制. Phase 1 的验收门很容易"过了又不算过".</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev high">High</span></td>
+        <td class="title">Analyst prompt 缺 few-shot 示例</td>
+        <td>
+          <div class="where">mastra/src/agents/analyst.ts:18-42</div>
+          <div class="why">prompt 解释了一/二/三阶概念和约束, 但没有任何 "输入 X → 期望输出 Y" 示例. Claude 偶尔会把 "供应商涨价" 推成 "供应商股价涨" — 这正是 prompt 显式禁止的, 但没示范.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">HTTP 工具无重试 / circuit breaker</td>
+        <td>
+          <div class="where">mastra/src/tools/flashfi-api.ts (postInference 单次 fetch)</div>
+          <div class="why">Go 临时 5xx → 整个 workflow 失败 → NATS nak 重投 → <strong>Analyst 重跑 (再付一次 token 钱)</strong>. M2 spec Task 2.5 隐含 "persist 独立重试" 的设计意图. 当前实现把 LLM 调用也一起重跑了.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">env 校验在 module load, NATS 连接错误不 fast-fail</td>
+        <td>
+          <div class="where">mastra/src/config/env.ts:8-14 + mastra/src/index.ts:8-9</div>
+          <div class="why">ANTHROPIC_API_KEY 缺会立刻 throw, 但 NATS 连不上会进 reconnect 循环静默 log. 启动时应该明确 health-check, 否则部署时不知道 "其实 NATS 一直连不上".</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">DLQ 只是 log + term, 没有真死信主题</td>
+        <td>
+          <div class="where">mastra/src/consumers/nats.ts:113-125</div>
+          <div class="why">3 次失败后 msg.term() 就丢了, 只在 stderr 留一行. Phase 1 spec 明确 "DLQ = 打日志报警" — 符合 spec, 但 Phase 2+ 必须有真 DLQ topic 或 dead_letter 表用于重放.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev medium">Medium</span></td>
+        <td class="title">没有推演质量监控</td>
+        <td>
+          <div class="where">整个 mastra/src/</div>
+          <div class="why">线上推演没有: token 使用量, 推演置信度, 采样回看, 模型漂移检测. dur_ms 只是延迟. Phase 2 要加, Phase 1 没强制要求.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">@ai-sdk/openai 装了但没用</td>
+        <td>
+          <div class="where">mastra/package.json:20</div>
+          <div class="why">Phase 1 显式选 Claude, OpenAI SDK 是死代码. 清理即可.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">日志靠 console.log + JSON.stringify, 无 logger</td>
+        <td>
+          <div class="where">consumers/nats.ts, index.ts, 等</div>
+          <div class="why">够用, 但 Phase 2 上量后要换 pino / winston, 否则改 log 格式要改每个 site.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev low">Low</span></td>
+        <td class="title">无单元 / 集成测试, 只有 manual eval</td>
+        <td>
+          <div class="where">mastra/tests/ 只有 manual-eval/ 目录</div>
+          <div class="why">workflow / consumer / tool 全无自动测试. 改 prompt 后没回归保护.</div>
+        </td>
+      </tr>
+      <tr>
+        <td><span class="sev ok">OK ✓</span></td>
+        <td class="title">已正确实现的部分</td>
+        <td>
+          <div class="why">Analyst Agent (Claude Sonnet 4.5) + Flashfi 专属 prompt; InferenceSchema 在 generate() 时通过 <code>output: zodSchema</code> 强制约束 + 一次 retry; NATS JetStream consumer durable + manualAck + ackExplicit + deliverNew + maxDeliver(3) + ackWait 60s; signal-inference workflow analyze → persist; flashfi-api 内部 token header; 10 条 fixture (HBM / Mac Studio / DeepSeek / 电力 / 出口 / 咖啡 / GLP-1 / 航运 / 噪音 / 日本人才) 覆盖一/二/三阶 + 弱信号; env 强校验 (ANTHROPIC_API_KEY · NATS_URL · FLASHFI_API_URL · INTERNAL_TOKEN); 没有任何 Phase 2 agent 误埋.</div>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ===================== ACTION ===================== -->
+  <h2 class="section"><span class="num">§ V</span>关闭 Phase 1 的最小工作清单</h2>
+  <div class="rule-double"></div>
+
+  <p style="margin-top:8px"><strong>按"必须做才能 W8 自己用"排序. Critical 不补完, M4 验收必败.</strong></p>
+
+  <ol class="recs">
+    <li><strong>[Mobile · Critical]</strong> 装 <code>expo-sqlite</code> + <code>drizzle-orm</code>, 把 <code>usePendingSignals</code> 的 set/get 改成 SQL. schema 按 M4 spec §4.2 (含 <code>syncStatus</code> / <code>serverEventId</code> / <code>attempts</code>). <em>≈ 1.5 天</em></li>
+    <li><strong>[Mobile · Critical]</strong> 装 <code>@react-native-community/netinfo</code>, 在 <code>PendingFlush</code> 里订阅 isConnected, 重连时触发 retry. 加 <code>AppState</code> 监听 background→active 也触发. <em>≈ 1 天</em></li>
+    <li><strong>[Mobile · High]</strong> Sync Queue 加 mutex (防止并发 flush) + max 3 attempts (然后停, UI 显示 "未同步" 红字) + exponential backoff. <em>≈ 1 天</em></li>
+    <li><strong>[Mobile · Medium]</strong> Inbox 轮询改自适应: 有 pending 才 10s 轮, 全 done 后停. 配 <code>refetchOnAppFocus</code>. <em>≈ 0.5 天</em></li>
+    <li><strong>[LLM · High]</strong> manual-eval 输出 JSON 文件 + 半结构化打分 (每条 5 字段 pass/fail), 跑完打印 "<code>7/10 passed</code>" 真实判定. <em>≈ 0.5 天</em></li>
+    <li><strong>[LLM · High]</strong> Analyst prompt 加 3-5 个 few-shot 示例 (good 一阶 → 二阶推链, bad 瞎编示例). <em>≈ 0.5 天</em></li>
+    <li><strong>[Backend · High]</strong> 给 signal handler + service + outbox 写至少 6 个测试 (capture happy, capture dup, list pagination, get not found, RecordInference happy, internal auth 401). <em>≈ 1 天</em></li>
+    <li><strong>[Backend · Medium]</strong> Outbox 配置改 env 驱动 (<code>OUTBOX_POLL_MS</code> / <code>OUTBOX_BATCH</code> / <code>OUTBOX_MAX_ATTEMPTS</code>). <em>≈ 0.5 天</em></li>
+    <li><strong>[LLM · Medium]</strong> flashfi-api postInference 加 3 次重试 + 指数退避 (单独重试 HTTP, 不重跑 Analyst). <em>≈ 0.5 天</em></li>
+    <li><strong>[Mastra · Low]</strong> 删 <code>@ai-sdk/openai</code> 依赖. <em>≈ 5 分钟</em></li>
+  </ol>
+
+  <p style="margin-top:18px">
+    <strong>总估时</strong> ≈ <strong>6.5 ~ 7 天</strong> 全职.
+    完成后即满足 M4 验收 (§验收标准 "用户行为" 全过), 可进入 W8 "自己用一周",
+    通过后才进 Phase 2 (M5 五轮追问).
+  </p>
+
+  <!-- ===================== STATIC ===================== -->
+  <h2 class="section"><span class="num">§ VI</span>不属于本次审计的范围</h2>
+  <p>以下项 <strong>路线图明确不在 6 个月内做</strong>, 即使代码里"缺", 也不算"未完成":</p>
+  <ul style="margin: 8px 0 16px">
+    <li>Android 编译 / 多用户登录 / Push 推送 / 社交分享 / Web 版</li>
+    <li>Apple Watch / Widget / AI 角色个性化 / 付费订阅</li>
+    <li>onboarding 引导流程 / 使用统计 / Streak / unread count</li>
+  </ul>
+  <p>以下 Phase 2/3 模块 (M5-M11) 仅有事件类型占位, <strong>无任何业务代码</strong>, 这是预期状态:</p>
+  <ul style="margin: 8px 0 16px">
+    <li>M5 五轮追问 / M6 四道门 / M7 承诺书 PDF / M8 签字 + 持仓</li>
+    <li>M9 持仓陪伴 / M10 退出巡检 / M11 复盘训练</li>
+  </ul>
+
+  <div class="footnote">
+    本审计基于 /Users/clh-openclaw/Project/0002-flashfi 仓库 main 分支当前状态生成 · 评分以 Phase 1 路线图 (docs/GOAL/phase-1-quiet/) 为基准 · 不预判 Phase 2/3 完成度
+  </div>
+
+</div>
+</body>
+</html>

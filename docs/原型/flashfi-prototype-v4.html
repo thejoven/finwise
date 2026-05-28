@@ -1,0 +1,1784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Flashfi Engine · 原型 v4 · 必做 3 屏</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700;1,800&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=Noto+Serif+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #ffffff;
+    --paper-2: #fafaf7;
+    --paper-3: #f3f1ec;
+    --paper-4: #ebe9e2;
+    --ink: #0a0a0a;
+    --ink-2: #2a2a2a;
+    --ink-3: #4a4a4a;
+    --muted: #6b6b6b;
+    --muted-2: #999;
+    --rule: #d6d4ce;
+    --rule-soft: #e8e6e0;
+    --red: #a8201a;
+    --red-soft: #fce8e6;
+    --green: #2e5e3a;
+    --highlight: #fff4a8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    height: 100%;
+    background: #1a1a1a;
+    font-family: 'Source Serif 4', 'Noto Serif SC', Georgia, serif;
+    color: var(--ink);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .stage {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    position: relative;
+  }
+  .stage::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--paper);
+    border-radius: 48px;
+    box-shadow:
+      0 0 0 12px #0a0a0a,
+      0 0 0 13px #2a2a2a,
+      0 40px 80px rgba(0,0,0,0.7),
+      0 20px 40px rgba(0,0,0,0.5);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+  .notch {
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 124px; height: 32px;
+    background: #0a0a0a;
+    border-bottom-left-radius: 18px;
+    border-bottom-right-radius: 18px;
+    z-index: 100;
+  }
+  .status-bar {
+    height: 54px;
+    padding: 18px 30px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    font-family: 'Source Serif 4', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    flex-shrink: 0;
+    z-index: 50;
+    position: relative;
+  }
+  .status-bar .right { display: flex; gap: 6px; align-items: center; }
+
+  .screens {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  .screen {
+    position: absolute;
+    inset: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.45s ease;
+    background: var(--paper);
+    display: flex;
+    flex-direction: column;
+  }
+  .screen.active { opacity: 1; pointer-events: auto; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  .screen-body {
+    flex: 1;
+    overflow-y: auto;
+  }
+  .screen-body::-webkit-scrollbar { display: none; }
+
+  /* ==================== BOTTOM TAB BAR (NEW · across A1 only) ==================== */
+  .tabbar {
+    flex-shrink: 0;
+    border-top: 1px solid var(--ink);
+    background: var(--paper);
+    display: flex;
+    height: 64px;
+    align-items: stretch;
+  }
+  .tabbar .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    border-right: 1px solid var(--rule);
+    transition: background 0.15s;
+    position: relative;
+  }
+  .tabbar .tab:last-child { border-right: none; }
+  .tabbar .tab:active { background: var(--paper-3); }
+  .tabbar .tab .icon {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    line-height: 1;
+    color: var(--ink);
+  }
+  .tabbar .tab .label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .tabbar .tab.active .label {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .tabbar .tab.active::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 16%; right: 16%;
+    height: 2px;
+    background: var(--red);
+  }
+  .tabbar .tab.center .icon {
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 700;
+  }
+
+  /* ==================== A1 · SILENT INBOX ==================== */
+  /* Masthead */
+  .a1-masthead {
+    flex-shrink: 0;
+    border-bottom: 4px double var(--ink);
+    padding: 8px 18px 12px;
+    position: relative;
+  }
+  .a1-masthead .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .a1-masthead .hamburger,
+  .a1-masthead .search {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    color: var(--ink);
+    cursor: pointer;
+    line-height: 1;
+    width: 24px;
+    text-align: center;
+  }
+  .a1-masthead .top-strip {
+    flex: 1;
+    text-align: center;
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .a1-masthead .top-strip .vol { color: var(--ink); font-weight: 700; }
+  .a1-masthead .nameplate {
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-weight: 900;
+    font-style: italic;
+    font-size: 38px;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    margin-bottom: 2px;
+  }
+  .a1-masthead .subline {
+    text-align: center;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--ink-2);
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .a1-masthead .tagline {
+    text-align: center;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* The "today: silent" stamp */
+  .silence-stamp {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper-2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .silence-stamp .left {
+    font-family: 'Source Serif 4', serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .silence-stamp .left strong {
+    color: var(--ink);
+    font-weight: 700;
+  }
+  .silence-stamp .right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--green);
+    font-weight: 500;
+  }
+  .silence-stamp .right .check {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--green);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    line-height: 1;
+  }
+
+  /* Inbox body */
+  .inbox-section {
+    padding: 18px 18px 0;
+  }
+  .inbox-section-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--ink);
+    font-weight: 700;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .inbox-section-label::before {
+    content: '◆';
+    font-size: 9px;
+    color: var(--red);
+  }
+  .inbox-section-label .meta {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 400;
+    margin-left: auto;
+  }
+
+  /* Holding card · the persistent companion */
+  .holding-card {
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    margin-bottom: 22px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .holding-card:active { background: var(--paper-2); }
+  .holding-card .top {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .holding-card .top-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .holding-card .name {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-style: italic;
+    font-size: 22px;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 4px;
+  }
+  .holding-card .signed-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .holding-card .conditions {
+    padding: 8px 14px 10px;
+  }
+  .holding-card .conditions-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 0;
+    font-size: 11.5px;
+  }
+  .check-row .box {
+    width: 11px;
+    height: 11px;
+    border: 1.5px solid var(--ink);
+    flex-shrink: 0;
+  }
+  .check-row .text {
+    flex: 1;
+    font-family: 'Source Serif 4', serif;
+    color: var(--ink-2);
+    line-height: 1.35;
+  }
+  .check-row .val {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.02em;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .holding-card .summary {
+    padding: 8px 14px;
+    background: var(--paper-3);
+    border-top: 1px solid var(--rule);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'Source Serif 4', serif;
+    font-size: 11px;
+    color: var(--ink);
+  }
+  .holding-card .summary strong {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .holding-card .summary .arrow {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  /* Weekly records list */
+  .records-list {
+    margin-bottom: 22px;
+  }
+  .record-row {
+    padding: 11px 4px;
+    border-bottom: 1px dotted var(--rule);
+    display: flex;
+    gap: 12px;
+    cursor: pointer;
+    align-items: flex-start;
+  }
+  .record-row:last-child { border-bottom: none; }
+  .record-row:active { background: var(--paper-3); }
+  .record-row .date {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    width: 48px;
+    flex-shrink: 0;
+    letter-spacing: 0.04em;
+    padding-top: 2px;
+  }
+  .record-row .text {
+    flex: 1;
+    font-family: 'Source Serif 4', serif;
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--ink);
+  }
+  .record-row .ai-marker {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 3px;
+    font-weight: 600;
+  }
+  .record-row .ai-marker::before {
+    content: '◆ ';
+    color: var(--red);
+  }
+  .records-expand {
+    margin-top: 8px;
+    padding: 8px 4px;
+    text-align: center;
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--muted);
+    border-top: 1px solid var(--rule);
+    cursor: pointer;
+  }
+
+  /* AI background work */
+  .ai-passive {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 14px 16px;
+    margin-bottom: 22px;
+    cursor: pointer;
+  }
+  .ai-passive:active { opacity: 0.92; }
+  .ai-passive .label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: rgba(255,255,255,0.5);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .ai-passive .label::before {
+    content: '◆ ';
+    color: #c19a3b;
+  }
+  .ai-passive .headline {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.35;
+    margin-bottom: 4px;
+  }
+  .ai-passive .meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.05em;
+  }
+  .ai-passive .meta .arrow {
+    float: right;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: rgba(255,255,255,0.7);
+  }
+
+  /* Footer quote */
+  .footer-quote {
+    margin: 28px 24px 24px;
+    padding: 18px 0;
+    border-top: 3px double var(--ink);
+    border-bottom: 3px double var(--ink);
+    text-align: center;
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--muted);
+  }
+
+  /* ==================== E4 · ANXIETY COMPANION ==================== */
+  .e4-screen {
+    background: var(--paper);
+  }
+  .e4-header {
+    padding: 12px 18px;
+    border-bottom: 3px double var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .e4-header .back {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--ink);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .e4-header .title-block {
+    text-align: center;
+    flex: 1;
+  }
+  .e4-header .title-block .kicker {
+    font-family: 'Source Serif 4', serif;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .e4-header .title-block .name {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .e4-header .placeholder { width: 20px; }
+
+  .e4-headline-wrap {
+    padding: 24px 22px 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .e4-kicker {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .e4-headline {
+    font-family: 'Playfair Display', serif;
+    font-weight: 800;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 8px;
+  }
+  .e4-headline em { font-style: italic; }
+  .e4-deck {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  /* Detection block · WSJ "By the Numbers" treatment */
+  .detection-block {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--paper-2);
+  }
+  .detection-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .detection-rows {
+    border-top: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+  }
+  .det-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 9px 4px;
+    border-bottom: 1px dotted var(--rule);
+    font-family: 'Source Serif 4', serif;
+    font-size: 12.5px;
+  }
+  .det-row:last-child { border-bottom: none; }
+  .det-row .k {
+    color: var(--muted);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .det-row .v {
+    font-family: 'Playfair Display', serif;
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .det-row .v.bold {
+    font-size: 14px;
+    color: var(--red);
+    font-weight: 800;
+    font-style: italic;
+  }
+
+  /* Exit conditions block · the heart of E4 */
+  .conditions-block {
+    padding: 22px 22px 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .conditions-block .section-head {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--ink);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .conditions-block .section-sub {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 17px;
+    color: var(--ink);
+    margin-bottom: 18px;
+    line-height: 1.25;
+  }
+  .conditions-block .section-sub em { font-style: italic; }
+
+  .condition-row {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .condition-row:last-child { border-bottom: none; }
+  .condition-row .roman {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 22px;
+    width: 30px;
+    flex-shrink: 0;
+    color: var(--ink);
+    line-height: 1;
+    padding-top: 2px;
+  }
+  .condition-row .text-block {
+    flex: 1;
+  }
+  .condition-row .condition-text {
+    font-family: 'Source Serif 4', serif;
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .condition-row .actual {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+  .condition-row .actual .v {
+    color: var(--green);
+    font-weight: 600;
+  }
+  .condition-row .actual .v.warning { color: var(--red); }
+  .condition-row .checkbox {
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid var(--ink);
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  /* The voice of the AI · the soothing verdict */
+  .editorial-verdict {
+    margin: 0;
+    padding: 24px 22px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .editorial-verdict .label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #c19a3b;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .editorial-verdict .quote {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.4;
+    color: var(--paper);
+    margin-bottom: 14px;
+    font-weight: 400;
+  }
+  .editorial-verdict .quote em {
+    font-style: normal;
+    border-bottom: 1px solid rgba(255,255,255,0.4);
+    padding-bottom: 1px;
+  }
+  .editorial-verdict .byline {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: rgba(255,255,255,0.5);
+    font-weight: 700;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+  }
+
+  /* CTA */
+  .e4-cta {
+    padding: 20px 22px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .btn {
+    padding: 14px 16px;
+    border: none;
+    cursor: pointer;
+    font-family: 'Source Serif 4', serif;
+    font-size: 13px;
+    border-radius: 0;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+    width: 100%;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .btn-light {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid var(--ink);
+  }
+  .btn-link {
+    background: transparent;
+    color: var(--muted);
+    text-transform: none;
+    font-style: italic;
+    font-size: 12px;
+    padding: 8px;
+    letter-spacing: 0.02em;
+  }
+
+  /* ==================== F2 · TIMELINE REPLAY ==================== */
+  .f2-screen {
+    background: var(--paper);
+  }
+  .f2-header {
+    padding: 12px 18px;
+    border-bottom: 3px double var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .f2-header .back {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--ink);
+    cursor: pointer;
+    line-height: 1;
+  }
+  .f2-header .title-block { text-align: center; flex: 1; }
+  .f2-header .title-block .kicker {
+    font-family: 'Source Serif 4', serif;
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .f2-header .title-block .name {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 14px;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .f2-intro {
+    padding: 22px 22px 20px;
+    border-bottom: 4px double var(--ink);
+    text-align: center;
+  }
+  .f2-eyebrow {
+    font-family: 'Source Serif 4', serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .f2-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 800;
+    font-style: italic;
+    font-size: 30px;
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin-bottom: 10px;
+  }
+  .f2-deck {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .f2-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    border-bottom: 4px double var(--ink);
+  }
+  .f2-stat {
+    padding: 14px 8px 16px;
+    text-align: center;
+    border-right: 1px solid var(--rule);
+  }
+  .f2-stat:last-child { border-right: none; }
+  .f2-stat .v {
+    font-family: 'Playfair Display', serif;
+    font-weight: 800;
+    font-style: italic;
+    font-size: 24px;
+    line-height: 1;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .f2-stat .v.red { color: var(--red); }
+  .f2-stat .v.green { color: var(--green); }
+  .f2-stat .k {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.13em;
+    color: var(--muted);
+    font-weight: 600;
+  }
+
+  /* Timeline · the soul of the product */
+  .timeline-wrap {
+    padding: 22px 0 12px;
+  }
+  .timeline-section-label {
+    padding: 0 22px 14px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: var(--red);
+    font-weight: 700;
+  }
+
+  .timeline {
+    position: relative;
+    padding: 0 22px;
+  }
+  /* the vertical line */
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 56px;
+    top: 4px;
+    bottom: 0;
+    width: 1px;
+    background: var(--ink);
+  }
+
+  .tl-node {
+    position: relative;
+    padding: 12px 0 16px 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  /* the marker */
+  .tl-marker {
+    position: absolute;
+    left: 47px;
+    top: 14px;
+    width: 19px;
+    height: 19px;
+    background: var(--paper);
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Playfair Display', serif;
+    font-size: 11px;
+    color: var(--ink);
+    line-height: 1;
+    font-weight: 700;
+  }
+  /* date label on left of line */
+  .tl-date {
+    position: absolute;
+    left: 0;
+    top: 13px;
+    width: 42px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    text-align: right;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .tl-date .day {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 1px;
+    letter-spacing: -0.02em;
+  }
+
+  .tl-content {
+    padding-top: 2px;
+  }
+  .tl-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .tl-text {
+    font-family: 'Playfair Display', serif;
+    font-weight: 600;
+    font-size: 14px;
+    line-height: 1.3;
+    color: var(--ink);
+    margin-bottom: 3px;
+    letter-spacing: -0.005em;
+  }
+  .tl-meta {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+
+  /* Variations · marker types */
+  .tl-node.signal .tl-marker { background: var(--paper); }
+  .tl-node.signal .tl-label { color: var(--ink-3); }
+
+  .tl-node.gate .tl-marker {
+    background: var(--ink);
+    color: var(--paper);
+  }
+  .tl-node.gate .tl-label { color: var(--ink); }
+
+  .tl-node.sign .tl-marker {
+    background: var(--red);
+    color: var(--paper);
+    border-color: var(--red);
+    width: 22px;
+    height: 22px;
+    left: 45px;
+    font-size: 12px;
+  }
+  .tl-node.sign .tl-label { color: var(--red); }
+  .tl-node.sign .tl-text {
+    font-size: 16px;
+    font-style: italic;
+  }
+
+  .tl-node.regret .tl-marker {
+    background: var(--paper);
+    border-color: var(--red);
+    border-width: 2px;
+    color: var(--red);
+  }
+  .tl-node.regret .tl-label { color: var(--red); }
+  .tl-node.regret .tl-text {
+    color: var(--ink);
+  }
+  .tl-node.regret .regret-warning {
+    margin-top: 6px;
+    padding: 8px 10px;
+    background: var(--paper-2);
+    border-left: 3px solid var(--red);
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink-2);
+  }
+  .tl-node.regret .regret-warning strong {
+    color: var(--red);
+    font-style: normal;
+    font-weight: 700;
+    background: var(--highlight);
+    padding: 1px 4px;
+  }
+
+  .tl-node.confirm .tl-marker {
+    background: var(--green);
+    color: var(--paper);
+    border-color: var(--green);
+  }
+  .tl-node.confirm .tl-label { color: var(--green); }
+
+  .tl-node.end .tl-marker {
+    background: var(--ink);
+    color: var(--paper);
+    border: 2px solid var(--ink);
+    width: 24px;
+    height: 24px;
+    left: 44px;
+    font-size: 13px;
+  }
+  .tl-node.end .tl-label { color: var(--ink); }
+  .tl-node.end .tl-text {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .tl-node.end .tl-text em {
+    color: var(--green);
+    font-style: italic;
+  }
+
+  /* Closing block · the AI's verdict on the journey */
+  .f2-closing {
+    margin-top: 24px;
+    padding: 0;
+    border-top: 4px double var(--ink);
+    background: var(--paper);
+  }
+  .f2-closing-inner {
+    padding: 22px 22px 18px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .f2-closing-label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--red);
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .f2-closing-headline {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .f2-closing-headline em {
+    background: var(--highlight);
+    padding: 2px 6px;
+    font-style: normal;
+    font-weight: 600;
+  }
+  .f2-closing-sub {
+    font-family: 'Source Serif 4', serif;
+    font-style: italic;
+    font-size: 11.5px;
+    color: var(--muted);
+    text-align: center;
+    line-height: 1.55;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px dotted var(--rule);
+  }
+
+  .f2-final-cta {
+    padding: 16px 22px 22px;
+    flex-shrink: 0;
+  }
+
+  /* ==================== FLOATING NAV ==================== */
+  .nav-pill {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--paper);
+    color: var(--ink);
+    padding: 8px 8px 8px 14px;
+    border: 1px solid var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 200;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .nav-pill .label {
+    font-family: 'Source Serif 4', serif;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-right: 4px;
+    font-weight: 700;
+  }
+  .nav-pill .dot {
+    padding: 4px 9px;
+    border: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Source Serif 4', serif;
+    font-size: 9.5px;
+    color: var(--muted);
+    cursor: pointer;
+    background: transparent;
+    transition: all 0.2s ease;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .nav-pill .dot.active {
+    background: var(--ink);
+    color: var(--paper);
+    border-color: var(--ink);
+  }
+  .nav-pill .dot:hover:not(.active) {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .credit {
+    position: fixed;
+    top: 24px;
+    left: 32px;
+    color: rgba(255,255,255,0.45);
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-size: 13px;
+    z-index: 200;
+  }
+  .credit .small {
+    font-family: 'Source Serif 4', serif;
+    font-style: normal;
+    font-size: 8.5px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 4px;
+    font-weight: 700;
+  }
+  .credit .version {
+    font-family: 'JetBrains Mono', monospace;
+    font-style: normal;
+    font-size: 9px;
+    opacity: 0.5;
+    margin-top: 2px;
+  }
+
+  @media (max-width: 480px) {
+    .phone {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .stage { background: var(--paper); }
+    .stage::before { display: none; }
+    .credit { display: none; }
+    .nav-pill { bottom: 14px; padding: 6px 6px 6px 10px; }
+    .nav-pill .label { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="credit">
+  <div class="small">PROTOTYPE</div>
+  Flashfi Engine
+  <div class="version">v4 · 必做 3 屏</div>
+</div>
+
+<div class="stage">
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="status-bar">
+      <span>9:47</span>
+      <span class="right">
+        <span style="font-size: 12px;">●●●●</span>
+        <span style="font-size: 12px;">100</span>
+      </span>
+    </div>
+
+    <div class="screens">
+
+      <!-- ============================================ -->
+      <!-- SCREEN 1 · A1 · SILENT INBOX (the base state) -->
+      <!-- ============================================ -->
+      <section class="screen active" id="screen-a1">
+
+        <!-- MASTHEAD -->
+        <div class="a1-masthead">
+          <div class="top-row">
+            <span class="hamburger" onclick="alert('抽屉菜单(暂未实现): 能力地图 · 静音 · 判据 · 设置')">≡</span>
+            <span class="top-strip"><span class="vol">VOL. I · NO. 47</span> · 5月15日 · 周五</span>
+            <span class="search">⌕</span>
+          </div>
+          <div class="nameplate">Flashfi</div>
+          <div class="subline">Conviction Quarterly</div>
+          <div class="tagline">A Quiet Journal of High-Confidence Calls</div>
+        </div>
+
+        <!-- TODAY: SILENT stamp -->
+        <div class="silence-stamp">
+          <div class="left">本年第 <strong>4</strong> 期</div>
+          <div class="right">
+            <span class="check">✓</span>
+            <span>今日: 沉默</span>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="screen-body">
+
+          <!-- Persistent holding card (E3) -->
+          <div class="inbox-section">
+            <div class="inbox-section-label">
+              <span>持仓中</span>
+              <span class="meta">第 89 天</span>
+            </div>
+
+            <div class="holding-card" onclick="goTo('e4')">
+              <div class="top">
+                <div class="top-label">2026·01·22 签字</div>
+                <div class="name">SK 海力士</div>
+                <div class="signed-meta">5% 仓位 · 6 个月承诺 · 剩 4 月 21 天</div>
+              </div>
+              <div class="conditions">
+                <div class="conditions-label">退出条件</div>
+                <div class="check-row">
+                  <span class="box"></span>
+                  <span class="text">HBM 现货价连续 4 周回落 &gt; 10%</span>
+                  <span class="val">0/4 周</span>
+                </div>
+                <div class="check-row">
+                  <span class="box"></span>
+                  <span class="text">下季度毛利率同比下滑</span>
+                  <span class="val">47 天</span>
+                </div>
+                <div class="check-row">
+                  <span class="box"></span>
+                  <span class="text">持仓满 12 个月</span>
+                  <span class="val">4 月 21 天</span>
+                </div>
+              </div>
+              <div class="summary">
+                <span>状态: <strong>0/3 触发</strong></span>
+                <span class="arrow">→</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Weekly records -->
+          <div class="inbox-section">
+            <div class="inbox-section-label">
+              <span>本周记录</span>
+              <span class="meta">5 条 · 全部已归档</span>
+            </div>
+
+            <div class="records-list">
+              <div class="record-row">
+                <div class="date">05·13</div>
+                <div>
+                  <div class="text">看到一篇关于 ARM 在车规芯片授权费翻倍的消息, 国产 RISC-V 阵营有动作。</div>
+                  <div class="ai-marker">AI 已推演 · 进入观察池</div>
+                </div>
+              </div>
+              <div class="record-row">
+                <div class="date">05·11</div>
+                <div>
+                  <div class="text">客户问 H200 还是 H100, 这个问题最近问的人变多了。</div>
+                  <div class="ai-marker">AI 已推演 · 关联到现有持仓</div>
+                </div>
+              </div>
+              <div class="record-row">
+                <div class="date">05·09</div>
+                <div>
+                  <div class="text">同事说他们部门下了一批 H100 二手机, 价格反弹。</div>
+                  <div class="ai-marker">AI 已推演</div>
+                </div>
+              </div>
+              <div class="record-row">
+                <div class="date">05·07</div>
+                <div>
+                  <div class="text">液冷柜的报价单, 一年涨了 40%。</div>
+                  <div class="ai-marker">AI 已推演 · 进入观察池</div>
+                </div>
+              </div>
+              <div class="record-row">
+                <div class="date">05·06</div>
+                <div>
+                  <div class="text">DeepSeek 部署需求又来了, 但这次问的是私有云配置。</div>
+                  <div class="ai-marker">AI 已推演</div>
+                </div>
+              </div>
+              <div class="records-expand">查看全部 47 条 →</div>
+            </div>
+          </div>
+
+          <!-- AI passive section -->
+          <div class="inbox-section">
+            <div class="inbox-section-label">
+              <span>AI 后台</span>
+              <span class="meta">本周 12 项已完成</span>
+            </div>
+
+            <div class="ai-passive" onclick="alert('AI 推演报告(暂未实现详细页)')">
+              <div class="label">关于 05·13 ARM 授权费那条</div>
+              <div class="headline">"信号有意思, 但不够厚——<br>还差 2 条独立信号过门 1。"</div>
+              <div class="meta">
+                门 1 进度 · 1/3
+                <span class="arrow">→</span>
+              </div>
+            </div>
+
+            <div class="ai-passive" onclick="alert('AI 推演报告(暂未实现详细页)')" style="background: var(--ink-2);">
+              <div class="label">关于 05·07 液冷涨价那条</div>
+              <div class="headline">"我跑了一阶 / 二阶受益方推演,<br>关联到你 1 月份的 HBM 那条线。"</div>
+              <div class="meta">
+                跑了 4 项 · 主动来看
+                <span class="arrow">→</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer brand voice -->
+          <div class="footer-quote">
+            这份刊物每天不发新闻。<br>
+            它在等到真正值得告诉你的事。
+          </div>
+        </div>
+
+        <!-- BOTTOM TAB BAR -->
+        <div class="tabbar">
+          <div class="tab active">
+            <div class="icon">⌂</div>
+            <div class="label">收件箱</div>
+          </div>
+          <div class="tab center" onclick="alert('快速录入页 B1(暂未实现) — 30 秒一条')">
+            <div class="icon">+</div>
+            <div class="label">记录</div>
+          </div>
+          <div class="tab" onclick="alert('档案 tab(暂未实现) — 所有历史可回看')">
+            <div class="icon">⊟</div>
+            <div class="label">档案</div>
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- SCREEN 2 · E4 · ANXIETY COMPANION CARD       -->
+      <!-- ============================================ -->
+      <section class="screen e4-screen" id="screen-e4">
+
+        <div class="e4-header">
+          <div class="back" onclick="goTo('a1')">←</div>
+          <div class="title-block">
+            <div class="kicker">SECTION D · 持仓陪伴</div>
+            <div class="name">SK 海力士 · 第 137 天</div>
+          </div>
+          <div class="placeholder"></div>
+        </div>
+
+        <div class="screen-body">
+
+          <!-- Headline -->
+          <div class="e4-headline-wrap">
+            <div class="e4-kicker">◆ 焦虑日 · 系统识别</div>
+            <h1 class="e4-headline">
+              你今天打开这个 APP<br>
+              <em>第 3 次。</em>
+            </h1>
+            <p class="e4-deck">
+              我猜你在想割肉。我不劝你做或不做。但在你做决定之前, 我请你和你 1 月 22 日签字的那个自己, 再说几句话。
+            </p>
+          </div>
+
+          <!-- Detection block -->
+          <div class="detection-block">
+            <div class="detection-label">◆ 今日检测 · 数据视角</div>
+            <div class="detection-rows">
+              <div class="det-row">
+                <span class="k">今日打开次数</span>
+                <span class="v bold">3 次</span>
+              </div>
+              <div class="det-row">
+                <span class="k">11:42 · 13:08 · 现在</span>
+                <span class="v" style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); font-weight: 400;">时间戳已归档</span>
+              </div>
+              <div class="det-row">
+                <span class="k">最近舆论</span>
+                <span class="v">1 篇大 V 文章看空</span>
+              </div>
+              <div class="det-row">
+                <span class="k">今日股价</span>
+                <span class="v" style="color: var(--red);">−4.2%</span>
+              </div>
+              <div class="det-row">
+                <span class="k">累计回报</span>
+                <span class="v" style="color: var(--green);">+18.7%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Exit conditions (the heart) -->
+          <div class="conditions-block">
+            <div class="section-head">◆ 你 1 月 22 日签字的退出条件</div>
+            <div class="section-sub"><em>触发了几条?</em></div>
+
+            <div class="condition-row">
+              <span class="roman">I.</span>
+              <div class="text-block">
+                <div class="condition-text">HBM 现货价连续 4 周回落 &gt; 10%</div>
+                <div class="actual">实际 · <span class="v">连续 0 周</span> · 本周还涨了 2.1%</div>
+              </div>
+              <span class="checkbox"></span>
+            </div>
+
+            <div class="condition-row">
+              <span class="roman">II.</span>
+              <div class="text-block">
+                <div class="condition-text">公司毛利率下季度同比下滑</div>
+                <div class="actual">下次财报 · <span class="v">还有 47 天</span> · 数据未出</div>
+              </div>
+              <span class="checkbox"></span>
+            </div>
+
+            <div class="condition-row">
+              <span class="roman">III.</span>
+              <div class="text-block">
+                <div class="condition-text">持仓满 12 个月, 重新评估</div>
+                <div class="actual">还需持有 · <span class="v">4 个月 27 天</span></div>
+              </div>
+              <span class="checkbox"></span>
+            </div>
+          </div>
+
+          <!-- The AI verdict — the soul -->
+          <div class="editorial-verdict">
+            <div class="label">◆ 主笔按 · 今天的波动</div>
+            <div class="quote">
+              "今天的价格波动<em>不触发</em><br>
+              你写过的任何退出条件。<br><br>
+              那篇大 V 文章<em>不在你的判据里</em>。<br>
+              它不该改变你 1 月 22 日的判断。"
+            </div>
+            <div class="byline">— AI 主笔 · 引自你的承诺书</div>
+          </div>
+
+        </div>
+
+        <div class="e4-cta">
+          <button class="btn btn-primary" onclick="goTo('a1')">看完了, 关闭</button>
+          <button class="btn btn-light" onclick="goTo('f2')">查看完整时间轴 →</button>
+          <button class="btn btn-link" onclick="alert('坚持退出会走入正式的'重新评估'流程, 不是一键操作。这条选择会被记录。')">
+            我坚持要退出
+          </button>
+        </div>
+
+      </section>
+
+
+      <!-- ============================================ -->
+      <!-- SCREEN 3 · F2 · TIMELINE REPLAY (the soul)   -->
+      <!-- ============================================ -->
+      <section class="screen f2-screen" id="screen-f2">
+
+        <div class="f2-header">
+          <div class="back" onclick="goTo('e4')">←</div>
+          <div class="title-block">
+            <div class="kicker">SECTION E · 复盘</div>
+            <div class="name">时间轴 · 完整回放</div>
+          </div>
+          <div style="width: 20px;"></div>
+        </div>
+
+        <div class="screen-body">
+
+          <!-- Intro -->
+          <div class="f2-intro">
+            <div class="f2-eyebrow">◆ 你 · 与 · SK 海力士</div>
+            <h1 class="f2-title">六个月,<br>从蒸发到凝结。</h1>
+            <p class="f2-deck">
+              你和这件事的全部接触瞬间——<br>包括两次差点废掉自己的瞬间。
+            </p>
+          </div>
+
+          <!-- Stats grid -->
+          <div class="f2-stats">
+            <div class="f2-stat">
+              <div class="v green">+47%</div>
+              <div class="k">最终回报</div>
+            </div>
+            <div class="f2-stat">
+              <div class="v">14<span style="font-size: 14px;">d</span></div>
+              <div class="k">从信号到签字</div>
+            </div>
+            <div class="f2-stat">
+              <div class="v red">2<span style="font-size: 14px;">次</span></div>
+              <div class="k">想反悔</div>
+            </div>
+          </div>
+
+          <!-- Timeline -->
+          <div class="timeline-wrap">
+            <div class="timeline-section-label">◆ 全部接触瞬间</div>
+
+            <div class="timeline">
+
+              <div class="tl-node signal">
+                <div class="tl-date">
+                  <div class="day">08</div>
+                  01月
+                </div>
+                <div class="tl-marker">●</div>
+                <div class="tl-content">
+                  <div class="tl-label">弱信号 1</div>
+                  <div class="tl-text">"群里抢 Mac Studio 512G"</div>
+                  <div class="tl-meta">你那天打开 APP 1 次, 记下了这条</div>
+                </div>
+              </div>
+
+              <div class="tl-node signal">
+                <div class="tl-date">
+                  <div class="day">12</div>
+                  01月
+                </div>
+                <div class="tl-marker">●</div>
+                <div class="tl-content">
+                  <div class="tl-label">弱信号 2</div>
+                  <div class="tl-text">"供应商说 Mac Studio 交付延期"</div>
+                  <div class="tl-meta">2 条信号联动, AI 升级到观察池</div>
+                </div>
+              </div>
+
+              <div class="tl-node signal">
+                <div class="tl-date">
+                  <div class="day">18</div>
+                  01月
+                </div>
+                <div class="tl-marker">●</div>
+                <div class="tl-content">
+                  <div class="tl-label">弱信号 3</div>
+                  <div class="tl-text">"工程师抱怨内存不够"</div>
+                  <div class="tl-meta">第 3 条独立信号, 门 1 通过</div>
+                </div>
+              </div>
+
+              <div class="tl-node signal">
+                <div class="tl-date">
+                  <div class="day">22</div>
+                  01月
+                </div>
+                <div class="tl-marker">●</div>
+                <div class="tl-content">
+                  <div class="tl-label">弱信号 4 · 主动提示</div>
+                  <div class="tl-text">"HBM 第三次涨价"</div>
+                  <div class="tl-meta">↑ 系统第一次主动找你</div>
+                </div>
+              </div>
+
+              <div class="tl-node gate">
+                <div class="tl-date">
+                  <div class="day">22</div>
+                  01月
+                </div>
+                <div class="tl-marker">⬢</div>
+                <div class="tl-content">
+                  <div class="tl-label">四道门 · 全过</div>
+                  <div class="tl-text">进入承诺书草稿</div>
+                </div>
+              </div>
+
+              <div class="tl-node sign">
+                <div class="tl-date">
+                  <div class="day">22</div>
+                  01月
+                </div>
+                <div class="tl-marker">★</div>
+                <div class="tl-content">
+                  <div class="tl-label">签字</div>
+                  <div class="tl-text">5% 仓位 · 6 个月承诺</div>
+                  <div class="tl-meta">14 天 · 从第一条信号到此刻</div>
+                </div>
+              </div>
+
+              <div class="tl-node regret">
+                <div class="tl-date">
+                  <div class="day">14</div>
+                  02月
+                </div>
+                <div class="tl-marker">⚠</div>
+                <div class="tl-content">
+                  <div class="tl-label">想反悔 1</div>
+                  <div class="tl-text">触发: 短期回调 8%</div>
+                  <div class="tl-meta">你那 24 小时打开 APP 5 次</div>
+                  <div class="regret-warning">
+                    如果你当时割肉, 会<strong>错过后续 38% 的涨幅</strong>。
+                  </div>
+                </div>
+              </div>
+
+              <div class="tl-node regret">
+                <div class="tl-date">
+                  <div class="day">20</div>
+                  03月
+                </div>
+                <div class="tl-marker">⚠</div>
+                <div class="tl-content">
+                  <div class="tl-label">想反悔 2</div>
+                  <div class="tl-text">触发: 一篇大 V 看空</div>
+                  <div class="tl-meta">你那 48 小时打开 APP 3 次</div>
+                  <div class="regret-warning">
+                    "那篇文章不在你的判据里"——这句话<strong>拦住了你</strong>。
+                  </div>
+                </div>
+              </div>
+
+              <div class="tl-node confirm">
+                <div class="tl-date">
+                  <div class="day">30</div>
+                  04月
+                </div>
+                <div class="tl-marker">●</div>
+                <div class="tl-content">
+                  <div class="tl-label">财报印证</div>
+                  <div class="tl-text">HBM 毛利率跳升</div>
+                  <div class="tl-meta">你 1 月 22 日的推演 · 兑现</div>
+                </div>
+              </div>
+
+              <div class="tl-node end">
+                <div class="tl-date">
+                  <div class="day">22</div>
+                  07月
+                </div>
+                <div class="tl-marker">★</div>
+                <div class="tl-content">
+                  <div class="tl-label">到期 · 复盘日</div>
+                  <div class="tl-text"><em>+47%</em></div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Closing verdict from AI -->
+          <div class="f2-closing">
+            <div class="f2-closing-inner">
+              <div class="f2-closing-label">◆ 下一次的训练重点</div>
+              <p class="f2-closing-headline">
+                "你的<em>瓶颈是门 4</em>。<br>
+                下一次, 缩短从信号到签字的天数。"
+              </p>
+              <p class="f2-closing-sub">
+                这条已写进你的系统记忆。<br>
+                下次相似信号一来, 产品会针对性地加强这一层。
+              </p>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="f2-final-cta">
+          <button class="btn btn-primary" onclick="alert('进入复盘四问对话 F3 (暂未实现)')">进入四问诊断 →</button>
+        </div>
+
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="nav-pill">
+  <span class="label">3 屏</span>
+  <div class="dot active" data-screen="a1" onclick="goTo('a1')">A1 · 静默</div>
+  <div class="dot" data-screen="e4" onclick="goTo('e4')">E4 · 陪伴</div>
+  <div class="dot" data-screen="f2" onclick="goTo('f2')">F2 · 时间轴</div>
+</div>
+
+<script>
+  let currentScreen = 'a1';
+
+  function goTo(id) {
+    document.querySelectorAll('.screen').forEach(s => {
+      s.classList.remove('active');
+    });
+    const target = document.getElementById('screen-' + id);
+    if (target) {
+      target.classList.add('active');
+      target.querySelector('.screen-body').scrollTop = 0;
+    }
+    document.querySelectorAll('.nav-pill .dot').forEach(d => {
+      d.classList.toggle('active', d.dataset.screen === id);
+    });
+    currentScreen = id;
+  }
+
+  document.addEventListener('keydown', (e) => {
+    const order = ['a1', 'e4', 'f2'];
+    const idx = order.indexOf(currentScreen);
+    if (e.key === 'ArrowRight' && idx < order.length - 1) goTo(order[idx + 1]);
+    if (e.key === 'ArrowLeft' && idx > 0) goTo(order[idx - 1]);
+  });
+</script>
+
+</body>
+</html>

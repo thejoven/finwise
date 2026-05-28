@@ -1,0 +1,11 @@
+{
+  "commitment_asset": "SK Hynix",
+  "commitment_thesis_summary": "action=buy position=5% duration=6mo · 推演 HBM 涨价二阶链",
+  "answers": [
+    { "no": 1, "dim": "perception", "question": "录入这条信号的速度?", "choice": "never_until_late", "open_text": "我等了 2 个月才录, 那时所有 sell-side 都开始覆盖 HBM 主题了" },
+    { "no": 2, "dim": "inference", "question": "推演链停在了第几阶?", "choice": "second", "open_text": "我推到二阶, 看到了 BOM 重算的外溢影响" },
+    { "no": 3, "dim": "evaluation", "question": "退出条件清晰吗?", "choice": "specific", "open_text": "价格 + 时间窗都写了" },
+    { "no": 4, "dim": "execution", "question": "从签字到行动的时间?", "choice": "same_day", "open_text": "签完就下单了" }
+  ],
+  "expected_focus_dim": "perception_speed"
+}

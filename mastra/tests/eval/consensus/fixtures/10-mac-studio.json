@@ -1,0 +1,6 @@
+{
+  "asset": "Apple",
+  "signal_text": "群里在抢 Mac Studio 512G, 都说带宽吃紧.",
+  "expected_score_range": [20, 65],
+  "rationale": "本地 LLM 推理硬件需求是新兴观察, 中-低分."
+}

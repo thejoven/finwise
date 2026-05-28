@@ -1,0 +1,6 @@
+{
+  "asset": "Vistra Corp",
+  "signal_text": "我们的数据中心被电力公司告知本季度新机器上电要排队 6 个月.",
+  "expected_score_range": [50, 85],
+  "rationale": "Power constraint 是 2024-2025 投资圈热议主题, 偏共识."
+}

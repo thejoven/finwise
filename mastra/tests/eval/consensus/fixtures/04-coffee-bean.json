@@ -1,0 +1,6 @@
+{
+  "asset": "Starbucks",
+  "signal_text": "巴西今年咖啡豆收成创新低, 国内连锁咖啡品牌都在涨价.",
+  "expected_score_range": [40, 80],
+  "rationale": "中等热度: 咖啡涨价是行业新闻级, 但 Starbucks 关联度是次级推理."
+}

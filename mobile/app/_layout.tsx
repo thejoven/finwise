@@ -1,0 +1,127 @@
+import { useEffect, useState } from "react";
+import { AppState, type AppStateStatus, Platform } from "react-native";
+import { useFonts } from "expo-font";
+import * as SplashScreen from "expo-splash-screen";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { QueryClient, QueryClientProvider, focusManager } from "@tanstack/react-query";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+
+import { PendingFlush, usePendingSignals } from "@/features/capture";
+import { SplashCover } from "@/features/splash";
+import { useAuth } from "@/core/auth/store";
+import {
+  bottomModalScreen,
+  loginScreen,
+  pushDetailScreen,
+  registerScreen,
+  rootStackScreenOptions,
+  tabsRootScreen,
+} from "@/core/navigation";
+
+// Block native splash hide until fonts load — prevents fallback-flash on cold start.
+void SplashScreen.preventAutoHideAsync();
+
+// 显式声明 root stack 默认 route — 防止 Expo Router 选错首屏 (例: modal capture
+// 被选成 initial 时, 用户看到的就是黑屏/空白).
+export const unstable_settings = {
+  initialRouteName: "(tabs)",
+};
+
+// 让 TanStack Query 把 RN 的 AppState 当作"focus"事件: 回前台时 refetch active queries.
+// 默认 RN 不像 web 有 window.focus, 必须手动接.
+focusManager.setEventListener((handleFocus) => {
+  const onChange = (status: AppStateStatus) => {
+    if (Platform.OS !== "web") handleFocus(status === "active");
+  };
+  const sub = AppState.addEventListener("change", onChange);
+  return () => sub.remove();
+});
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      staleTime: 60_000,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
+
+const FONTS = {
+  "PlayfairDisplay-Regular": require("../assets/fonts/PlayfairDisplay-Regular.ttf"),
+  "PlayfairDisplay-Italic": require("../assets/fonts/PlayfairDisplay-Italic.ttf"),
+  "PlayfairDisplay-Bold": require("../assets/fonts/PlayfairDisplay-Bold.ttf"),
+  "PlayfairDisplay-BoldItalic": require("../assets/fonts/PlayfairDisplay-BoldItalic.ttf"),
+  "SourceSerif4-Regular": require("../assets/fonts/SourceSerif4-Regular.ttf"),
+  "SourceSerif4-Italic": require("../assets/fonts/SourceSerif4-Italic.ttf"),
+  "SourceSerif4-SemiBold": require("../assets/fonts/SourceSerif4-SemiBold.ttf"),
+  "NotoSerifSC-Regular": require("../assets/fonts/NotoSerifSC-Regular.ttf"),
+  "NotoSerifSC-Bold": require("../assets/fonts/NotoSerifSC-Bold.ttf"),
+  "JetBrainsMono-Regular": require("../assets/fonts/JetBrainsMono-Regular.ttf"),
+  "JetBrainsMono-Medium": require("../assets/fonts/JetBrainsMono-Medium.ttf"),
+};
+
+export default function RootLayout() {
+  const hydratePending = usePendingSignals((s) => s.hydrate);
+  const hydrateAuth = useAuth((s) => s.hydrate);
+  const [storageReady, setStorageReady] = useState(false);
+  // JS splash 是否还在演动画. 字体/hydrate 完成后, 我们把 native splash 收掉,
+  // 由本 JS splash 接管, 演完动画再卸载, 把下层 Stack 露出来.
+  const [splashAnimating, setSplashAnimating] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    Promise.allSettled([
+      hydratePending().catch((err) => {
+        console.warn("[storage] pending hydrate failed:", err);
+      }),
+      hydrateAuth().catch((err) => {
+        console.warn("[auth] hydrate failed:", err);
+      }),
+    ]).finally(() => {
+      if (mounted) setStorageReady(true);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, [hydratePending, hydrateAuth]);
+
+  const [loaded] = useFonts(FONTS);
+
+  useEffect(() => {
+    if (loaded && storageReady) {
+      // 注意: 这里只是把 native splash 收掉, JS 自己的 <SplashCover> 仍在上层渲染.
+      void SplashScreen.hideAsync();
+    }
+  }, [loaded, storageReady]);
+
+  if (!loaded || !storageReady) return null;
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <StatusBar style="dark" />
+          <PendingFlush />
+          <Stack screenOptions={rootStackScreenOptions}>
+            <Stack.Screen name="(tabs)" options={tabsRootScreen} />
+            <Stack.Screen name="login" options={loginScreen} />
+            <Stack.Screen name="register" options={registerScreen} />
+            <Stack.Screen name="capture" options={bottomModalScreen} />
+            <Stack.Screen name="profile/edit" options={bottomModalScreen} />
+            <Stack.Screen name="profile/password" options={bottomModalScreen} />
+            <Stack.Screen name="search" options={bottomModalScreen} />
+            <Stack.Screen name="signal/[id]" options={pushDetailScreen} />
+            <Stack.Screen name="refinement/[sessionId]" options={pushDetailScreen} />
+            <Stack.Screen name="commitment/[id]" options={pushDetailScreen} />
+            <Stack.Screen name="retrospect/[id]" options={pushDetailScreen} />
+            <Stack.Screen name="colophon" options={pushDetailScreen} />
+          </Stack>
+          {splashAnimating && <SplashCover onFinish={() => setSplashAnimating(false)} />}
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
+}

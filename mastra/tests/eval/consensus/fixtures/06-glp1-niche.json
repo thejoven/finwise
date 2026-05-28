@@ -1,0 +1,6 @@
+{
+  "asset": "Eli Lilly",
+  "signal_text": "诊所反映 GLP-1 类药物的患者依从性突然下降.",
+  "expected_score_range": [20, 60],
+  "rationale": "Eli Lilly 是主流 (高), 但'依从性下降'是 leading observation (低). 中等分."
+}

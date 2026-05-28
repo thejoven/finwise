@@ -1,0 +1,34 @@
+{
+  "tags": [
+    "DeepSeek",
+    "私有化部署",
+    "企业级AI",
+    "律所",
+    "医院"
+  ],
+  "related_assets": [
+    {
+      "ticker": "DeepSeek (未上市)",
+      "rationale": "私有化部署需求上升, 合同单价高, 直接受益",
+      "order": "first"
+    },
+    {
+      "ticker": "华为昇腾/Atlas",
+      "rationale": "国产算力卡是私有化部署常用底座, 尤其对合规敏感行业",
+      "order": "second"
+    },
+    {
+      "ticker": "深信服/奇安信",
+      "rationale": "私有化部署伴随安全合规需求, 数据不出域需要安全方案",
+      "order": "second"
+    },
+    {
+      "ticker": "中科曙光",
+      "rationale": "私有化部署拉动服务器采购, 尤其信创场景",
+      "order": "third"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "leading",
+  "one_line_summary": "律所医院主动问DeepSeek私有化, 企业级AI部署从概念进入行业场景"
+}

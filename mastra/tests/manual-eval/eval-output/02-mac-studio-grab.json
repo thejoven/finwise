@@ -1,0 +1,34 @@
+{
+  "tags": [
+    "Mac Studio",
+    "M2 Ultra",
+    "大模型推理",
+    "带宽吃紧",
+    "断货"
+  ],
+  "related_assets": [
+    {
+      "ticker": "AAPL",
+      "rationale": "Mac Studio 断货直接受益, M2 Ultra 高 ASP 产品拉动营收",
+      "order": "first"
+    },
+    {
+      "ticker": "TSMC",
+      "rationale": "M2 Ultra 采用台积电先进制程, 大模型推理需求推升高端芯片订单",
+      "order": "first"
+    },
+    {
+      "ticker": "MU / SK Hynix",
+      "rationale": "512G 统一内存需要大量高带宽 DRAM, 大容量内存模组需求激增",
+      "order": "second"
+    },
+    {
+      "ticker": "NVDA",
+      "rationale": "同价位 4090 工作站被比下去, 推理侧性价比竞争加剧, 高端消费 GPU 需求受挤压",
+      "order": "second"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "leading",
+  "one_line_summary": "Mac Studio 512G 因大模型推理需求断货, 统一内存路线受追捧"
+}

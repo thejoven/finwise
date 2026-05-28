@@ -1,0 +1,159 @@
+# Flashfi Engine · 完整文档包
+
+> 一个把模糊的高价值信号, 转化为少数高确定性承诺的 AI 产品。
+>
+> 这份压缩包是 Flashfi Engine 从产品哲学到技术架构到开发任务的完整文档。
+
+---
+
+## 目录结构
+
+```
+flashfi-bundle/
+├── 产品文档/                              ← 产品哲学与五层架构(7 份)
+│   ├── 00_总览_Flashfi_Engine.md
+│   ├── 01_第一层_信号捕捉.md
+│   ├── 02_第二层_模式识别与推演训练.md
+│   ├── 03_第三层_确定性评估.md
+│   ├── 04_第四层_承诺执行.md
+│   ├── 05_第五层_复盘训练.md
+│   └── 06_产品哲学.md                    ← 这是宪法, 任何决策依赖
+│
+├── 技术文档/                              ← 9 份架构文档 + native_feel_skill
+│   ├── README.md                          # 技术文档导航
+│   ├── 01-09 · 九份架构大纲
+│   └── native_feel_skill/                # RN 原生感 Skill 完整版
+│       ├── SKILL.md
+│       ├── references/(8 份)
+│       └── checklists/(2 份)
+│
+├── GOAL/                                  ← 开发目标书 · 给 AI Agent 看
+│   ├── GOAL.md                            🔴 必读 · 项目总入口
+│   ├── AGENT_BRIEF.md                     🔴 必读 · 元指令
+│   ├── phase-1-quiet/                    Phase 1 · 安静(W1-W8)
+│   │   ├── 00-overview.md
+│   │   ├── M1-data-foundation.md
+│   │   ├── M2-signal-pipeline.md
+│   │   ├── M3-client-shell.md
+│   │   └── M4-end-to-end.md
+│   ├── phase-2-ritual/                   Phase 2 · 仪式(W9-W18)
+│   │   ├── 00-overview.md
+│   │   ├── M5-socratic-refinement.md
+│   │   ├── M6-gate-engine.md
+│   │   ├── M7-commitment-book.md
+│   │   └── M8-signing-flow.md
+│   └── phase-3-mirror/                   Phase 3 · 镜子(W19-W26)
+│       ├── 00-overview.md
+│       ├── M9-anxiety-companion.md
+│       ├── M10-exit-monitor.md
+│       └── M11-retrospect-training.md
+│
+└── 原型/
+    └── flashfi-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
+```
+
+---
+
+## 阅读顺序
+
+### 如果你是产品方 / 投资方
+1. `产品文档/00_总览_Flashfi_Engine.md` — 一页讲完产品是什么
+2. `产品文档/06_产品哲学.md` — 12 条反直觉设计原则
+3. 用浏览器打开 `原型/flashfi-prototype-v4.html` — 3 屏交互原型
+
+### 如果你是技术合作者
+1. 先读产品文档六份 — 理解世界观
+2. `技术文档/README.md` — 技术全景
+3. `技术文档/01_系统架构总览_大纲.md` — 全局边界
+4. 按需深入 02-09
+
+### 如果你是协助开发的 AI Agent / 工程师
+1. **必读 `GOAL/AGENT_BRIEF.md`** — 项目元指令
+2. **必读 `GOAL/GOAL.md`** — 路线图全景
+3. 读当前 Phase 的 `00-overview.md`
+4. 读当前模块的 `Mn-xxx.md` 任务单
+5. UI 任务额外读 `技术文档/native_feel_skill/`
+
+---
+
+## 技术栈速查
+
+| 层 | 技术 |
+|---|---|
+| 客户端 | Expo SDK 53+ (React Native) + TypeScript |
+| 客户端路由 | Expo Router v3 |
+| 客户端状态 | Zustand + TanStack Query |
+| 客户端离线 | WatermelonDB / expo-sqlite + Drizzle |
+| 后端 | Go + Gin + Ent ORM |
+| 数据库 | PostgreSQL 16 + pgvector |
+| 缓存 / 总线 | Redis + NATS JetStream |
+| LLM 编排 | Mastra (Node.js) |
+| LLM 模型 | Claude Sonnet 4.5 (主) + Haiku (辅) |
+| PDF 渲染 | chromedp (Chromium headless) |
+| Phase 1 部署 | Docker Compose · 单 VPS |
+
+---
+
+## 6 个月路线图(GOAL/ 详细)
+
+| Phase | 周数 | 模块 | 完成时能做什么 |
+|---|---|---|---|
+| **Phase 1 · 安静** | W1-W8 | M1-M4 | 每天写信号, AI 后台推演, 不打扰 |
+| **Phase 2 · 仪式** | W9-W18 | M5-M8 | 五轮追问 + 四道门 + 签字承诺 |
+| **Phase 3 · 镜子** | W19-W26 | M9-M11 | 持仓陪伴 + 复盘训练, 看见自己 |
+
+每个 Phase 结束都有"自己用一周", 不达标不进下个 Phase。
+
+**总计 26 周 ≈ 6 个月 · 11 个模块 · 3 次自己用一周**。
+
+---
+
+## 五个核心约束(也是反直觉的产品哲学)
+
+1. **沉默优于发声** — 大部分时候, 这个产品不主动找你
+2. **频率匹配 alpha** — 一年 1-2 次主动提示, 不是每天 5 条
+3. **减少决策不是增加信息** — 一次签字, 其他全部预决定
+4. **承诺书不是建议** — 语言塑造行为
+5. **让用户看见自己, 比让用户赚钱更重要** — 复盘训练是真正的主体
+
+详见 `产品文档/06_产品哲学.md`。
+
+---
+
+## 关于产品名
+
+- **Flashfi** — 产品名
+- **Conviction Quarterly** — 报刊系列名(原型 v4 报刊头副线)
+- **Flashfi Engine** — 完整产品定位(强信念引擎)
+
+文档里:
+- "Flashfi Engine" 用于正式称呼
+- "Flashfi" 用于简称
+- "conviction" 作为类别概念词(对比 trading) 保留小写, 不是品牌词
+
+---
+
+## 这套文档的价值在哪里
+
+这不是一份普通的技术文档。它的特别之处:
+
+1. **每份文档都标注"为什么"** — 解释的不是"做什么", 而是"为什么这样做"
+2. **GOAL 任务单为 AI 协助开发优化** — 上下文 / 目标 / 验收 / 已知坑 / 自由度边界 五段固定结构
+3. **反模式比正向规则多** — 因为正确的形态是无数错误形态被排除后剩下的
+4. **验收标准是产品语言, 不是工程语言** — "用户能完成 X 动作, 不出现 Y 反模式", 不是"测试覆盖率 80%"
+
+---
+
+## 状态
+
+🟢 文档体系完整
+🟢 GOAL 路线图就绪(45 份文件, 含 11 个模块任务单)
+🟡 等待开始 W1: M1 数据底座
+⚪ 6 个月后: Flashfi Engine v1.0
+
+---
+
+## 一句话
+
+> 这不是又一个 AI 工具的开发文档。
+> 这是一面镜子的开发指南。

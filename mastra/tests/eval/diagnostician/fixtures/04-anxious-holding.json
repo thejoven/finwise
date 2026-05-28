@@ -1,0 +1,11 @@
+{
+  "commitment_asset": "Eli Lilly",
+  "commitment_thesis_summary": "action=sell short=5% duration=6mo · GLP-1 患者依从性触顶",
+  "answers": [
+    { "no": 1, "dim": "perception", "question": "录入这条信号的速度?", "choice": "same_day", "open_text": "诊所反映那天就录了" },
+    { "no": 2, "dim": "inference", "question": "推演链停在了第几阶?", "choice": "second", "open_text": "推到了二阶: 依从性下降 → sell side 下修预期" },
+    { "no": 3, "dim": "evaluation", "question": "退出条件清晰吗?", "choice": "specific", "open_text": "Q3 财报指引是关键" },
+    { "no": 4, "dim": "execution", "question": "从签字到行动的时间?", "choice": "same_day", "open_text": "我每天都开 APP 看, 焦虑得睡不着, 但我没破 thesis 也没退. 最后还是熬到了 thesis 兑现." }
+  ],
+  "expected_focus_dim": "holding_patience"
+}

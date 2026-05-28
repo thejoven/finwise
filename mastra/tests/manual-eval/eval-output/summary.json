@@ -1,0 +1,512 @@
+[
+  {
+    "fixture": "01-hbm-pricing.txt",
+    "duration_ms": 4711,
+    "inference": {
+      "tags": [
+        "HBM",
+        "内存涨价",
+        "AI 推理盒",
+        "BOM 压力"
+      ],
+      "related_assets": [
+        {
+          "ticker": "SK Hynix",
+          "rationale": "HBM 主供应商, 第三次涨价直接增厚利润",
+          "order": "first"
+        },
+        {
+          "ticker": "Samsung Memory",
+          "rationale": "HBM 二供, 跟涨受益",
+          "order": "first"
+        },
+        {
+          "ticker": "Micron",
+          "rationale": "HBM 市场追赶者, 涨价周期中份额与价格双受益",
+          "order": "first"
+        },
+        {
+          "ticker": "Marvell/Astera Labs",
+          "rationale": "推理盒 BOM 压力下, 系统厂商更倾向优化互联与加速卡配置, 互联侧需求上升",
+          "order": "second"
+        },
+        {
+          "ticker": "NVIDIA",
+          "rationale": "推理盒 BOM 承压可能延缓非 GPU 方案替代, 但高端推理仍依赖 GPU, 合同密度上升",
+          "order": "second"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "aligned",
+      "one_line_summary": "HBM 第三轮涨价, 推理盒 BOM 承压外溢至互联与 GPU 方案"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "02-mac-studio-grab.txt",
+    "duration_ms": 3665,
+    "inference": {
+      "tags": [
+        "Mac Studio",
+        "M2 Ultra",
+        "大模型推理",
+        "带宽吃紧",
+        "断货"
+      ],
+      "related_assets": [
+        {
+          "ticker": "AAPL",
+          "rationale": "Mac Studio 断货直接受益, M2 Ultra 高 ASP 产品拉动营收",
+          "order": "first"
+        },
+        {
+          "ticker": "TSMC",
+          "rationale": "M2 Ultra 采用台积电先进制程, 大模型推理需求推升高端芯片订单",
+          "order": "first"
+        },
+        {
+          "ticker": "MU / SK Hynix",
+          "rationale": "512G 统一内存需要大量高带宽 DRAM, 大容量内存模组需求激增",
+          "order": "second"
+        },
+        {
+          "ticker": "NVDA",
+          "rationale": "同价位 4090 工作站被比下去, 推理侧性价比竞争加剧, 高端消费 GPU 需求受挤压",
+          "order": "second"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "leading",
+      "one_line_summary": "Mac Studio 512G 因大模型推理需求断货, 统一内存路线受追捧"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "03-deepseek-onprem.txt",
+    "duration_ms": 3379,
+    "inference": {
+      "tags": [
+        "DeepSeek",
+        "私有化部署",
+        "企业级AI",
+        "律所",
+        "医院"
+      ],
+      "related_assets": [
+        {
+          "ticker": "DeepSeek (未上市)",
+          "rationale": "私有化部署需求上升, 合同单价高, 直接受益",
+          "order": "first"
+        },
+        {
+          "ticker": "华为昇腾/Atlas",
+          "rationale": "国产算力卡是私有化部署常用底座, 尤其对合规敏感行业",
+          "order": "second"
+        },
+        {
+          "ticker": "深信服/奇安信",
+          "rationale": "私有化部署伴随安全合规需求, 数据不出域需要安全方案",
+          "order": "second"
+        },
+        {
+          "ticker": "中科曙光",
+          "rationale": "私有化部署拉动服务器采购, 尤其信创场景",
+          "order": "third"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "leading",
+      "one_line_summary": "律所医院主动问DeepSeek私有化, 企业级AI部署从概念进入行业场景"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "04-power-cap.txt",
+    "duration_ms": 4570,
+    "inference": {
+      "tags": [
+        "变压器",
+        "算力中心",
+        "电力设备",
+        "供应链瓶颈"
+      ],
+      "related_assets": [
+        {
+          "ticker": "金盘科技",
+          "rationale": "国内干式变压器头部厂商, 算力中心配电设备核心供应商, 订单周期拉长直接反映其产能满载",
+          "order": "first"
+        },
+        {
+          "ticker": "伊戈尔",
+          "rationale": "配电变压器主要供应商, 受益于算力中心建设加速带来的变压器需求激增",
+          "order": "first"
+        },
+        {
+          "ticker": "中国西电/特变电工",
+          "rationale": "大型电力变压器供应商, 西部园区配套输变电设备需求外溢",
+          "order": "first"
+        },
+        {
+          "ticker": "科华数据/科士达",
+          "rationale": "UPS 及配电系统集成商, 变压器缺货导致其整体交付周期拉长, 但具备供应链锁价能力的头部集成商反而能抢占份额",
+          "order": "second"
+        },
+        {
+          "ticker": "万国数据/世纪互联",
+          "rationale": "算力中心运营方, 变压器交付延迟意味着新园区投产时间推后, 存量算力资源稀缺性上升, 已投产机柜议价能力增强",
+          "order": "third"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "leading",
+      "one_line_summary": "西部算力中心变压器供货周期从8周飙至26周, 电力设备瓶颈卡住新园区投产节奏"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "05-china-export-cn.txt",
+    "duration_ms": 8000,
+    "inference": {
+      "tags": [
+        "中国新能源出海",
+        "中东本地组装",
+        "沙特招标",
+        "阿联酋"
+      ],
+      "related_assets": [
+        {
+          "ticker": "BYD",
+          "rationale": "中东本地化组装领先者, 阿联酋/沙特建厂直接受益",
+          "order": "first"
+        },
+        {
+          "ticker": "蔚来",
+          "rationale": "阿联酋主权基金已投资, 本地组装落地加速",
+          "order": "first"
+        },
+        {
+          "ticker": "宁德时代",
+          "rationale": "中东新能源车放量拉动电池配套, 本地化产能需求外溢",
+          "order": "second"
+        },
+        {
+          "ticker": "沙特主权基金(PIF)",
+          "rationale": "招标倾向中系, PIF 合资工厂的供应链和基建配套商间接受益",
+          "order": "third"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "leading",
+      "one_line_summary": "中东两大市场同步转向中国新能源车本地化, 从出口模式升级为产能落地"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "06-coffee-bean.txt",
+    "duration_ms": 10551,
+    "error": "No object generated: response did not match schema.",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": false,
+        "detail": "No object generated: response did not match schema."
+      },
+      {
+        "name": "tags_count",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "summary_length",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "no_action_words",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      }
+    ],
+    "passed": false
+  },
+  {
+    "fixture": "07-glp1-niche.txt",
+    "duration_ms": 8098,
+    "error": "No object generated: response did not match schema.",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": false,
+        "detail": "No object generated: response did not match schema."
+      },
+      {
+        "name": "tags_count",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "summary_length",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "no_action_words",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      }
+    ],
+    "passed": false
+  },
+  {
+    "fixture": "08-shipping-redirect.txt",
+    "duration_ms": 10069,
+    "error": "No object generated: response did not match schema.",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": false,
+        "detail": "No object generated: response did not match schema."
+      },
+      {
+        "name": "tags_count",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "summary_length",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "no_action_words",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": false,
+        "detail": "n/a (no inference)"
+      }
+    ],
+    "passed": false
+  },
+  {
+    "fixture": "09-noise-too-vague.txt",
+    "duration_ms": 1686,
+    "inference": {
+      "tags": [],
+      "related_assets": [],
+      "cognitive_layer": "first",
+      "consensus_check": "aligned",
+      "one_line_summary": "未具体化的情绪观察，不足以推演"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "fixture": "10-niche-japan-talent.txt",
+    "duration_ms": 5545,
+    "inference": {
+      "tags": [
+        "日本半导体",
+        "工程师薪酬",
+        "人才流动",
+        "中国半导体"
+      ],
+      "related_assets": [
+        {
+          "ticker": "Tokyo Electron (TEL)",
+          "rationale": "日本半导体设备龙头, 人才流出说明本土景气度或竞争力相对下降, 薪酬溢价缩水",
+          "order": "first"
+        },
+        {
+          "ticker": "Disco Corp",
+          "rationale": "日本切割/研磨设备龙头, 工程师外流反映其国内扩张放缓或薪资竞争力减弱",
+          "order": "first"
+        },
+        {
+          "ticker": "中芯国际 (SMIC)",
+          "rationale": "内地晶圆代工龙头, 能以更低成本招到日本资深工程师, 降低人力成本, 提升良率追赶能力",
+          "order": "second"
+        },
+        {
+          "ticker": "北方华创 (NAURA)",
+          "rationale": "内地半导体设备国产替代龙头, 日本设备背景工程师流入加速技术突破和客户导入",
+          "order": "second"
+        },
+        {
+          "ticker": "ASML",
+          "rationale": "若内地设备商因人才流入加速突破, 长期可能侵蚀ASML在部分环节的不可替代性",
+          "order": "third"
+        }
+      ],
+      "cognitive_layer": "second",
+      "consensus_check": "leading",
+      "one_line_summary": "日本半导体工程师要价骤降且愿意来内地, 人才流向逆转"
+    },
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "tags_count",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      },
+      {
+        "name": "emptiness_correct",
+        "passed": true
+      }
+    ],
+    "passed": true
+  }
+]

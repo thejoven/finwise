@@ -1,0 +1,70 @@
+{
+  "name": "flashfi-mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "ios": "expo run:ios",
+    "android": "expo run:android",
+    "typecheck": "tsc --noEmit",
+    "lint": "prettier --check .",
+    "check:banned-deps": "bash scripts/check-banned-deps.sh"
+  },
+  "dependencies": {
+    "@react-native-community/netinfo": "11.4.1",
+    "@tanstack/react-query": "^5.59.0",
+    "expo": "^54.0.34",
+    "expo-asset": "~12.0.13",
+    "expo-constants": "~18.0.13",
+    "expo-font": "~14.0.11",
+    "expo-haptics": "~15.0.8",
+    "expo-linking": "~8.0.12",
+    "expo-router": "~6.0.23",
+    "expo-secure-store": "~15.0.8",
+    "expo-splash-screen": "~31.0.13",
+    "expo-sqlite": "~16.0.10",
+    "expo-status-bar": "~3.0.9",
+    "expo-system-ui": "~6.0.9",
+    "ky": "^1.7.0",
+    "lucide-react-native": "^0.456.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-gesture-handler": "~2.28.0",
+    "react-native-reanimated": "~4.1.1",
+    "react-native-safe-area-context": "~5.6.0",
+    "react-native-screens": "~4.16.0",
+    "react-native-svg": "15.12.1",
+    "react-native-worklets": "0.5.1",
+    "uuid": "^11.0.0",
+    "zod": "^3.23.0",
+    "zustand": "^5.0.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.25.0",
+    "@types/react": "~19.1.10",
+    "@types/uuid": "^10.0.0",
+    "babel-preset-expo": "^54.0.10",
+    "prettier": "^3.3.0",
+    "typescript": "~5.9.2"
+  },
+  "comments": {
+    "_intentionally_absent": [
+      "react-native-toast-message",
+      "react-native-flash-message",
+      "react-native-paper",
+      "react-native-elements",
+      "react-native-onboarding-swiper",
+      "react-native-tooltip",
+      "react-native-walkthrough-tooltip",
+      "react-native-swipe-list-view",
+      "react-native-confetti",
+      "lottie-react-native",
+      "react-native-vector-icons",
+      "react-native-timeline-flatlist",
+      "expo-notifications"
+    ],
+    "_why": "See AGENT_BRIEF §2.4 and references/05-flashfi-restraint.md §9. Any of these breaks product philosophy."
+  }
+}

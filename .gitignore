@@ -1,0 +1,37 @@
+# Go
+/server/bin/
+/server/tmp/
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+
+# Node (mobile/ added in M3)
+node_modules/
+.expo/
+.expo-shared/
+dist/
+web-build/
+
+# TypeScript incremental build cache
+*.tsbuildinfo
+
+# Logs
+*.log
+
+# Docker volumes (managed by compose, but ignore stray exports)
+pgdata/

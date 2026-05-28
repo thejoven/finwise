@@ -1,0 +1,6 @@
+{
+  "asset": "ASML",
+  "signal_text": "EUV 设备的中国出口被进一步限制了.",
+  "expected_score_range": [70, 100],
+  "rationale": "已经是大新闻, 完全主流共识, 给高分."
+}

@@ -1,0 +1,11 @@
+{
+  "commitment_asset": "Apple Inc",
+  "commitment_thesis_summary": "action=buy position=5% duration=6mo · Mac Studio 本地 LLM 需求",
+  "answers": [
+    { "no": 1, "dim": "perception", "question": "录入这条信号的速度?", "choice": "instant", "open_text": "群里看到就录" },
+    { "no": 2, "dim": "inference", "question": "推演链停在了第几阶?", "choice": "second", "open_text": "推到了二阶" },
+    { "no": 3, "dim": "evaluation", "question": "退出条件清晰吗?", "choice": "vague", "open_text": "退出条件我当时写的是'看情况', 没有具体的价格或时间或外部消息" },
+    { "no": 4, "dim": "execution", "question": "从签字到行动的时间?", "choice": "same_day", "open_text": "签完立刻下单" }
+  ],
+  "expected_focus_dim": "exit_quality"
+}

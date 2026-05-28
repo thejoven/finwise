@@ -1,0 +1,204 @@
+openapi: 3.0.3
+info:
+  title: Flashfi Engine API
+  version: 0.2.0
+  description: |
+    Phase 1 surface. Single user; bearer is a static dev token until Phase 4+ auth lands.
+    Internal endpoints (Mastra worker only) use a separate shared-secret header and
+    optionally bind to loopback.
+
+servers:
+  - url: http://localhost:8080
+    description: Local dev
+
+components:
+  securitySchemes:
+    DevBearer:
+      type: http
+      scheme: bearer
+      description: |
+        `Authorization: Bearer <DEV_BEARER_TOKEN>`. Single-user Phase 1 auth.
+    InternalToken:
+      type: apiKey
+      in: header
+      name: X-Internal-Token
+      description: Shared secret between Go server and Mastra worker.
+
+  schemas:
+    SignalCaptureRequest:
+      type: object
+      required: [client_event_id, raw_text]
+      properties:
+        client_event_id:
+          type: string
+          format: uuid
+          description: Client-generated idempotency key. UUID v7 recommended.
+        raw_text:
+          type: string
+          minLength: 1
+          maxLength: 2000
+          description: One-sentence observation, in user's words.
+        occurred_at:
+          type: string
+          format: date-time
+          description: When the user noticed the signal. Defaults to server now if omitted.
+
+    SignalCaptureResponse:
+      type: object
+      required: [signal_id, event_id, inference_status, duplicate]
+      properties:
+        signal_id: { type: string, format: uuid }
+        event_id:  { type: integer, format: int64 }
+        inference_status: { type: string, enum: [pending, done, failed] }
+        duplicate:
+          type: boolean
+          description: true if (user, client_event_id) already existed; same signal returned.
+
+    SignalView:
+      type: object
+      required: [id, raw_text, captured_at, inference_status]
+      properties:
+        id:          { type: string, format: uuid }
+        raw_text:    { type: string }
+        captured_at: { type: string, format: date-time }
+        inference_status: { type: string, enum: [pending, done, failed] }
+        inference_summary:
+          type: string
+          nullable: true
+        inference_tags:
+          type: array
+          items: { type: string }
+
+    SignalList:
+      type: object
+      required: [signals, has_more]
+      properties:
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/SignalView" }
+        has_more: { type: boolean }
+
+    InferenceRequest:
+      type: object
+      required: [signal_id, user_id, summary, tags, model]
+      properties:
+        signal_id: { type: string, format: uuid }
+        user_id:   { type: string, format: uuid }
+        summary:
+          type: string
+          maxLength: 200
+        tags:
+          type: array
+          maxItems: 5
+          items: { type: string, maxLength: 20 }
+        model:
+          type: string
+          description: e.g. "claude-sonnet-4-5"
+        related_assets:
+          type: array
+          maxItems: 6
+          items:
+            type: object
+            required: [ticker, rationale, order]
+            properties:
+              ticker:    { type: string }
+              rationale: { type: string }
+              order:     { type: string, enum: [first, second, third] }
+        cognitive_layer:
+          type: string
+          enum: [first, second, third]
+          nullable: true
+        consensus_check:
+          type: string
+          enum: [leading, aligned, lagging]
+          nullable: true
+
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+paths:
+  /healthz:
+    get:
+      summary: Liveness + DB ping
+      responses:
+        '200': { description: OK }
+        '503': { description: DB down }
+
+  /v1/signals:
+    post:
+      summary: Capture a signal
+      description: |
+        Returns 202 immediately. AI inference happens async via NATS → Mastra.
+        Idempotent on (user_id, client_event_id).
+      security: [ { DevBearer: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignalCaptureRequest" }
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalCaptureResponse" }
+        '400': { description: bad input, content: { application/json: { schema: { $ref: "#/components/schemas/Error" } } } }
+        '401': { description: unauthorized }
+    get:
+      summary: List signals (A1 inbox)
+      security: [ { DevBearer: [] } ]
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - in: query
+          name: before
+          schema: { type: string, format: date-time }
+          description: Cursor — return signals with captured_at strictly before this.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalList" }
+        '401': { description: unauthorized }
+
+  /v1/signals/{id}:
+    get:
+      summary: Get one signal
+      security: [ { DevBearer: [] } ]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignalView" }
+        '404': { description: not found }
+        '401': { description: unauthorized }
+
+  /v1/internal/inferences:
+    post:
+      summary: Record an analyst inference (Mastra → Go)
+      description: |
+        Called by the Mastra worker after running the Analyst Agent.
+        Writes a signal.inference.done event + updates the signals row.
+        Idempotent — same (signal_id, derived client_event_id) returns 200 noop.
+      security: [ { InternalToken: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InferenceRequest" }
+      responses:
+        '200': { description: recorded }
+        '400': { description: bad input }
+        '401': { description: bad internal token }
+        '403': { description: not from loopback (when INTERNAL_LOOPBACK=true) }
+        '404': { description: signal not found }

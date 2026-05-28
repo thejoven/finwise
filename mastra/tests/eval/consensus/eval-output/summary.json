@@ -1,0 +1,324 @@
+[
+  {
+    "fixture": "01-hbm-pricing.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2866,
+    "raw": {
+      "score": 70,
+      "narrative_summary": "HBM 持续涨价已被市场充分预期，SK 海力士作为 HBM 龙头受益明确，但涨价逻辑已多次计价。",
+      "evidence": [
+        "HBM 已是第三次涨价，市场对此已有充分预期和定价",
+        "SK 海力士 HBM 产能满载，卖方普遍看好但观点已不新鲜",
+        "AI 推理盒 BOM 承压反映涨价传导至下游，非新增叙事"
+      ]
+    }
+  },
+  {
+    "fixture": "02-niche-japan-talent.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2654,
+    "raw": {
+      "score": 30,
+      "narrative_summary": "日本半导体工程师为中国设备公司站台，在小圈层引发关注，但主流市场尚未广泛讨论。",
+      "evidence": [
+        "日本半导体老工程师为中国设备公司站台，属于行业人际动态",
+        "该事件在半导体设备小圈层有讨论，但未进入主流财经视野",
+        "8035.T（东京电子）本身是日本半导体设备龙头，此事件对其叙事热度影响有限"
+      ]
+    }
+  },
+  {
+    "fixture": "03-nvidia-mainstream.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2665,
+    "raw": {
+      "score": 85,
+      "narrative_summary": "NVDA 受益于 AI 训练需求持续增长及 hyperscaler 资本支出扩张，市场叙事高度集中且充分定价。",
+      "evidence": [
+        "Hyperscaler (MSFT, GOOG, AMZN, META) 持续上调 2024-2025 年资本支出指引",
+        "AI 训练芯片需求强劲，Hopper/Blackwell 产品线供不应求",
+        "NVDA 是 AI 基础设施核心标的，主流卖方广泛覆盖且媒体高频报道"
+      ]
+    }
+  },
+  {
+    "fixture": "04-coffee-bean.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2160,
+    "raw": {
+      "score": 45,
+      "narrative_summary": "咖啡豆减产推高成本，市场关注星巴克等连锁品牌利润压力与提价传导能力。",
+      "evidence": [
+        "巴西咖啡豆减产新闻在农产品和消费板块有讨论",
+        "国内咖啡品牌涨价消息引发对星巴克中国区成本压力的关注",
+        "行业媒体有覆盖但尚未成为主流财经头条"
+      ]
+    }
+  },
+  {
+    "fixture": "05-shipping-redirect.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": false,
+        "detail": "got 85, want [30, 70]"
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": false,
+    "dur_ms": 2454,
+    "raw": {
+      "score": 85,
+      "narrative_summary": "红海/苏伊士运河中断导致绕行好望角，推高航运运价与马士基盈利预期，市场叙事热度极高。",
+      "evidence": [
+        "胡塞武装袭击红海商船持续，多家航运巨头绕行好望角",
+        "马士基多次上调全年盈利指引，运价大幅攀升",
+        "主流财经媒体密集报道航运中断对全球供应链的冲击"
+      ]
+    }
+  },
+  {
+    "fixture": "06-glp1-niche.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2466,
+    "raw": {
+      "score": 30,
+      "narrative_summary": "GLP-1 依从性下降信号出现，市场关注 Eli Lilly 需求持续性，但讨论仍限于专业圈内。",
+      "evidence": [
+        "诊所反馈 GLP-1 依从性下降，引发对 Tirzepatide 长期需求的质疑",
+        "部分 sell-side 分析师开始下调依从性假设，但尚未形成广泛共识",
+        "主流财经媒体未大规模报道此信号，讨论集中在医疗投资社区"
+      ]
+    }
+  },
+  {
+    "fixture": "07-power-cap.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2250,
+    "raw": {
+      "score": 70,
+      "narrative_summary": "Vistra 作为美国独立电力生产商，受益于 AI 数据中心电力需求激增，市场已充分定价该逻辑。",
+      "evidence": [
+        "数据中心电力排队反映需求紧张，利好电力供应商",
+        "Vistra 被多家卖方覆盖为 AI 电力受益标的",
+        "2024 年以来股价已大幅上涨，叙事已被消化"
+      ]
+    }
+  },
+  {
+    "fixture": "08-deepseek-onprem.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2790,
+    "raw": {
+      "score": 55,
+      "narrative_summary": "DeepSeek 私有化部署需求带动国产 AI 服务器关注，联想作为头部服务器厂商受益于该叙事，但尚未成为广泛共识。",
+      "evidence": [
+        "DeepSeek 爆火后企业私有化部署需求上升，利好服务器厂商",
+        "联想服务器在国内市场份额靠前，具备 AI 整机交付能力",
+        "该叙事在 IT 采购圈和部分卖方报告中出现，但未达大众财经热度"
+      ]
+    }
+  },
+  {
+    "fixture": "09-china-export.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": false,
+        "detail": "got 65, want [70, 100]"
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": false,
+    "dur_ms": 2450,
+    "raw": {
+      "score": 65,
+      "narrative_summary": "ASML 对华出口限制加码，EUV/DUV 设备管制收紧，市场关注地缘风险对营收影响。",
+      "evidence": [
+        "荷兰政府近期进一步收紧对华出口许可",
+        "ASML 财报电话会提及出口管制为关键风险",
+        "多家卖方下调中国区收入预期，但长期需求叙事仍在"
+      ]
+    }
+  },
+  {
+    "fixture": "10-mac-studio.json",
+    "checks": [
+      {
+        "name": "valid_json",
+        "passed": true
+      },
+      {
+        "name": "score_in_range",
+        "passed": true
+      },
+      {
+        "name": "summary_length",
+        "passed": true
+      },
+      {
+        "name": "no_action_words",
+        "passed": true
+      }
+    ],
+    "passed": true,
+    "dur_ms": 2337,
+    "raw": {
+      "score": 30,
+      "narrative_summary": "Apple 新品 Mac Studio 存储配置引发抢购，供应链带宽话题在极客圈内讨论。",
+      "evidence": [
+        "Mac Studio 512G 版本在部分渠道出现抢购现象",
+        "用户讨论集中在存储带宽限制上",
+        "话题主要出现在数码/极客社群，未扩散至主流财经媒体"
+      ]
+    }
+  }
+]

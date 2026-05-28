@@ -1,0 +1,328 @@
+// Package gate is the M6 四道门评估 module.
+//
+// 评估主体是确定性 Go 规则引擎. 只有 G2 反共识需要 LLM (M6.5 引入 Mastra).
+//
+// 数据流:
+//   refinement.completed → 内部 consumer 触发 Service.Evaluate(refinementID)
+//   → 串行跑 G1, G2, G3, G4
+//   → 任一门失败立即 ArchiveSilently (写 gate.archived event, 但不在 client 可见 subject 发)
+//   → 全过 PassAndPromote (写 gate.evaluated + gate.passed, M7 narrator 会消费 gate.passed)
+package gate
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"flashfi/server/internal/domain"
+	"flashfi/server/internal/infra/db"
+)
+
+var (
+	ErrNotFound = errors.New("gate evaluation not found")
+)
+
+type Repository struct {
+	pool *db.Pool
+}
+
+func NewRepository(pool *db.Pool) *Repository {
+	return &Repository{pool: pool}
+}
+
+// Evaluation mirrors a gate_evaluations row.
+type Evaluation struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	RefinementID uuid.UUID
+	Gates        domain.GateDetail
+	Passed       bool
+	FailedGate   *int
+	ArchivedPool *domain.ArchivePool
+	EvaluatedAt  time.Time
+}
+
+// ───── Insert (transactional: event + view + outbox) ─────
+
+type InsertInput struct {
+	UserID       uuid.UUID
+	RefinementID uuid.UUID
+	Gates        domain.GateDetail
+	Passed       bool
+	FailedGate   *int
+	ArchivedPool *domain.ArchivePool
+	// HumanReason 仅 archived 时有意义 — 写到 gate.archived 事件的 payload.
+	HumanReason string
+}
+
+// Insert 写一条完整 evaluation. 内部用一个事务保证:
+//   - events.gate.evaluated (总是写)
+//   - events.gate.archived  (仅 !Passed 时写, causation = gate.evaluated)
+//   - gate_evaluations row
+//   - outbox: gate.evaluated 总发; gate.archived 仅失败时发 (subject 客户端不订阅);
+//             gate.passed 仅通过时发 (M7 narrator 消费)
+func (r *Repository) Insert(ctx context.Context, in InsertInput) (*Evaluation, error) {
+	now := time.Now().UTC()
+	evalID := uuid.New()
+
+	// gate.evaluated 全量 payload
+	evalPayload := domain.GateEvaluatedPayload{
+		EvaluationID: evalID,
+		UserID:       in.UserID,
+		RefinementID: in.RefinementID,
+		Gates:        in.Gates,
+		Passed:       in.Passed,
+		FailedGate:   in.FailedGate,
+		ArchivedPool: in.ArchivedPool,
+		EvaluatedAt:  now,
+	}
+	evalBytes, err := json.Marshal(evalPayload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal evaluated payload: %w", err)
+	}
+
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("begin tx: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// client_event_id 由 (refinement_id + "evaluated") 派生, 防止重复触发产生多条
+	evalCID := uuid.NewSHA1(uuid.NameSpaceOID,
+		append([]byte("gate-evaluated:"), in.RefinementID[:]...))
+
+	const insertEvent = `
+		INSERT INTO events (user_id, client_event_id, type, payload, occurred_at)
+		VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (user_id, client_event_id) DO NOTHING
+		RETURNING id
+	`
+	var evalEventID int64
+	if err := tx.QueryRow(ctx, insertEvent,
+		in.UserID, evalCID, string(domain.EventGateEvaluated), evalBytes, now,
+	).Scan(&evalEventID); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			// 已经 evaluate 过 — 静默成功, 返回已存在的
+			return r.getByRefinement(ctx, tx, in.UserID, in.RefinementID)
+		}
+		return nil, fmt.Errorf("insert evaluated event: %w", err)
+	}
+
+	// 2) gate_evaluations row
+	const insertView = `
+		INSERT INTO gate_evaluations
+			(id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+	`
+	gatesJSON, err := json.Marshal(in.Gates)
+	if err != nil {
+		return nil, fmt.Errorf("marshal gates_detail: %w", err)
+	}
+	var pool *string
+	if in.ArchivedPool != nil {
+		s := string(*in.ArchivedPool)
+		pool = &s
+	}
+	if _, err := tx.Exec(ctx, insertView,
+		evalID, in.UserID, in.RefinementID, gatesJSON, in.Passed, in.FailedGate, pool, now,
+	); err != nil {
+		return nil, fmt.Errorf("insert gate_evaluations: %w", err)
+	}
+
+	// 3) outbox · gate.evaluated (审计用, 客户端不订阅)
+	if err := insertOutbox(ctx, tx, evalEventID, domain.EventGateEvaluated, evalBytes); err != nil {
+		return nil, err
+	}
+
+	// 4) 如果失败, 写 gate.archived event + outbox (subject 客户端不订阅, 沉默归档)
+	if !in.Passed && in.ArchivedPool != nil && in.FailedGate != nil {
+		archivedPayload := domain.GateArchivedPayload{
+			EvaluationID: evalID,
+			UserID:       in.UserID,
+			Pool:         *in.ArchivedPool,
+			FailedGate:   *in.FailedGate,
+			HumanReason:  in.HumanReason,
+			ArchivedAt:   now,
+		}
+		archivedBytes, err := json.Marshal(archivedPayload)
+		if err != nil {
+			return nil, fmt.Errorf("marshal archived payload: %w", err)
+		}
+		archivedCID := uuid.NewSHA1(uuid.NameSpaceOID,
+			append([]byte("gate-archived:"), in.RefinementID[:]...))
+		var archivedEventID int64
+		if err := tx.QueryRow(ctx, insertEvent,
+			in.UserID, archivedCID, string(domain.EventGateArchived), archivedBytes, now,
+		).Scan(&archivedEventID); err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("insert archived event: %w", err)
+		}
+		if archivedEventID > 0 {
+			if err := insertOutbox(ctx, tx, archivedEventID, domain.EventGateArchived, archivedBytes); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	// 5) 如果通过, 发独立的 gate.passed (M7 narrator 消费)
+	if in.Passed {
+		// gate.passed 不是单独的 EventType — 它是 outbox-only 信号, 同样 payload
+		// 用 evaluated payload, 但 subject = "gate.passed"
+		const insertOutboxPassed = `
+			INSERT INTO event_outbox (event_id, subject, payload) VALUES ($1, $2, $3)
+		`
+		if _, err := tx.Exec(ctx, insertOutboxPassed, evalEventID, "gate.passed", evalBytes); err != nil {
+			return nil, fmt.Errorf("insert outbox passed: %w", err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, fmt.Errorf("commit: %w", err)
+	}
+
+	return &Evaluation{
+		ID:           evalID,
+		UserID:       in.UserID,
+		RefinementID: in.RefinementID,
+		Gates:        in.Gates,
+		Passed:       in.Passed,
+		FailedGate:   in.FailedGate,
+		ArchivedPool: in.ArchivedPool,
+		EvaluatedAt:  now,
+	}, nil
+}
+
+// ───── reads ─────
+
+func (r *Repository) GetByID(ctx context.Context, userID, id uuid.UUID) (*Evaluation, error) {
+	const q = `
+		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
+		FROM gate_evaluations WHERE user_id = $1 AND id = $2
+	`
+	var (
+		ev    Evaluation
+		gates json.RawMessage
+		pool  *string
+	)
+	if err := r.pool.QueryRow(ctx, q, userID, id).Scan(
+		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get evaluation: %w", err)
+	}
+	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+		return nil, fmt.Errorf("unmarshal gates_detail: %w", err)
+	}
+	if pool != nil {
+		p := domain.ArchivePool(*pool)
+		ev.ArchivedPool = &p
+	}
+	return &ev, nil
+}
+
+// GetByRefinementID 按 refinement_id 拿用户的 evaluation. 客户端 signal 详情页用,
+// 把"通过 / 哪道门没过"的结果展示在信号底部. 没有 → ErrNotFound.
+func (r *Repository) GetByRefinementID(ctx context.Context, userID, refinementID uuid.UUID) (*Evaluation, error) {
+	const q = `
+		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
+		FROM gate_evaluations WHERE user_id = $1 AND refinement_id = $2
+	`
+	var (
+		ev    Evaluation
+		gates json.RawMessage
+		pool  *string
+	)
+	if err := r.pool.QueryRow(ctx, q, userID, refinementID).Scan(
+		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("get by refinement: %w", err)
+	}
+	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+		return nil, fmt.Errorf("unmarshal gates_detail: %w", err)
+	}
+	if pool != nil {
+		p := domain.ArchivePool(*pool)
+		ev.ArchivedPool = &p
+	}
+	return &ev, nil
+}
+
+func (r *Repository) ListByPool(ctx context.Context, userID uuid.UUID, pool domain.ArchivePool, limit int) ([]Evaluation, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	const q = `
+		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
+		FROM gate_evaluations
+		WHERE user_id = $1 AND archived_pool = $2
+		ORDER BY evaluated_at DESC
+		LIMIT $3
+	`
+	rows, err := r.pool.Query(ctx, q, userID, string(pool), limit)
+	if err != nil {
+		return nil, fmt.Errorf("list by pool: %w", err)
+	}
+	defer rows.Close()
+	out := make([]Evaluation, 0, limit)
+	for rows.Next() {
+		var (
+			ev    Evaluation
+			gates json.RawMessage
+			p     *string
+		)
+		if err := rows.Scan(&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &p, &ev.EvaluatedAt); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+		if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+			return nil, fmt.Errorf("unmarshal: %w", err)
+		}
+		if p != nil {
+			ap := domain.ArchivePool(*p)
+			ev.ArchivedPool = &ap
+		}
+		out = append(out, ev)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) getByRefinement(ctx context.Context, tx pgx.Tx, userID, refinementID uuid.UUID) (*Evaluation, error) {
+	const q = `
+		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
+		FROM gate_evaluations WHERE user_id = $1 AND refinement_id = $2
+	`
+	var (
+		ev    Evaluation
+		gates json.RawMessage
+		pool  *string
+	)
+	if err := tx.QueryRow(ctx, q, userID, refinementID).Scan(
+		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
+	); err != nil {
+		return nil, fmt.Errorf("get by refinement: %w", err)
+	}
+	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+		return nil, err
+	}
+	if pool != nil {
+		p := domain.ArchivePool(*pool)
+		ev.ArchivedPool = &p
+	}
+	return &ev, nil
+}
+
+func insertOutbox(ctx context.Context, tx pgx.Tx, eventID int64, et domain.EventType, payload []byte) error {
+	const q = `INSERT INTO event_outbox (event_id, subject, payload) VALUES ($1, $2, $3)`
+	if _, err := tx.Exec(ctx, q, eventID, string(et), payload); err != nil {
+		return fmt.Errorf("insert outbox: %w", err)
+	}
+	return nil
+}
