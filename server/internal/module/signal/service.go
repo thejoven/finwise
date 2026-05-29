@@ -17,20 +17,32 @@ import (
 // Wrapped errors give the HTTP handler a 400 path.
 var ErrInvalidInput = errors.New("invalid input")
 
+// ErrInvalidProject — capture 时 project_id 不属于 user / 已归档. handler 转 400.
+var ErrInvalidProject = errors.New("invalid project")
+
+// ProjectOwnerCheck — 由 main.go 装配的闭包, capture 时校验 project_id 是否
+// 属于该 user 且未归档. 返回 ErrInvalidProject 时上游转 400.
+// 闭包形式避免 signal 模块反向 import project 模块.
+type ProjectOwnerCheck func(ctx context.Context, userID, projectID uuid.UUID) error
+
 // Service holds the business rules around signal capture / inference.
 // Kept thin: repository is the work-horse.
 type Service struct {
-	repo *Repository
+	repo         *Repository
+	projectCheck ProjectOwnerCheck
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+// NewService — projectCheck 可以传 nil, capture 时若有 project_id 入参会被忽略
+// (理论不该发生, 但测试场景方便).
+func NewService(repo *Repository, projectCheck ProjectOwnerCheck) *Service {
+	return &Service{repo: repo, projectCheck: projectCheck}
 }
 
 // CaptureCommand is the API-facing input to capture a signal.
 type CaptureCommand struct {
 	UserID        uuid.UUID
 	ClientEventID uuid.UUID
+	ProjectID     *uuid.UUID // 可选; nil = 未分类
 	RawText       string
 	OccurredAt    time.Time
 }
@@ -66,9 +78,16 @@ func (s *Service) Capture(ctx context.Context, cmd CaptureCommand) (*CaptureResu
 	if err := cmd.Validate(); err != nil {
 		return nil, err
 	}
+	// project_id 显式带入时, 校验属于 user 且未归档. 闭包未装配(测试场景)就跳过.
+	if cmd.ProjectID != nil && s.projectCheck != nil {
+		if err := s.projectCheck(ctx, cmd.UserID, *cmd.ProjectID); err != nil {
+			return nil, err
+		}
+	}
 	return s.repo.Capture(ctx, CaptureInput{
 		UserID:        cmd.UserID,
 		ClientEventID: cmd.ClientEventID,
+		ProjectID:     cmd.ProjectID,
 		RawText:       cmd.RawText,
 		CapturedAt:    cmd.OccurredAt,
 	})

@@ -8,6 +8,7 @@ import { Display, DoubleRule, Mono, Sans, Serif, TapEffect } from "@/shared/comp
 import { theme } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
+import { useNotifications } from "@/features/notifications";
 
 /**
  * 个人资料 tab.
@@ -150,6 +151,11 @@ export default function ProfileScreen() {
         </View>
 
         <View style={styles.section}>
+          <SectionLabel>通讯</SectionLabel>
+          <NotificationRow />
+        </View>
+
+        <View style={styles.section}>
           <SectionLabel>其他</SectionLabel>
           <RowLink label="卷首语 · 关于" onPress={() => router.push("/colophon")} />
           <RowLink label="搜索观察记录" onPress={() => router.push("/search")} />
@@ -179,11 +185,54 @@ function SectionLabel({ children }: { children: string }) {
 
 function RowLink({ label, onPress }: { label: string; onPress: () => void }) {
   return (
-    <TapEffect style={styles.row} onPress={onPress} pressedStyle={{ backgroundColor: theme.color.paperPressed }}>
+    <TapEffect
+      style={styles.row}
+      onPress={onPress}
+      pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+    >
       <Serif size={14} style={styles.rowLabel}>
         {label}
       </Serif>
       <ChevronRight size={16} color={theme.color.muted2} strokeWidth={1.5} />
+    </TapEffect>
+  );
+}
+
+/**
+ * NotificationRow — 通知中心入口, 含未读 badge.
+ * 未读 N > 0 → red diamond + Mono "N" 数字; 0 → 灰 "无";
+ */
+function NotificationRow() {
+  const items = useNotifications((s) => s.items);
+  const unread = items.filter((n) => !n.read).length;
+  const total = items.length;
+  const right =
+    unread > 0 ? (
+      <View style={styles.badgeRow}>
+        <View style={styles.badgeDot} />
+        <Mono size={10} style={styles.badgeCount}>
+          {unread}
+        </Mono>
+        <ChevronRight size={16} color={theme.color.ink2} strokeWidth={1.5} />
+      </View>
+    ) : (
+      <View style={styles.badgeRow}>
+        <Mono size={10} style={styles.badgeMuted}>
+          {total === 0 ? "无" : `${total}`}
+        </Mono>
+        <ChevronRight size={16} color={theme.color.muted2} strokeWidth={1.5} />
+      </View>
+    );
+  return (
+    <TapEffect
+      style={styles.row}
+      onPress={() => router.push("/notifications")}
+      pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+    >
+      <Serif size={14} style={styles.rowLabel}>
+        消息通知
+      </Serif>
+      {right}
     </TapEffect>
   );
 }
@@ -252,5 +301,26 @@ const styles = StyleSheet.create({
     color: theme.color.red,
     letterSpacing: 2,
     textTransform: "uppercase",
+  },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+  },
+  badgeDot: {
+    width: 6,
+    height: 6,
+    backgroundColor: theme.color.red,
+    transform: [{ rotate: "45deg" }],
+  },
+  badgeCount: {
+    color: theme.color.red,
+    letterSpacing: 1,
+    marginRight: 2,
+  },
+  badgeMuted: {
+    color: theme.color.muted2,
+    letterSpacing: 1,
+    marginRight: 2,
   },
 });

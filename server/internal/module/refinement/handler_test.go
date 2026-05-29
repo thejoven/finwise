@@ -60,7 +60,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	// signal module — refinement.Start 要求 primary_signal_id 真实存在
 	sigRepo := signalmod.NewRepository(pool)
-	sigSvc := signalmod.NewService(sigRepo)
+	sigSvc := signalmod.NewService(sigRepo, nil)
 	sigHandler := signalmod.NewHandler(sigSvc)
 
 	refRepo := NewRepository(pool)

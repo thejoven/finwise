@@ -4,6 +4,7 @@ import { BookOpen, Plus } from "lucide-react-native";
 import { Display, Sans } from "./Text";
 import { TapEffect } from "./TapEffect";
 import { theme } from "@/core/theme";
+import { ProjectChipsRow } from "@/features/project";
 
 export interface MastheadProps {
   /** 卷号, e.g. "I" */
@@ -90,6 +91,7 @@ export function Masthead({
           以智驭财 · 行远致富
         </RNText>
       </View>
+      <ProjectChipsRow parentPadded />
       <DoubleRuleBottom />
     </View>
   );

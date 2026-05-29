@@ -33,19 +33,67 @@ services:
       timeout: 3s
       retries: 10
 
-  nats:
-    image: nats:2.10-alpine
-    container_name: flashfi-nats
+  redis:
+    image: redis:7-alpine
+    container_name: flashfi-redis
     restart: unless-stopped
-    command: ["-js", "-m", "8222"]
+    command: ["redis-server", "--appendonly", "yes"]
+    # 205 上有别的项目占了 6379 (mm-redis). 默认改成 6380 避撞,
+    # 想改回 6379 set REDIS_HOST_PORT=6379 in .env.
     ports:
-      - "${NATS_HOST_PORT:-4222}:4222"
-      - "${NATS_MONITOR_HOST_PORT:-8222}:8222"
+      - "${REDIS_HOST_PORT:-6380}:6379"
+    volumes:
+      - redisdata:/data
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O-", "http://localhost:8222/healthz"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # iii engine v0.16.0 — 跑 docker 是因为原生二进制的 microVM 沙箱在 205 Ubuntu
+  # 上跟 sshd 抢资源, 直接撂挂 sshd. 官方镜像设了 III_EXECUTION_CONTEXT=docker,
+  # 内置 queue/state/http worker 不再走 microVM.
+  iii:
+    image: iiidev/iii:0.16.0
+    container_name: flashfi-iii
+    restart: unless-stopped
+    # 镜像里 user 是 65532 nonroot, /app/data 需要可写 — 用 volume 解决权限.
+    volumes:
+      - ./iii/config.yaml:/app/config.yaml:ro
+      - iiidata:/app/data
+    ports:
+      - "${III_HTTP_HOST_PORT:-3111}:3111"     # HTTP worker, Go outbox POST 这里
+      - "${III_WS_HOST_PORT:-49134}:49134"     # SDK worker WS connection
+      - "${III_METRICS_HOST_PORT:-9464}:9464"  # prometheus
+    healthcheck:
+      test: ["CMD", "/app/iii", "--version"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # iii-console (浏览器 UI: DLQ / queue stats / OTel). 上游没出 docker 镜像,
+  # 自己用 iii/Dockerfile.console 把 v0.16.0 musl binary 装进 alpine, build 后接 engine.
+  iii-console:
+    build:
+      context: ./iii
+      dockerfile: Dockerfile.console
+      args:
+        VERSION: "0.16.0"
+        TARGET: x86_64-unknown-linux-musl
+    image: flashfi/iii-console:0.16.0
+    container_name: flashfi-iii-console
+    restart: unless-stopped
+    depends_on:
+      iii:
+        condition: service_started
+    command:
+      - "--host=0.0.0.0"
+      - "--port=3113"
+      - "--engine-host=iii"        # docker 网内直接服务名
+      - "--engine-port=3111"
+      - "--bridge-port=49134"
+    ports:
+      - "${III_CONSOLE_HOST_PORT:-3113}:3113"
 
   # --- Application (profile: prod) ---
 
@@ -62,12 +110,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      nats:
+      redis:
         condition: service_healthy
+      iii:
+        condition: service_started
     environment:
       # Compose 这里的 environment 优先级高于 env_file, 所以网络相关的 URL 固定写死.
       DATABASE_URL: postgres://${POSTGRES_USER:-flashfi}:${POSTGRES_PASSWORD:-dev_password_change_me}@postgres:5432/${POSTGRES_DB:-flashfi}?sslmode=disable
-      NATS_URL: nats://nats:4222
+      # iii engine 现在跑在 compose 网络里同名 service. outbox 走这里推事件.
+      III_HTTP_URL: http://iii:3111
       PORT: "8080"
       LOG_LEVEL: ${LOG_LEVEL:-info}
       DEV_USER_ID: ${DEV_USER_ID:?DEV_USER_ID required, run uuidgen and set it in .env}
@@ -95,10 +146,11 @@ services:
     depends_on:
       api:
         condition: service_started
-      nats:
-        condition: service_healthy
+      iii:
+        condition: service_started
     environment:
-      NATS_URL: nats://nats:4222
+      # iii SDK worker 通过 WS 连到同 compose 网络里的 iii service.
+      III_URL: ws://iii:49134
       FLASHFI_API_URL: http://api:8080
       INTERNAL_TOKEN: ${INTERNAL_TOKEN}
       LLM_API_KEY: ${LLM_API_KEY:?LLM_API_KEY required for mastra}
@@ -155,3 +207,5 @@ services:
 
 volumes:
   pgdata:
+  redisdata:
+  iiidata:

@@ -17,6 +17,8 @@ export interface PendingSignalRow {
   attempts: number;
   /** Unix ms — sync queue won't retry before this. 0 = retry now. */
   next_retry_at: number;
+  /** 提交时绑定的分类 id; null = 未分类 (即 "全部") */
+  project_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -29,6 +31,7 @@ interface DBRow {
   error: string | null;
   attempts: number;
   next_retry_at: number;
+  project_id: string | null;
   created_at: number;
   updated_at: number;
 }
@@ -58,18 +61,21 @@ export async function upsertSyncing(input: {
   id: string;
   raw_text: string;
   captured_at: string;
+  project_id?: string | null;
 }): Promise<PendingSignalRow> {
   const db = await getDB();
   const now = Date.now();
+  const projectID = input.project_id ?? null;
   await db.runAsync(
-    `INSERT INTO pending_signals (id, raw_text, captured_at, status, error, attempts, next_retry_at, created_at, updated_at)
-     VALUES (?, ?, ?, 'syncing', NULL, 0, 0, ?, ?)
+    `INSERT INTO pending_signals (id, raw_text, captured_at, status, error, attempts, next_retry_at, project_id, created_at, updated_at)
+     VALUES (?, ?, ?, 'syncing', NULL, 0, 0, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        status        = 'syncing',
        error         = NULL,
        next_retry_at = 0,
+       project_id    = excluded.project_id,
        updated_at    = excluded.updated_at`,
-    [input.id, input.raw_text, input.captured_at, now, now],
+    [input.id, input.raw_text, input.captured_at, projectID, now, now],
   );
   const row = await db.getFirstAsync<DBRow>(`SELECT * FROM pending_signals WHERE id = ?`, [input.id]);
   if (!row) throw new Error(`upsertSyncing: row not found after insert: ${input.id}`);

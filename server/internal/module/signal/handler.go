@@ -38,19 +38,22 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 
 type captureRequest struct {
 	ClientEventID string    `json:"client_event_id"`
+	ProjectID     *string   `json:"project_id,omitempty"`
 	RawText       string    `json:"raw_text"`
 	OccurredAt    time.Time `json:"occurred_at"`
 }
 
 type captureResponse struct {
-	SignalID        string `json:"signal_id"`
-	EventID         int64  `json:"event_id"`
-	InferenceStatus string `json:"inference_status"`
-	Duplicate       bool   `json:"duplicate"`
+	SignalID        string  `json:"signal_id"`
+	EventID         int64   `json:"event_id"`
+	InferenceStatus string  `json:"inference_status"`
+	Duplicate       bool    `json:"duplicate"`
+	ProjectID       *string `json:"project_id,omitempty"`
 }
 
 type signalView struct {
 	ID               string    `json:"id"`
+	ProjectID        *string   `json:"project_id,omitempty"`
 	RawText          string    `json:"raw_text"`
 	CapturedAt       time.Time `json:"captured_at"`
 	InferenceStatus  string    `json:"inference_status"`
@@ -95,9 +98,20 @@ func (h *Handler) capture(c *gin.Context) {
 		return
 	}
 
+	var projectID *uuid.UUID
+	if req.ProjectID != nil && *req.ProjectID != "" {
+		pid, err := uuid.Parse(*req.ProjectID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "project_id not a uuid"})
+			return
+		}
+		projectID = &pid
+	}
+
 	res, err := h.svc.Capture(c.Request.Context(), CaptureCommand{
 		UserID:        userID,
 		ClientEventID: cid,
+		ProjectID:     projectID,
 		RawText:       req.RawText,
 		OccurredAt:    req.OccurredAt,
 	})
@@ -106,14 +120,19 @@ func (h *Handler) capture(c *gin.Context) {
 		return
 	}
 
-	// 202 even on duplicate — the client should treat the response as the truth
-	// and update its local state idempotently.
-	c.JSON(http.StatusAccepted, captureResponse{
+	resp := captureResponse{
 		SignalID:        res.Signal.ID.String(),
 		EventID:         res.EventID,
 		InferenceStatus: string(res.Signal.InferenceStatus),
 		Duplicate:       res.Duplicate,
-	})
+	}
+	if res.Signal.ProjectID != nil {
+		s := res.Signal.ProjectID.String()
+		resp.ProjectID = &s
+	}
+	// 202 even on duplicate — the client should treat the response as the truth
+	// and update its local state idempotently.
+	c.JSON(http.StatusAccepted, resp)
 }
 
 func (h *Handler) list(c *gin.Context) {
@@ -266,7 +285,7 @@ func (h *Handler) recordInference(c *gin.Context) {
 }
 
 func toSignalView(s domain.Signal) signalView {
-	return signalView{
+	v := signalView{
 		ID:               s.ID.String(),
 		RawText:          s.RawText,
 		CapturedAt:       s.CapturedAt,
@@ -274,11 +293,20 @@ func toSignalView(s domain.Signal) signalView {
 		InferenceSummary: s.InferenceSummary,
 		InferenceTags:    s.InferenceTags,
 	}
+	if s.ProjectID != nil {
+		pid := s.ProjectID.String()
+		v.ProjectID = &pid
+	}
+	return v
 }
 
 func writeServiceError(c *gin.Context, err error) {
 	if errors.Is(err, ErrInvalidInput) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	if errors.Is(err, ErrInvalidProject) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid project_id"})
 		return
 	}
 	c.Error(err) //nolint:errcheck // gin logs it via middleware

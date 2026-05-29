@@ -16,7 +16,7 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ChevronDown, ChevronUp } from "lucide-react-native";
 
-import { Display, DoubleRule, Mono, Sans, Serif, TapEffect } from "@/shared/components";
+import { Display, DoubleRule, Mono, RichText, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 import { formatLongDate } from "@/features/capture";
 import type { Diagnosis, QuestionOption, RoundView, UserAnswer } from "@/core/api/refinement";
@@ -29,7 +29,12 @@ interface Props {
   defaultExpanded?: boolean;
 }
 
-export function RefinementHistory({ rounds, decision, completedAt, defaultExpanded = false }: Props) {
+export function RefinementHistory({
+  rounds,
+  decision,
+  completedAt,
+  defaultExpanded = false,
+}: Props) {
   const [expanded, setExpanded] = useState(defaultExpanded);
   if (rounds.length === 0) return null;
   const ordered = [...rounds].sort((a, b) => a.round - b.round);
@@ -102,7 +107,7 @@ function RoundBlock({ round }: { round: RoundView }) {
       </View>
 
       <Display size={17} italic style={styles.questionText}>
-        {round.question_text}
+        <RichText text={round.question_text} />
       </Display>
 
       {options.length > 0 ? (
@@ -161,7 +166,7 @@ function OptionRow({ option, selected, rank, userOpenText }: OptionRowProps) {
           italic={option.is_user_input}
           style={[styles.optionText, selected && styles.optionTextSelected]}
         >
-          {option.text}
+          <RichText text={option.text} />
         </Serif>
         {option.is_user_input && selected && userOpenText ? (
           <Serif size={13} style={styles.userOpenText}>

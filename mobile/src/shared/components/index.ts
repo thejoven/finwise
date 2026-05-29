@@ -4,6 +4,10 @@
 export { Display, Serif, Sans, Mono } from "./Text";
 export type { DisplayProps, SerifProps, SansProps, MonoProps } from "./Text";
 
+export { RichText } from "./RichText";
+
+export { DoneAccessory } from "./DoneAccessory";
+
 export { TapEffect } from "./TapEffect";
 export type { TapEffectProps } from "./TapEffect";
 
@@ -28,3 +32,5 @@ export {
   COLLAPSIBLE_MASTHEAD_COLLAPSED,
 } from "./CollapsibleMasthead";
 export type { CollapsibleMastheadProps } from "./CollapsibleMasthead";
+
+export { GlassTabBarBackground } from "./GlassTabBarBackground";

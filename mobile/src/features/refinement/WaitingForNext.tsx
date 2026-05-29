@@ -14,7 +14,7 @@
  *   - 用 ink/muted 色调, 不引入新色
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import Animated, {
   Easing,
@@ -27,7 +27,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-import { Mono } from "@/shared/components";
+import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 
 import { TypewriterText } from "./TypewriterText";
@@ -37,9 +37,17 @@ interface Props {
   stamp?: string;
   /** 主体 typewriter 文字 */
   text: string;
+  /**
+   * 可选: 等下一题的计时锚 (上一轮 answered_at). 配合 onRetry 启用 60s 后的
+   * 重试按钮. 不传 → 永远不显示重试.
+   */
+  retryAnchor?: string | number | null;
+  /** 重试 mutation 回调; 同时控制 busy 视觉 */
+  onRetry?: () => void;
+  retryBusy?: boolean;
 }
 
-export function WaitingForNext({ stamp, text }: Props) {
+export function WaitingForNext({ stamp, text, retryAnchor, onRetry, retryBusy }: Props) {
   return (
     <View style={styles.root}>
       {stamp ? (
@@ -54,6 +62,51 @@ export function WaitingForNext({ stamp, text }: Props) {
         <PulsingDot delay={360} />
       </View>
       <ShimmerRule />
+      {retryAnchor != null && onRetry ? (
+        <RetryGate anchor={retryAnchor} busy={!!retryBusy} onRetry={onRetry} />
+      ) : null}
+    </View>
+  );
+}
+
+/**
+ * RetryGate — 60s 后才露面的"重新出题"提示 + 按钮.
+ * 包在 WaitingForNext 内部, 跟"等下一题"语义一致.
+ */
+function RetryGate({
+  anchor,
+  busy,
+  onRetry,
+}: {
+  anchor: string | number;
+  busy: boolean;
+  onRetry: () => void;
+}) {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const anchorMs = typeof anchor === "number" ? anchor : new Date(anchor).getTime();
+  const elapsedSec = Math.max(0, Math.floor((now - anchorMs) / 1000));
+  if (elapsedSec < 60) return null;
+
+  return (
+    <View style={styles.retryBlock}>
+      <Serif size={12} italic style={styles.retryHint}>
+        ◆ 等下一题超过 {elapsedSec}s — 大概率 Socratic 输出格式偶发不稳, 让它重试一次.
+      </Serif>
+      <TapEffect
+        style={[styles.retryButton, busy && styles.retryButtonBusy]}
+        pressedStyle={busy ? undefined : { backgroundColor: theme.color.ink2 }}
+        onPress={busy ? undefined : onRetry}
+        disabled={busy}
+      >
+        <Sans size={11} weight="700" style={styles.retryLabel}>
+          {busy ? "正在重新出题..." : "让它再出一次"}
+        </Sans>
+      </TapEffect>
     </View>
   );
 }
@@ -140,5 +193,30 @@ const styles = StyleSheet.create({
     width: 80,
     height: StyleSheet.hairlineWidth,
     backgroundColor: theme.color.ink,
+  },
+  retryBlock: {
+    marginTop: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    paddingTop: theme.spacing.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: theme.color.ruleSoft,
+  },
+  retryHint: {
+    color: theme.color.muted,
+    lineHeight: 20,
+  },
+  retryButton: {
+    alignSelf: "flex-start",
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.sm,
+    backgroundColor: theme.color.ink,
+  },
+  retryButtonBusy: {
+    backgroundColor: theme.color.muted2,
+  },
+  retryLabel: {
+    color: theme.color.paper,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
 });

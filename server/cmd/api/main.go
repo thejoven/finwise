@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,7 +14,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	natsgo "github.com/nats-io/nats.go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -21,34 +21,20 @@ import (
 	"flashfi/server/internal/domain"
 	"flashfi/server/internal/httpapi"
 	"flashfi/server/internal/infra/db"
+	iiix "flashfi/server/internal/infra/iii"
 	mastrax "flashfi/server/internal/infra/mastra"
-	natsx "flashfi/server/internal/infra/nats"
 	accountmod "flashfi/server/internal/module/account"
 	commitmentmod "flashfi/server/internal/module/commitment"
 	companionmod "flashfi/server/internal/module/companion"
 	exitmod "flashfi/server/internal/module/exit"
 	gatemod "flashfi/server/internal/module/gate"
+	projectmod "flashfi/server/internal/module/project"
 	refinementmod "flashfi/server/internal/module/refinement"
+	attentionmod "flashfi/server/internal/module/attention"
 	researchmod "flashfi/server/internal/module/research"
 	retrospectmod "flashfi/server/internal/module/retrospect"
 	signalmod "flashfi/server/internal/module/signal"
 )
-
-// streamName is the JetStream stream that holds all flashfi events.
-// Subjects "signal.*", "refinement.*", etc are bound here.
-const streamName = "FLASHFI_EVENTS"
-
-// streamSubjects is the union of all event subjects the stream accepts.
-// Add Phase 2/3 subjects here as modules land — JetStream Update is safe.
-var streamSubjects = []string{
-	"signal.>",
-	"refinement.>",
-	"gate.>",
-	"commitment.>",
-	"companion.>",
-	"exit.>",
-	"retrospect.>",
-}
 
 func main() {
 	if err := run(); err != nil {
@@ -79,16 +65,8 @@ func run() error {
 	defer pool.Close()
 	logger.Info("db connected")
 
-	nc, err := natsx.Connect(cfg.NATSURL)
-	if err != nil {
-		return fmt.Errorf("nats connect: %w", err)
-	}
-	defer nc.Close()
-	logger.Info("nats connected")
-
-	if err := ensureStream(nc); err != nil {
-		return fmt.Errorf("ensure stream: %w", err)
-	}
+	iiiClient := iiix.NewClient(cfg.IIIHTTPURL)
+	logger.Info("iii http client ready", zap.String("url", cfg.IIIHTTPURL))
 
 	// ───── Mastra HTTP client (G2 / Editor / Diagnostician) ─────
 	// 空 URL 时 client.IsConfigured() = false, 各 service fallback 启发式.
@@ -110,8 +88,22 @@ func run() error {
 		logger.Warn("ensure dev user failed (ignored)", zap.Error(err))
 	}
 
+	projectRepo := projectmod.NewRepository(pool)
+	projectSvc := projectmod.NewService(projectRepo)
+	projectHandler := projectmod.NewHandler(projectSvc)
+
 	signalRepo := signalmod.NewRepository(pool)
-	signalSvc := signalmod.NewService(signalRepo)
+	// projectOwnerCheck: signal.Capture 用它校验请求里的 project_id 属于 user 且未归档.
+	signalSvc := signalmod.NewService(signalRepo, func(ctx context.Context, userID, projectID uuid.UUID) error {
+		err := projectSvc.ValidateOwnership(ctx, userID, projectID)
+		if err != nil {
+			if errors.Is(err, projectmod.ErrNotFound) {
+				return signalmod.ErrInvalidProject
+			}
+			return err
+		}
+		return nil
+	})
 	signalHandler := signalmod.NewHandler(signalSvc)
 
 	refinementRepo := refinementmod.NewRepository(pool)
@@ -155,6 +147,10 @@ func run() error {
 	researchSvc := researchmod.NewService(researchRepo, researchSessionLookup)
 	researchHandler := researchmod.NewHandler(researchSvc)
 
+	attentionRepo := attentionmod.NewRepository(pool)
+	attentionSvc := attentionmod.NewService(attentionRepo)
+	attentionHandler := attentionmod.NewHandler(attentionSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -165,6 +161,7 @@ func run() error {
 		Sessions:         accountSvc,
 		RegisterModules: func(anon, v1, internal *gin.RouterGroup) {
 			accountHandler.Register(anon, v1, internal)
+			projectHandler.Register(v1, internal)
 			signalHandler.Register(v1, internal)
 			refinementHandler.Register(v1, internal)
 			gateHandler.Register(v1, internal)
@@ -172,6 +169,7 @@ func run() error {
 			companionHandler.Register(v1, internal)
 			retrospectHandler.Register(v1, internal)
 			researchHandler.Register(v1, internal)
+			attentionHandler.Register(v1, internal)
 		},
 	})
 
@@ -186,22 +184,46 @@ func run() error {
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
 
-	outbox := natsx.NewOutboxWorker(pool, nc, logger, natsx.OutboxConfig{
+	// gate 评估: 原来由 NATS pull consumer 异步触发 (refinement.completed durable
+	// "gate-evaluator"). 切到 iii 后, iii 没有 Go SDK, 所以把 gate.Evaluate 作为
+	// outbox 的 postPublish 回调内联起来 — 事件成功 POST 到 iii 之后, 同一进程里
+	// 顺手把 gate 跑完, 跑出来的 gate.passed/gate.archived 走正常 outbox 路径.
+	postPublish := func(ctx context.Context, subject string, payload []byte) {
+		if subject != "refinement.completed" {
+			return
+		}
+		var p domain.RefinementCompletedPayload
+		if err := json.Unmarshal(payload, &p); err != nil {
+			logger.Error("gate inline: decode payload", zap.Error(err))
+			return
+		}
+		if p.Decision == domain.RefinementTrainingOnly {
+			logger.Info("gate inline: skipped (training_only)",
+				zap.String("refinement_id", p.RefinementID.String()))
+			return
+		}
+		start := time.Now()
+		if _, err := gateSvc.Evaluate(ctx, p.RefinementID); err != nil {
+			logger.Warn("gate inline evaluate failed",
+				zap.String("refinement_id", p.RefinementID.String()),
+				zap.Error(err))
+			return
+		}
+		logger.Info("gate inline evaluated",
+			zap.String("refinement_id", p.RefinementID.String()),
+			zap.Duration("dur", time.Since(start)))
+	}
+
+	outbox := iiix.NewOutboxWorker(pool, iiiClient, logger, iiix.OutboxConfig{
 		PollInterval: cfg.OutboxPollInterval,
 		BatchSize:    cfg.OutboxBatchSize,
 		MaxAttempts:  cfg.OutboxMaxAttempts,
+		PostPublish:  postPublish,
 	})
 	workerWG.Add(1)
 	go func() {
 		defer workerWG.Done()
 		outbox.Run(workerCtx)
-	}()
-
-	gateConsumer := gatemod.NewConsumer(gateSvc, nc, logger)
-	workerWG.Add(1)
-	go func() {
-		defer workerWG.Done()
-		gateConsumer.Run(workerCtx)
 	}()
 
 	// exit checker 调 retrospect 创建闭包 — main.go 装配跨模块依赖, exit 包不引 retrospect.
@@ -246,29 +268,6 @@ func run() error {
 
 	workerCancel()
 	workerWG.Wait()
-	return nil
-}
-
-// ensureStream creates the JetStream stream lazily on startup.
-// Idempotent: noop if it already exists with compatible config.
-func ensureStream(client *natsx.Client) error {
-	_, err := client.JS.StreamInfo(streamName)
-	if err == nil {
-		return nil
-	}
-	if !errors.Is(err, natsgo.ErrStreamNotFound) {
-		return fmt.Errorf("stream info: %w", err)
-	}
-	_, err = client.JS.AddStream(&natsgo.StreamConfig{
-		Name:      streamName,
-		Subjects:  streamSubjects,
-		Storage:   natsgo.FileStorage,
-		Retention: natsgo.LimitsPolicy,
-		MaxAge:    30 * 24 * time.Hour, // 30 days; Phase 1 audit horizon
-	})
-	if err != nil {
-		return fmt.Errorf("add stream: %w", err)
-	}
 	return nil
 }
 

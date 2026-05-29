@@ -14,8 +14,8 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { StyleSheet, TextInput, View } from "react-native";
-import { Display, Mono, Serif, TapEffect } from "@/shared/components";
+import { StyleSheet, View } from "react-native";
+import { Display, Mono, RichText, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 import type {
   PendingQuestionPayload,
@@ -24,68 +24,48 @@ import type {
   UserAnswer,
 } from "@/core/api/refinement";
 
+import { InputTrigger } from "./InputTrigger";
+import { TextInputModal } from "./TextInputModal";
+
 interface Props {
   question: PendingQuestionPayload;
   onAnswerChange: (answer: UserAnswer) => void;
-  // 文本输入 focus 时回调 — 父组件用来 scroll 到底, 避免键盘遮挡.
-  onInputFocus?: () => void;
 }
 
-export function QuestionCard({ question, onAnswerChange, onInputFocus }: Props) {
+export function QuestionCard(props: Props) {
+  const { question } = props;
   return (
     <View style={styles.root}>
       <Mono size={9} style={styles.roundStamp}>
         ROUND {question.round} · {kindLabel(question.kind)}
       </Mono>
       <Display size={20} style={styles.questionText}>
-        {question.text}
+        <RichText text={question.text} />
       </Display>
       <View style={styles.separator} />
-      <Body question={question} onAnswerChange={onAnswerChange} onInputFocus={onInputFocus} />
+      <Body {...props} />
     </View>
   );
 }
 
-function Body({ question, onAnswerChange, onInputFocus }: Props) {
-  switch (question.kind) {
+function Body(props: Props) {
+  switch (props.question.kind) {
     case "single":
-      return (
-        <SingleChoice
-          question={question}
-          onAnswerChange={onAnswerChange}
-          onInputFocus={onInputFocus}
-        />
-      );
+      return <SingleChoice {...props} />;
     case "multi":
-      return (
-        <MultiChoice
-          question={question}
-          onAnswerChange={onAnswerChange}
-          onInputFocus={onInputFocus}
-        />
-      );
+      return <MultiChoice {...props} />;
     case "ordering":
-      return (
-        <Ordering question={question} onAnswerChange={onAnswerChange} onInputFocus={onInputFocus} />
-      );
+      return <Ordering {...props} />;
     case "open":
-      return (
-        <OpenText question={question} onAnswerChange={onAnswerChange} onInputFocus={onInputFocus} />
-      );
+      return <OpenText {...props} />;
     case "commitment_setup":
-      return (
-        <CommitmentSetup
-          question={question}
-          onAnswerChange={onAnswerChange}
-          onInputFocus={onInputFocus}
-        />
-      );
+      return <CommitmentSetup {...props} />;
   }
 }
 
 // ───── single ─────
 
-function SingleChoice({ question, onAnswerChange, onInputFocus }: Props) {
+function SingleChoice({ question, onAnswerChange }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
   const [userText, setUserText] = useState("");
   const start = useMemo(() => Date.now(), []);
@@ -132,7 +112,6 @@ function SingleChoice({ question, onAnswerChange, onInputFocus }: Props) {
           onPress={() => pick(o.id, !!o.is_user_input)}
           userText={userText}
           onUserTextChange={changeUserText}
-          onUserTextFocus={onInputFocus}
         />
       ))}
     </View>
@@ -141,7 +120,7 @@ function SingleChoice({ question, onAnswerChange, onInputFocus }: Props) {
 
 // ───── multi ─────
 
-function MultiChoice({ question, onAnswerChange, onInputFocus }: Props) {
+function MultiChoice({ question, onAnswerChange }: Props) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [userText, setUserText] = useState("");
   const start = useMemo(() => Date.now(), []);
@@ -200,7 +179,6 @@ function MultiChoice({ question, onAnswerChange, onInputFocus }: Props) {
           onPress={() => toggle(o.id)}
           userText={userText}
           onUserTextChange={changeUserText}
-          onUserTextFocus={onInputFocus}
         />
       ))}
     </View>
@@ -209,7 +187,7 @@ function MultiChoice({ question, onAnswerChange, onInputFocus }: Props) {
 
 // ───── ordering ─────
 
-function Ordering({ question, onAnswerChange, onInputFocus }: Props) {
+function Ordering({ question, onAnswerChange }: Props) {
   const [order, setOrder] = useState<string[]>([]);
   const [userText, setUserText] = useState("");
   const start = useMemo(() => Date.now(), []);
@@ -269,7 +247,6 @@ function Ordering({ question, onAnswerChange, onInputFocus }: Props) {
             onPress={() => toggle(o.id)}
             userText={userText}
             onUserTextChange={changeUserText}
-            onUserTextFocus={onInputFocus}
           />
         );
       })}
@@ -279,8 +256,9 @@ function Ordering({ question, onAnswerChange, onInputFocus }: Props) {
 
 // ───── open ─────
 
-function OpenText({ question, onAnswerChange, onInputFocus }: Props) {
+function OpenText({ question, onAnswerChange }: Props) {
   const [text, setText] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
   const start = useMemo(() => Date.now(), []);
 
   const change = useCallback(
@@ -295,18 +273,25 @@ function OpenText({ question, onAnswerChange, onInputFocus }: Props) {
     <View style={styles.openWrap}>
       {(question.open_prompts ?? []).map((p, i) => (
         <Serif key={i} size={13} italic style={styles.openPrompt}>
-          {p}
+          <RichText text={p} />
         </Serif>
       ))}
-      <TextInput
+      <InputTrigger
         value={text}
-        onChangeText={change}
         placeholder="一句话写下你的回答"
-        placeholderTextColor={theme.color.muted2}
-        multiline
-        autoFocus
-        onFocus={onInputFocus}
-        style={styles.openInput}
+        onPress={() => setModalOpen(true)}
+      />
+      <TextInputModal
+        visible={modalOpen}
+        title={question.text.length > 60 ? question.text.slice(0, 60) + "…" : question.text}
+        placeholder="一句话写下你的回答"
+        value={text}
+        hints={question.open_prompts}
+        onSave={(t) => {
+          change(t);
+          setModalOpen(false);
+        }}
+        onCancel={() => setModalOpen(false)}
       />
     </View>
   );
@@ -317,10 +302,11 @@ function OpenText({ question, onAnswerChange, onInputFocus }: Props) {
 // choice_ids = [action_id, duration_id] (顺序无关), open_text = textarea 内容.
 // 三块全部填齐才算"答完", 父组件按 onAnswerChange 推送当前状态.
 
-function CommitmentSetup({ question, onAnswerChange, onInputFocus }: Props) {
+function CommitmentSetup({ question, onAnswerChange }: Props) {
   const [actionId, setActionId] = useState<string | null>(null);
   const [durationId, setDurationId] = useState<string | null>(null);
   const [text, setText] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
   const start = useMemo(() => Date.now(), []);
 
   const actionOpts = useMemo(
@@ -407,17 +393,25 @@ function CommitmentSetup({ question, onAnswerChange, onInputFocus }: Props) {
       </Mono>
       {(question.open_prompts ?? []).map((p, i) => (
         <Serif key={i} size={13} italic style={styles.openPrompt}>
-          {p}
+          <RichText text={p} />
         </Serif>
       ))}
-      <TextInput
+      <InputTrigger
         value={text}
-        onChangeText={changeText}
         placeholder="为什么是这个操作 + 时长? 写下退出条件 (价格 + 时间 + 一条外部信号)."
-        placeholderTextColor={theme.color.muted2}
-        multiline
-        onFocus={onInputFocus}
-        style={styles.openInput}
+        onPress={() => setModalOpen(true)}
+      />
+      <TextInputModal
+        visible={modalOpen}
+        title="你的理由 + 退出条件"
+        placeholder="为什么是这个操作 + 时长? 写下退出条件 (价格 + 时间 + 一条外部信号)."
+        value={text}
+        hints={question.open_prompts}
+        onSave={(t) => {
+          changeText(t);
+          setModalOpen(false);
+        }}
+        onCancel={() => setModalOpen(false)}
       />
     </View>
   );
@@ -434,7 +428,6 @@ interface OptionRowProps {
   onPress: () => void;
   userText?: string;
   onUserTextChange?: (s: string) => void;
-  onUserTextFocus?: () => void;
 }
 
 function OptionRow({
@@ -446,9 +439,10 @@ function OptionRow({
   onPress,
   userText,
   onUserTextChange,
-  onUserTextFocus,
 }: OptionRowProps) {
   const isUserInput = !!option.is_user_input;
+  const [modalOpen, setModalOpen] = useState(false);
+
   return (
     <View>
       <TapEffect
@@ -476,20 +470,29 @@ function OptionRow({
             isUserInput && styles.userInputLabel,
           ]}
         >
-          {option.text}
+          <RichText text={option.text} />
         </Serif>
       </TapEffect>
       {isUserInput && selected ? (
-        <TextInput
-          value={userText ?? ""}
-          onChangeText={onUserTextChange}
-          placeholder="写下你看到的那条链 — 哪个被忽略的环节, 哪个角度被市场漏掉"
-          placeholderTextColor={theme.color.muted2}
-          multiline
-          autoFocus
-          onFocus={onUserTextFocus}
-          style={styles.userInputField}
-        />
+        <>
+          <InputTrigger
+            value={userText ?? ""}
+            placeholder="写下你看到的那条链 — 哪个被忽略的环节, 哪个角度被市场漏掉"
+            onPress={() => setModalOpen(true)}
+            small
+          />
+          <TextInputModal
+            visible={modalOpen}
+            title="你看到的那条链"
+            placeholder="哪个被忽略的环节, 哪个角度被市场漏掉"
+            value={userText ?? ""}
+            onSave={(t) => {
+              onUserTextChange?.(t);
+              setModalOpen(false);
+            }}
+            onCancel={() => setModalOpen(false)}
+          />
+        </>
       ) : null}
     </View>
   );

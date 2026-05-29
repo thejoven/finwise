@@ -52,6 +52,8 @@ export function PendingFlush() {
             client_event_id: row.id,
             raw_text: row.raw_text,
             occurred_at: row.captured_at,
+            // 重投递时复用当初保存的 project_id, 而不是当前 active.
+            project_id: row.project_id,
           });
           await remove(row.id);
         } catch (err) {

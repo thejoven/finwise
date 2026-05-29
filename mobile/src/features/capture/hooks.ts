@@ -14,6 +14,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { captureSignal as postSignal, listSignals, type SignalView } from "@/core/api/signals";
 import { uuidV4 } from "@/core/uuid";
+import { useActiveProject } from "@/features/project/store";
 
 import { usePendingSignals, type PendingSignal } from "./store";
 
@@ -95,16 +96,20 @@ export function useCaptureSignal() {
     mutationFn: async (rawText: string) => {
       const id = uuidV4();
       const capturedAt = new Date().toISOString();
+      // active project 在提交那一刻锁定 — 之后用户切换 active 不影响这条 in-flight
+      // 信号的归属. 重试也用同一个 project_id.
+      const projectID = useActiveProject.getState().activeId;
 
       // 1) 先落 SQLite (status=syncing). 即使下面 POST 阶段 App 被杀, 重启后
       //    sync queue 也会从 SQLite 恢复并重试.
-      await submit({ id, raw_text: rawText, captured_at: capturedAt });
+      await submit({ id, raw_text: rawText, captured_at: capturedAt, project_id: projectID });
 
       try {
         await postSignal({
           client_event_id: id,
           raw_text: rawText,
           occurred_at: capturedAt,
+          project_id: projectID,
         });
         await remove(id);
         await queryClient.invalidateQueries({ queryKey: SIGNALS_KEY });
@@ -146,6 +151,8 @@ export function useRetryPending() {
           client_event_id: item.id,
           raw_text: item.raw_text,
           occurred_at: item.captured_at,
+          // 用提交时保存的 project_id, 而不是当前 active — 保持归属一致.
+          project_id: item.project_id,
         });
         await remove(item.id);
         await queryClient.invalidateQueries({ queryKey: SIGNALS_KEY });

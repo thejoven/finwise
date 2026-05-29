@@ -15,7 +15,7 @@ import (
 
 type Config struct {
 	DatabaseURL string
-	NATSURL     string
+	IIIHTTPURL  string // iii engine HTTP worker base URL, e.g. http://host.docker.internal:3111
 	Port        int
 	LogLevel    string
 
@@ -45,7 +45,7 @@ type Config struct {
 func Load() (*Config, error) {
 	c := &Config{
 		DatabaseURL:    os.Getenv("DATABASE_URL"),
-		NATSURL:        os.Getenv("NATS_URL"),
+		IIIHTTPURL:     os.Getenv("III_HTTP_URL"),
 		LogLevel:       strings.ToLower(getDefault("LOG_LEVEL", "info")),
 		DevBearerToken: os.Getenv("DEV_BEARER_TOKEN"),
 		InternalToken:  os.Getenv("INTERNAL_TOKEN"),
@@ -96,8 +96,8 @@ func Load() (*Config, error) {
 	if c.DatabaseURL == "" {
 		missing = append(missing, "DATABASE_URL")
 	}
-	if c.NATSURL == "" {
-		missing = append(missing, "NATS_URL")
+	if c.IIIHTTPURL == "" {
+		missing = append(missing, "III_HTTP_URL")
 	}
 	if c.DevUserID == uuid.Nil {
 		missing = append(missing, "DEV_USER_ID")

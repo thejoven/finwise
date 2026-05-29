@@ -14,7 +14,7 @@
  */
 
 import { StyleSheet, View } from "react-native";
-import { Display, Mono, Serif } from "@/shared/components";
+import { Display, Mono, RichText, Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
 import type { QuestionOption, RoundView } from "@/core/api/refinement";
 
@@ -29,7 +29,7 @@ export function AnsweredRoundCard({ round }: Props) {
         ROUND {round.round} · {kindLabel(round.question_kind)} · 已答
       </Mono>
       <Display size={20} style={styles.questionText}>
-        {round.question_text}
+        <RichText text={round.question_text} />
       </Display>
       <View style={styles.separator} />
       <Body round={round} />
@@ -147,7 +147,7 @@ function OptionList({
                 isSelected ? styles.optionTextSelected : styles.optionTextDim,
               ]}
             >
-              {o.text}
+              <RichText text={o.text} />
             </Serif>
           </View>
         );

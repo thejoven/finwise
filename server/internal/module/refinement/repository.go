@@ -583,6 +583,47 @@ func (r *Repository) findBySignalActive(ctx context.Context, tx pgx.Tx, userID, 
 	return &s, nil
 }
 
+// EnqueueReinferQuestionOutbox — 用户主动触发: refinement 卡在"等下一题"
+// (上一条 refinement.answered 被 mastra socratic DLQ 了), 重发同一条 event
+// 给 NATS, 让 mastra 重新跑出题流程.
+//
+// 行为: 找该 session 最近一条 refinement.answered event, 写一行新 outbox
+// (复用同 event_id + payload). 不新建 event — 事件溯源不污染.
+//
+// 失败语义:
+//   - session 没有 refinement.answered (用户还没答任何一轮) → return error,
+//     调用方应该走 reinfer-started 路径 (M5 R1 出题失败). 暂未实现, 当前 v1
+//     用户场景就是 R2+ 卡住.
+func (r *Repository) EnqueueReinferQuestionOutbox(ctx context.Context, sessionID uuid.UUID) error {
+	const q = `
+		SELECT id, payload
+		FROM events
+		WHERE type = $1
+		  AND (payload->>'refinement_id')::uuid = $2
+		ORDER BY occurred_at DESC
+		LIMIT 1
+	`
+	var eventID int64
+	var payload []byte
+	if err := r.pool.QueryRow(ctx, q, string(domain.EventRefinementAnswered), sessionID).Scan(&eventID, &payload); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("no refinement.answered event for session %s", sessionID)
+		}
+		return fmt.Errorf("lookup answered event: %w", err)
+	}
+
+	const insertQ = `
+		INSERT INTO event_outbox (event_id, subject, payload)
+		VALUES ($1, $2, $3)
+	`
+	if _, err := r.pool.Exec(ctx, insertQ,
+		eventID, string(domain.EventRefinementAnswered), payload,
+	); err != nil {
+		return fmt.Errorf("insert reinfer-question outbox: %w", err)
+	}
+	return nil
+}
+
 // findBySignalActiveNoTx — Start 入口处的快路径, 不开 tx 直接查 pool.
 // pgx.ErrNoRows 时调用方走 INSERT 路径; 其他 err 直接传上去.
 func (r *Repository) findBySignalActiveNoTx(ctx context.Context, userID, signalID uuid.UUID) (*Session, error) {

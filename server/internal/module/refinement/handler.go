@@ -28,6 +28,7 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	pub.GET("/by-signal/:signalID", h.getBySignal)
 	pub.GET("/:id", h.get)
 	pub.POST("/:id/answers", h.answer)
+	pub.POST("/:id/reinfer-question", h.reinferQuestion)
 
 	internalV1.POST("/refinement/sessions/:id/question", h.saveQuestion)
 	internalV1.GET("/refinement/sessions/:id", h.internalGet)
@@ -368,6 +369,42 @@ func toSessionViewResponse(v *SessionView) sessionViewResponse {
 		resp.PendingQuestion = &pendingQuestion{Round: v.Question.Round, Payload: v.Question.Payload}
 	}
 	return resp
+}
+
+// reinferQuestion — 用户主动重推: 当前 session 等下一题卡住 (mastra socratic DLQ).
+// 重发最近一条 refinement.answered event 让 mastra 再出一次.
+func (h *Handler) reinferQuestion(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	sessionID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	if err := h.svc.ReinferQuestion(c.Request.Context(), userID, sessionID); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, ErrAlreadyCompleted) {
+			c.JSON(http.StatusConflict, gin.H{"error": "session already completed"})
+			return
+		}
+		if errors.Is(err, ErrHasPendingQuestion) {
+			c.JSON(http.StatusConflict, gin.H{"error": "session has a pending question; no need to retry"})
+			return
+		}
+		if errors.Is(err, ErrNotStarted) {
+			c.JSON(http.StatusConflict, gin.H{"error": "session has no answered round yet"})
+			return
+		}
+		writeErr(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"reinfer_enqueued": true})
 }
 
 func writeErr(c *gin.Context, err error) {

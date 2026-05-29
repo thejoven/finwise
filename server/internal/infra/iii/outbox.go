@@ -1,4 +1,4 @@
-package nats
+package iii
 
 import (
 	"context"
@@ -12,9 +12,8 @@ import (
 	"flashfi/server/internal/infra/metrics"
 )
 
-// OutboxWorker drains event_outbox into NATS. One worker per process is fine
-// at Phase 1 throughput; `FOR UPDATE SKIP LOCKED` keeps it safe if we ever
-// scale out.
+// OutboxWorker drains event_outbox to the iii engine over HTTP.
+// 与原 NATS 版本对等: SKIP LOCKED 安全, batch+poll 调优用同样 env.
 type OutboxWorker struct {
 	pool   *db.Pool
 	client *Client
@@ -23,12 +22,20 @@ type OutboxWorker struct {
 	pollInterval time.Duration
 	batchSize    int
 	maxAttempts  int
+
+	postPublish PostPublishFn
 }
 
+// PostPublishFn 在每条事件成功 POST 到 iii 后被调用 (在 tx 提交之后).
+// 用来串本地后续动作 — 比如 refinement.completed 同步触发 gate.Evaluate.
+// 错误只记日志, 不会回滚 outbox 状态.
+type PostPublishFn func(ctx context.Context, subject string, payload []byte)
+
 type OutboxConfig struct {
-	PollInterval time.Duration // default 500ms
-	BatchSize    int           // default 10
-	MaxAttempts  int           // default 5
+	PollInterval time.Duration
+	BatchSize    int
+	MaxAttempts  int
+	PostPublish  PostPublishFn
 }
 
 func NewOutboxWorker(pool *db.Pool, client *Client, logger *zap.Logger, cfg OutboxConfig) *OutboxWorker {
@@ -48,12 +55,12 @@ func NewOutboxWorker(pool *db.Pool, client *Client, logger *zap.Logger, cfg Outb
 		pollInterval: cfg.PollInterval,
 		batchSize:    cfg.BatchSize,
 		maxAttempts:  cfg.MaxAttempts,
+		postPublish:  cfg.PostPublish,
 	}
 }
 
-// Run blocks until ctx is canceled. Polls the outbox, publishes pending rows.
 func (w *OutboxWorker) Run(ctx context.Context) {
-	w.logger.Info("outbox worker started",
+	w.logger.Info("outbox worker started (iii)",
 		zap.Duration("poll", w.pollInterval),
 		zap.Int("batch", w.batchSize),
 	)
@@ -119,12 +126,19 @@ func (w *OutboxWorker) drainOnce(ctx context.Context) (int, error) {
 		return 0, tx.Commit(ctx)
 	}
 
+	// 成功 dispatch 的事件 — 提交后再跑 postPublish.
+	type successful struct {
+		subject string
+		payload []byte
+	}
+	var sent []successful
+
 	published := 0
 	for _, p := range batch {
-		_, pubErr := w.client.JS.Publish(p.subject, p.payload)
+		handled, pubErr := w.client.Publish(ctx, p.subject, p.payload)
 		if pubErr != nil {
 			metrics.OutboxFailed.Inc()
-			w.logger.Warn("nats publish failed",
+			w.logger.Warn("iii publish failed",
 				zap.Int64("outbox_id", p.id),
 				zap.String("subject", p.subject),
 				zap.Int("attempts", p.attempts+1),
@@ -153,10 +167,19 @@ func (w *OutboxWorker) drainOnce(ctx context.Context) (int, error) {
 			return published, fmt.Errorf("mark published: %w", err)
 		}
 		published++
+		if handled {
+			sent = append(sent, successful{subject: p.subject, payload: p.payload})
+		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return published, fmt.Errorf("commit: %w", err)
+	}
+
+	if w.postPublish != nil {
+		for _, s := range sent {
+			w.postPublish(ctx, s.subject, s.payload)
+		}
 	}
 	return published, nil
 }

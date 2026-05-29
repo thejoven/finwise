@@ -20,6 +20,7 @@ const (
 type Signal struct {
 	ID            uuid.UUID
 	UserID        uuid.UUID
+	ProjectID     *uuid.UUID // 可选; null = 未分类
 	RawText       string
 	CapturedAt    time.Time
 	SourceEventID int64
@@ -37,10 +38,11 @@ type Signal struct {
 // SignalCapturedPayload is the JSON body of a signal.captured event.
 // Matches the NATS message published by the outbox worker.
 type SignalCapturedPayload struct {
-	SignalID   uuid.UUID `json:"signal_id"`
-	UserID     uuid.UUID `json:"user_id"`
-	RawText    string    `json:"raw_text"`
-	CapturedAt time.Time `json:"captured_at"`
+	SignalID   uuid.UUID  `json:"signal_id"`
+	UserID     uuid.UUID  `json:"user_id"`
+	ProjectID  *uuid.UUID `json:"project_id,omitempty"`
+	RawText    string     `json:"raw_text"`
+	CapturedAt time.Time  `json:"captured_at"`
 }
 
 // SignalInferenceDonePayload is the JSON body of a signal.inference.done event.

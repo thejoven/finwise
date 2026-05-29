@@ -6,6 +6,10 @@ export { WaitingForNext } from "./WaitingForNext";
 export { LearningCard, LearningTimeline } from "./LearningCard";
 export { CluesDrawer } from "./CluesDrawer";
 export { CluesTrigger } from "./CluesTrigger";
+export { RefinementSteps } from "./RefinementSteps";
+export { RoundDivider } from "./RoundDivider";
+export { TextInputModal } from "./TextInputModal";
+export { InputTrigger } from "./InputTrigger";
 export { computeDiagnosis } from "./diagnose";
 export {
   useRefinementBySignal,

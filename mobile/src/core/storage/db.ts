@@ -65,5 +65,13 @@ async function applyMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
     await db.execAsync(`PRAGMA user_version = ${version};`);
   }
 
-  // Phase 2 migrations land below as `if (version < 2) { ... version = 2; }`
+  if (version < 2) {
+    // 加 project_id 到 pending_signals: 即使 App 重启, 重试时仍能把 signal
+    // 提交到原 active project. 字段 nullable, 历史行兼容.
+    await db.withExclusiveTransactionAsync(async (tx) => {
+      await tx.execAsync(`ALTER TABLE pending_signals ADD COLUMN project_id TEXT;`);
+    });
+    version = 2;
+    await db.execAsync(`PRAGMA user_version = ${version};`);
+  }
 }

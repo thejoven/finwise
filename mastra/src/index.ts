@@ -1,25 +1,25 @@
 /**
  * Mastra worker entrypoint.
  * 同时跑两件事:
- *   1. NATS consumer (signal.captured / refinement.* / gate.passed)
- *   2. HTTP 服务 (Go 同步调 ConsensusCheck / Editor / Diagnostician)
+ *   1. iii SDK worker (queue 处理器 + HTTP shim) — 替换了原来的 NATS consumer.
+ *   2. HTTP 服务 (Go 同步调 ConsensusCheck / Editor / Diagnostician).
  *
  * Graceful shutdown on SIGINT/SIGTERM.
  */
 
-import { startConsumers } from "./consumers/nats.js";
+import { startIiiWorker } from "./iii/worker.js";
 import { startHttpServer } from "./server/http.js";
 
 async function main() {
-  const [consumer, httpHandle] = await Promise.all([
-    startConsumers(),
+  const [iiiHandle, httpHandle] = await Promise.all([
+    startIiiWorker(),
     startHttpServer(),
   ]);
 
   const shutdown = async (sig: string) => {
     console.log(JSON.stringify({ ts: new Date().toISOString(), level: "info", msg: "shutdown", signal: sig }));
     try {
-      await Promise.all([consumer.stop(), httpHandle.stop()]);
+      await Promise.all([iiiHandle.stop(), httpHandle.stop()]);
       process.exit(0);
     } catch (err) {
       console.error(JSON.stringify({ ts: new Date().toISOString(), level: "error", msg: "shutdown error", err: String(err) }));

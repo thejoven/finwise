@@ -10,6 +10,7 @@ export { usePendingSignals, type PendingSignal } from "./store";
 export { SignalRow } from "./SignalRow";
 export { SilenceStamp } from "./SilenceStamp";
 export { PendingFlush } from "./PendingFlush";
+export { useInferenceDoneToast } from "./useInferenceDoneToast";
 export {
   formatMonthDay,
   formatLongDate,

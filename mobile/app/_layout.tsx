@@ -11,6 +11,9 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PendingFlush, usePendingSignals } from "@/features/capture";
 import { SplashCover } from "@/features/splash";
 import { useAuth } from "@/core/auth/store";
+import { useNotifications } from "@/features/notifications";
+import { useActiveProject } from "@/features/project/store";
+import { ToastRoot } from "@/shared/toast";
 import {
   bottomModalScreen,
   loginScreen,
@@ -66,6 +69,8 @@ const FONTS = {
 export default function RootLayout() {
   const hydratePending = usePendingSignals((s) => s.hydrate);
   const hydrateAuth = useAuth((s) => s.hydrate);
+  const hydrateNotifications = useNotifications((s) => s.hydrate);
+  const hydrateActiveProject = useActiveProject((s) => s.hydrate);
   const [storageReady, setStorageReady] = useState(false);
   // JS splash 是否还在演动画. 字体/hydrate 完成后, 我们把 native splash 收掉,
   // 由本 JS splash 接管, 演完动画再卸载, 把下层 Stack 露出来.
@@ -80,13 +85,19 @@ export default function RootLayout() {
       hydrateAuth().catch((err) => {
         console.warn("[auth] hydrate failed:", err);
       }),
+      hydrateNotifications().catch((err) => {
+        console.warn("[notifications] hydrate failed:", err);
+      }),
+      hydrateActiveProject().catch((err) => {
+        console.warn("[activeProject] hydrate failed:", err);
+      }),
     ]).finally(() => {
       if (mounted) setStorageReady(true);
     });
     return () => {
       mounted = false;
     };
-  }, [hydratePending, hydrateAuth]);
+  }, [hydratePending, hydrateAuth, hydrateNotifications, hydrateActiveProject]);
 
   const [loaded] = useFonts(FONTS);
 
@@ -118,8 +129,11 @@ export default function RootLayout() {
             <Stack.Screen name="commitment/[id]" options={pushDetailScreen} />
             <Stack.Screen name="retrospect/[id]" options={pushDetailScreen} />
             <Stack.Screen name="colophon" options={pushDetailScreen} />
+            <Stack.Screen name="notifications" options={pushDetailScreen} />
           </Stack>
           {splashAnimating && <SplashCover onFinish={() => setSplashAnimating(false)} />}
+          {/* Toast 必须挂在 stack 之外, 确保盖在所有 screen 上面 */}
+          <ToastRoot />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

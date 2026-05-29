@@ -1,0 +1,36 @@
+# iii-console 是 iii engine 的 Web UI (DLQ 查看 / 队列指标 / functions 列表 / OTel).
+# 官方没出 docker 镜像 (only ships native binary), 这里自己拉.
+#
+# Build:
+#   docker build -t flashfi/iii-console:0.16.0 -f iii/Dockerfile.console iii/
+#
+# Run (本地直连本机 iii engine):
+#   docker run -p 3113:3113 flashfi/iii-console:0.16.0 \
+#     --host=0.0.0.0 --engine-host=host.docker.internal --engine-port=3111
+
+ARG VERSION=0.16.0
+ARG TARGET=x86_64-unknown-linux-musl
+
+# Stage 1: fetch + extract binary from GitHub release.
+FROM alpine:3.20 AS fetcher
+ARG VERSION
+ARG TARGET
+RUN apk add --no-cache curl ca-certificates
+RUN set -e; \
+    curl -fsSL -o /tmp/iii-console.tar.gz \
+      "https://github.com/iii-hq/iii/releases/download/iii/v${VERSION}/iii-console-${TARGET}.tar.gz" && \
+    tar -xzf /tmp/iii-console.tar.gz -C /usr/local/bin/ && \
+    chmod +x /usr/local/bin/iii-console && \
+    /usr/local/bin/iii-console --version
+
+# Stage 2: minimal runtime image.
+FROM alpine:3.20
+RUN apk add --no-cache ca-certificates && \
+    addgroup -S -g 65532 nonroot && \
+    adduser -S -G nonroot -u 65532 nonroot
+COPY --from=fetcher /usr/local/bin/iii-console /usr/local/bin/iii-console
+USER 65532:65532
+EXPOSE 3113
+ENTRYPOINT ["/usr/local/bin/iii-console"]
+# 默认值. compose 里通过 command 覆盖 engine-host=iii (docker 网络 service name).
+CMD ["--host=0.0.0.0", "--port=3113"]

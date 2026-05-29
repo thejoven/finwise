@@ -10,6 +10,7 @@ import { api } from "./client";
 
 export const SignalView = z.object({
   id: z.string().uuid(),
+  project_id: z.string().uuid().nullable().optional(),
   raw_text: z.string(),
   captured_at: z.string(),
   inference_status: z.enum(["pending", "done", "failed"]),
@@ -29,6 +30,7 @@ const CaptureResp = z.object({
   event_id: z.number(),
   inference_status: z.enum(["pending", "done", "failed"]),
   duplicate: z.boolean(),
+  project_id: z.string().uuid().nullable().optional(),
 });
 export type CaptureResp = z.infer<typeof CaptureResp>;
 
@@ -36,10 +38,19 @@ export interface CaptureInput {
   client_event_id: string;
   raw_text: string;
   occurred_at?: string;
+  /** 可选: 绑定到某个分类 (project) */
+  project_id?: string | null;
 }
 
 export async function captureSignal(input: CaptureInput): Promise<CaptureResp> {
-  const json = await api.post("v1/signals", { json: input }).json();
+  // project_id == null 时不发字段, 避免后端被传 "null" 字符串误解析
+  const body: Record<string, unknown> = {
+    client_event_id: input.client_event_id,
+    raw_text: input.raw_text,
+  };
+  if (input.occurred_at) body.occurred_at = input.occurred_at;
+  if (input.project_id) body.project_id = input.project_id;
+  const json = await api.post("v1/signals", { json: body }).json();
   return CaptureResp.parse(json);
 }
 

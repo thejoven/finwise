@@ -1,10 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from "react-native-reanimated";
+import Animated, { useAnimatedScrollHandler, useSharedValue } from "react-native-reanimated";
 import { router } from "expo-router";
 
 import {
@@ -20,6 +17,7 @@ import {
   chineseWeekday,
   isSameLocalDay,
   isoWeekOfYear,
+  useInferenceDoneToast,
   useMergedSignals,
   type MergedSignal,
 } from "@/features/capture";
@@ -43,6 +41,9 @@ export default function InboxScreen() {
   const insets = useSafeAreaInsets();
   const { data, refetch, isLoading } = useMergedSignals();
   const [refreshing, setRefreshing] = useState(false);
+
+  // 监测 pending → done 跃迁, 弹 toast 通知用户 AI 推演完成
+  useInferenceDoneToast(data);
 
   const todayCount = useMemo(
     () => data.filter((s) => isSameLocalDay(s.captured_at)).length,

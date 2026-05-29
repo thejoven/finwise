@@ -85,6 +85,35 @@ func (s *Service) Start(ctx context.Context, cmd StartCommand) (*Session, error)
 	})
 }
 
+// ───── ReinferQuestion ─────
+// 用户主动触发: 等下一题卡很久 (上一条 refinement.answered 被 mastra socratic DLQ).
+// 重发同一条 event 让 mastra 重出当前轮.
+
+var (
+	ErrAlreadyCompleted   = errors.New("session already completed")
+	ErrHasPendingQuestion = errors.New("session has a pending question; no need to retry")
+	ErrNotStarted         = errors.New("session has no answered round yet; cannot retry question")
+)
+
+func (s *Service) ReinferQuestion(ctx context.Context, userID, sessionID uuid.UUID) error {
+	view, err := s.repo.Get(ctx, userID, sessionID)
+	if err != nil {
+		return err
+	}
+	if view.Status != "active" {
+		return ErrAlreadyCompleted
+	}
+	// 已经有 pending question (mastra 已出题, 等用户答) → 没必要重推
+	if view.Question != nil {
+		return ErrHasPendingQuestion
+	}
+	// 一轮都没答过 → 出 R1 走的是 refinement.started, 这条路径不适用. v1 不支持.
+	if view.RoundsDone == 0 {
+		return ErrNotStarted
+	}
+	return s.repo.EnqueueReinferQuestionOutbox(ctx, sessionID)
+}
+
 // ───── Get ─────
 
 func (s *Service) Get(ctx context.Context, userID, sessionID uuid.UUID) (*SessionView, error) {

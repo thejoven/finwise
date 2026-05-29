@@ -54,7 +54,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	devUserID := uuid.New()
 	// 跨模块: signal + refinement + gate
-	sigSvc := signalmod.NewService(signalmod.NewRepository(pool))
+	sigSvc := signalmod.NewService(signalmod.NewRepository(pool), nil)
 	sigHandler := signalmod.NewHandler(sigSvc)
 	refSvc := refinementmod.NewService(refinementmod.NewRepository(pool), func(ctx context.Context, userID, signalID uuid.UUID) error {
 		_, err := sigSvc.Get(ctx, userID, signalID)

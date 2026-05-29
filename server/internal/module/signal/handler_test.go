@@ -59,7 +59,7 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	devUserID := uuid.New()
 	repo := NewRepository(pool)
-	svc := NewService(repo)
+	svc := NewService(repo, nil) // projectCheck=nil: 测试不带 project_id, 不校验
 	handler := NewHandler(svc)
 
 	router := httpapi.NewRouter(httpapi.Deps{

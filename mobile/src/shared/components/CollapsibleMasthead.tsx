@@ -30,6 +30,7 @@ import { BookOpen, Plus } from "lucide-react-native";
 import { Display, Sans } from "./Text";
 import { TapEffect } from "./TapEffect";
 import { theme } from "@/core/theme";
+import { ProjectChipsRow } from "@/features/project";
 
 export interface CollapsibleMastheadProps {
   volume: string;
@@ -47,16 +48,20 @@ export interface CollapsibleMastheadProps {
 const TOP_BAR_BLOCK = 40;
 // "财知 + FinWise + slogan" 块的高度
 const HERO_BLOCK = 48 + 2 + 16 + 6 + 16 + 6; // ≈ 94
+// 分类 chip 行: paddingTop 4 + 24 chip + paddingBottom 6 ≈ 34
+const CHIPS_BLOCK = 34;
+// 折叠态可见的 + 展开时一起被收掉的 hero + chips 总高
+const COLLAPSING_BLOCK = HERO_BLOCK + CHIPS_BLOCK;
 // 底部 rule (折叠态: 单线; 展开态: 双线)
 const FOOTER_BLOCK = 6;
 
 /** 展开态总高度 (不含 safe top). 父组件用作 ScrollView paddingTop 基准. */
-export const COLLAPSIBLE_MASTHEAD_EXPANDED = TOP_BAR_BLOCK + HERO_BLOCK + FOOTER_BLOCK; // ~140
+export const COLLAPSIBLE_MASTHEAD_EXPANDED = TOP_BAR_BLOCK + COLLAPSING_BLOCK + FOOTER_BLOCK;
 /** 折叠态总高度 (不含 safe top). */
 export const COLLAPSIBLE_MASTHEAD_COLLAPSED = TOP_BAR_BLOCK + FOOTER_BLOCK; // ~46
 
-/** 折叠动画走完所需的 scrollY 距离. 等于 hero 块高度, 视觉与滚动 1:1. */
-const RANGE = HERO_BLOCK;
+/** 折叠动画走完所需的 scrollY 距离. 等于 hero+chips 块高度, 视觉与滚动 1:1. */
+const RANGE = COLLAPSING_BLOCK;
 
 export function CollapsibleMasthead({
   volume,
@@ -71,7 +76,7 @@ export function CollapsibleMasthead({
 
   // 容器高度: 展开总高 → 折叠总高 (线性插值, 含 safe top inset).
   const containerStyle = useAnimatedStyle(() => {
-    const extra = interpolate(scrollY.value, [0, RANGE], [HERO_BLOCK, 0], Extrapolation.CLAMP);
+    const extra = interpolate(scrollY.value, [0, RANGE], [COLLAPSING_BLOCK, 0], Extrapolation.CLAMP);
     return {
       height: insets.top + TOP_BAR_BLOCK + extra + FOOTER_BLOCK,
     };
@@ -132,6 +137,11 @@ export function CollapsibleMasthead({
         <RNText maxFontSizeMultiplier={1.2} style={styles.tagline}>
           以智驭财 · 行远致富
         </RNText>
+      </Animated.View>
+
+      {/* 分类 chip 行: 容器高度收紧时自动被截掉, 不需要单独的 opacity 动画. */}
+      <Animated.View style={heroStyle}>
+        <ProjectChipsRow parentPadded />
       </Animated.View>
 
       {/* 双横线 (展开时显双线; 折叠时被容器高度截掉, 只剩外层 hairline 收边) */}

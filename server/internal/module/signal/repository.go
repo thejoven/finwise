@@ -29,6 +29,7 @@ func NewRepository(pool *db.Pool) *Repository {
 type CaptureInput struct {
 	UserID        uuid.UUID
 	ClientEventID uuid.UUID
+	ProjectID     *uuid.UUID
 	RawText       string
 	CapturedAt    time.Time
 }
@@ -50,6 +51,7 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 	payload := domain.SignalCapturedPayload{
 		SignalID:   signalID,
 		UserID:     in.UserID,
+		ProjectID:  in.ProjectID,
 		RawText:    in.RawText,
 		CapturedAt: in.CapturedAt,
 	}
@@ -97,11 +99,11 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 	// 2) signals row
 	const insertSignal = `
 		INSERT INTO signals (
-			id, user_id, raw_text, captured_at, source_event_id
-		) VALUES ($1, $2, $3, $4, $5)
+			id, user_id, raw_text, captured_at, source_event_id, project_id
+		) VALUES ($1, $2, $3, $4, $5, $6)
 	`
 	if _, err := tx.Exec(ctx, insertSignal,
-		signalID, in.UserID, in.RawText, in.CapturedAt, eventID,
+		signalID, in.UserID, in.RawText, in.CapturedAt, eventID, in.ProjectID,
 	); err != nil {
 		return nil, fmt.Errorf("insert signal: %w", err)
 	}
@@ -125,6 +127,7 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 		Signal: &domain.Signal{
 			ID:              signalID,
 			UserID:          in.UserID,
+			ProjectID:       in.ProjectID,
 			RawText:         in.RawText,
 			CapturedAt:      in.CapturedAt,
 			SourceEventID:   eventID,
@@ -142,7 +145,7 @@ type existingCapture struct {
 
 func (r *Repository) findByClientEventID(ctx context.Context, tx pgx.Tx, userID, cid uuid.UUID) (*existingCapture, error) {
 	const q = `
-		SELECT e.id, s.id, s.raw_text, s.captured_at, s.inference_status,
+		SELECT e.id, s.id, s.project_id, s.raw_text, s.captured_at, s.inference_status,
 		       s.inference_summary, s.inference_tags, s.inference_model, s.inference_done_at,
 		       s.created_at, s.updated_at
 		FROM events e
@@ -150,13 +153,13 @@ func (r *Repository) findByClientEventID(ctx context.Context, tx pgx.Tx, userID,
 		WHERE e.user_id = $1 AND e.client_event_id = $2
 	`
 	var (
-		eventID         int64
-		sig             domain.Signal
-		statusStr       string
+		eventID   int64
+		sig       domain.Signal
+		statusStr string
 	)
 	sig.UserID = userID
 	err := tx.QueryRow(ctx, q, userID, cid).Scan(
-		&eventID, &sig.ID, &sig.RawText, &sig.CapturedAt, &statusStr,
+		&eventID, &sig.ID, &sig.ProjectID, &sig.RawText, &sig.CapturedAt, &statusStr,
 		&sig.InferenceSummary, &sig.InferenceTags, &sig.InferenceModel, &sig.InferenceDoneAt,
 		&sig.CreatedAt, &sig.UpdatedAt,
 	)
@@ -177,6 +180,7 @@ func (r *Repository) EnqueueReinferOutbox(ctx context.Context, sig *domain.Signa
 	payload := domain.SignalCapturedPayload{
 		SignalID:   sig.ID,
 		UserID:     sig.UserID,
+		ProjectID:  sig.ProjectID,
 		RawText:    sig.RawText,
 		CapturedAt: sig.CapturedAt,
 	}
@@ -217,7 +221,7 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 
 	// 动态拼 WHERE — 加一个 q 维度就 4 种组合, 用 args slice 比 fmt 模板清楚.
 	const baseSelect = `
-		SELECT id, user_id, raw_text, captured_at, source_event_id,
+		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
 		       inference_model, inference_done_at,
 		       created_at, updated_at
@@ -268,7 +272,7 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 // Get returns a single signal by id.
 func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (*domain.Signal, error) {
 	const q = `
-		SELECT id, user_id, raw_text, captured_at, source_event_id,
+		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
 		       inference_model, inference_done_at,
 		       created_at, updated_at
@@ -378,7 +382,7 @@ func scanSignal(r rowScanner) (*domain.Signal, error) {
 		tags      []string
 	)
 	if err := r.Scan(
-		&s.ID, &s.UserID, &s.RawText, &s.CapturedAt, &s.SourceEventID,
+		&s.ID, &s.UserID, &s.ProjectID, &s.RawText, &s.CapturedAt, &s.SourceEventID,
 		&statusStr, &s.InferenceSummary, &tags,
 		&s.InferenceModel, &s.InferenceDoneAt,
 		&s.CreatedAt, &s.UpdatedAt,

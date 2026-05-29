@@ -292,3 +292,22 @@ export async function postResearch(args: PostResearchArgs): Promise<void> {
   });
   await retryingPost(url, body);
 }
+
+// ─────────────────────────── Attention (M11-bis) ───────────────────────────
+
+export interface PostAttentionArgs {
+  refinement_id: string;
+  user_id: string;
+  focus_score: number;
+  depth_score: number;
+  breadth_score: number;
+  execution_score: number;
+  insight: string;
+  blindspot: string;
+  model: string;
+}
+
+export async function postAttention(args: PostAttentionArgs): Promise<void> {
+  const url = `${config.flashfiApiUrl}/v1/internal/attention`;
+  await retryingPost(url, JSON.stringify(args));
+}

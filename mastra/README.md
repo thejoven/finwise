@@ -1,6 +1,6 @@
 # mastra/
 
-Flashfi Engine 的 LLM 编排. Node + Mastra + OpenAI-compatible SDK (默认接 DeepSeek) + NATS JetStream.
+Flashfi Engine 的 LLM 编排. Node + Mastra + OpenAI-compatible SDK (默认接 DeepSeek) + iii engine (queue + HTTP triggers, Redis adapter).
 
 ```
 src/
@@ -11,7 +11,7 @@ src/
 │   ├── consensus.ts        # M6 G2 反共识打分
 │   ├── editor.ts           # M9 焦虑日陪伴文字
 │   ├── diagnostician.ts    # M11 复盘 focus 维度
-│   └── schema.ts           # NATS 消息 schema
+│   └── schema.ts           # 事件 payload schema
 ├── llm/
 │   └── model.ts            # provider-neutral 模型工厂 (默认 DeepSeek)
 ├── workflows/
@@ -20,13 +20,13 @@ src/
 │   └── commitment-draft.ts    # M7 起草承诺书
 ├── tools/
 │   └── flashfi-api.ts        # POST /v1/internal/*
-├── consumers/
-│   └── nats.ts               # signal / refinement / gate.passed 三个 durable consumer
+├── iii/
+│   └── worker.ts             # iii SDK worker: 4 queue processors + 5 HTTP shims
 ├── server/
 │   └── http.ts               # Go 同步调 Mastra 的 HTTP server (M6/M9/M11)
 ├── config/
 │   └── env.ts                # 全部 env 入口
-└── index.ts                  # worker 进程 (NATS consumer + HTTP server)
+└── index.ts                  # worker 进程 (iii SDK worker + HTTP server)
 
 tests/
 ├── manual-eval/            # M2 Analyst eval (≥7/10 pass)
@@ -40,7 +40,7 @@ tests/
 
 - Node 20 LTS
 - `LLM_API_KEY` (DeepSeek 默认) + `LLM_BASE_URL` (默认 `https://api.deepseek.com`)
-- 同一台机器跑 Postgres + NATS (Go server 那边的 `make dev`)
+- 同一台机器跑 Postgres + Redis (docker compose) + iii engine (host systemd, `flashfi-iii.service`)
 
 ## 启动
 
@@ -51,7 +51,7 @@ cp .env.example .env
 #   - LLM_API_KEY (DeepSeek key, 控制台拿: https://platform.deepseek.com/api_keys)
 #   - INTERNAL_TOKEN (与 server .env 一致)
 npm install
-npm run dev               # tsx watch · 同时跑 NATS consumer + HTTP server (127.0.0.1:9090)
+npm run dev               # tsx watch · 同时跑 iii SDK worker + HTTP server (127.0.0.1:9090)
 ```
 
 ## 切换 LLM 提供商
@@ -70,7 +70,7 @@ npm run dev               # tsx watch · 同时跑 NATS consumer + HTTP server (
 ## 验证
 
 ```bash
-# 1) Go server 起来, postgres + nats 起来
+# 1) Go server 起来, postgres + redis 起来, iii engine (systemd) 起来
 # 2) Mastra worker 起来 (上面 npm run dev)
 # 3) POST 一条信号 (server 那边)
 curl -X POST http://192.168.1.205:8080/v1/signals \
@@ -102,8 +102,8 @@ npm run eval:all           # 全跑一遍
 
 ## 关键约束
 
-- `consumers/nats.ts` 三个 durable consumer (signal.captured / refinement.* / gate.passed) 必须 `manualAck + ackExplicit` — offline 期间不丢消息
+- `iii/worker.ts` 注册 4 个 queue 处理器 + 5 个 HTTP shim (signal-captured / refinement-{started,answered,completed} / gate-passed). at-least-once + retry + DLQ 由 iii engine 管 (Redis adapter, max_retries=3)
 - agents 用 zod schema 强约束输出, 不让 LLM 自由发挥
-- Narrator 必须 verbatim 引用用户原 reasons — workflow 层做 substring 校验, 失败 nak
-- 失败重试 3 次后进 DLQ (Phase 1-3 = log only, 不阻塞队列)
+- Narrator 必须 verbatim 引用用户原 reasons — workflow 层做 substring 校验, 失败时 throw 让 iii 重试
+- 失败重试 3 次后进 iii DLQ (Phase 1 = log only, 不阻塞队列)
 - Mastra HTTP 服务用同一个 INTERNAL_TOKEN 跟 Go server 互认

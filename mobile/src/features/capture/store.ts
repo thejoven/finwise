@@ -34,13 +34,20 @@ export interface PendingSignal {
   attempts: number;
   /** Unix ms — sync queue won't retry before this. 0 = retry now. */
   next_retry_at: number;
+  /** 提交时绑定的分类 id; null = 未分类 */
+  project_id: string | null;
 }
 
 interface PendingState {
   items: Record<string, PendingSignal>;
   /** 启动时调一次. 之后 mutation 自己同步 zustand, 不需要再 hydrate. */
   hydrate: () => Promise<void>;
-  submit: (input: { id: string; raw_text: string; captured_at: string }) => Promise<void>;
+  submit: (input: {
+    id: string;
+    raw_text: string;
+    captured_at: string;
+    project_id?: string | null;
+  }) => Promise<void>;
   markFailed: (id: string, error: string) => Promise<void>;
   markSyncing: (id: string) => Promise<void>;
   remove: (id: string) => Promise<void>;
@@ -57,6 +64,7 @@ function rowToSignal(r: PendingSignalRow): PendingSignal {
     error: r.error ?? undefined,
     attempts: r.attempts,
     next_retry_at: r.next_retry_at,
+    project_id: r.project_id,
   };
 }
 

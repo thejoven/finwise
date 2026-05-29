@@ -43,7 +43,7 @@ export const config = {
   llmApiKey: readLLMKey(),
   llmBaseURL: optional("LLM_BASE_URL", "https://api.deepseek.com")!,
 
-  natsUrl: optional("NATS_URL", "nats://localhost:4222")!,
+  iiiUrl: optional("III_URL", "ws://localhost:49134")!,
 
   flashfiApiUrl: optional("FLASHFI_API_URL", "http://localhost:8080")!,
   internalToken: required("INTERNAL_TOKEN"),

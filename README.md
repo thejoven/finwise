@@ -10,7 +10,7 @@
 
 ```
 .
-├── server/         # Go 后端 (Phase 1 起步, gin + pgvector + NATS JetStream)
+├── server/         # Go 后端 (Phase 1 起步, gin + pgvector + iii engine over HTTP)
 ├── mastra/         # Node LLM worker (Analyst / Editor / Diagnostician, tsx 直跑)
 ├── mobile/         # Expo / React Native 客户端 (M3 起)
 ├── web-admin/      # Vite + shadcn/ui 后台 (admin SPA + nginx 反代)
@@ -33,7 +33,7 @@
 
 | 场景 | 用什么 | 跑哪里 |
 |---|---|---|
-| 本地写代码 / 跑测试 | `docker compose up -d` (只起 postgres+nats) + `make run` | Mac |
+| 本地写代码 / 跑测试 | `docker compose up -d` (postgres+redis) + iii (systemd 或本地) + `make run` | Mac |
 | 现行内网部署 | `./scripts/remote-sync.sh` (rsync + systemd restart) | `root@192.168.1.205` |
 | **Docker 全栈部署 (新)** | `docker compose --profile prod up -d --build` | 任意 Linux/Docker 主机 |
 
@@ -62,8 +62,9 @@ cp .env.example .env
 # 编辑 .env, 把 DEV_USER_ID 填一个 uuidgen 生成的值
 uuidgen
 
-# 2) 起基础设施 (postgres + nats)
+# 2) 起基础设施 (postgres + redis)
 make dev
+#    iii engine 走 systemd (见 SERVER.md), 或本地裸跑: iii --config iii/config.yaml
 
 # 3) 跑迁移
 cd server && go mod tidy && cd ..
@@ -112,8 +113,8 @@ make test
 
 ## C. Docker 全栈部署
 
-把整个后端 (postgres + nats + api + mastra + web-admin) 打包跑在一台 Linux 主机上,
-不依赖 systemd / 宿主 nginx. 适合:
+把后端 (postgres + redis + api + mastra + web-admin) 跑在一台 Linux 主机的 docker compose 里;
+iii engine 走 host systemd (`flashfi-iii.service`), 容器通过 host.docker.internal 接它. 适合:
 
 - 在另一台机器搭一份测试环境
 - CI 起完整 E2E 环境
@@ -128,25 +129,32 @@ make test
    ┌──────────┐     ┌─────────────┐     ┌──────────────┐
    │ postgres │◀───▶│     api     │◀───▶│   mastra     │
    │  :5432   │     │  :8080      │     │  :9091       │
-   │ pgvector │     │  (gin)      │     │  (tsx)       │
+   │ pgvector │     │  (gin)      │     │  (iii SDK)   │
    └──────────┘     └─────────────┘     └──────────────┘
-        ▲                  ▲                   ▲
-        │                  │                   │
-        │           ┌──────┴────────┐     ┌────┴─────┐
-        │           │  web-admin    │     │   nats   │
-        │           │  nginx :80    │     │  :4222   │
-        │           │  → api:8080   │     │  (JS)    │
-        │           └───────────────┘     └──────────┘
-        │
-   ┌────┴──────┐
-   │ migrator  │ (profile=migrate, 一次性)
-   └───────────┘
+        ▲                 ▲ ▲ ▲                ▲
+        │                 │ │ │                │ ws
+        │           ┌─────┘ │ └──────┐         │
+        │           │       │        │         │
+        │     ┌─────┴───┐   │   ┌────┴────┐    │
+        │     │web-admin│   │   │  redis  │    │
+        │     │nginx :80│   │   │  :6379  │    │
+        │     └─────────┘   │   └─────────┘    │
+        │                   │ http POST events │
+        │                   ▼                  │
+        │             host.docker.internal     │
+   ┌────┴──────┐    ┌────────────────────────┐ │
+   │ migrator  │    │  iii engine (host)     │◀┘
+   └───────────┘    │  systemd: flashfi-iii  │
+                    │  HTTP :3111  WS :49134 │
+                    └────────────────────────┘
 
    宿主端口 (默认):
      :8080  → api          (curl / mobile 用)
      :8082  → web-admin    (浏览器访问后台)
      :5432  → postgres
-     :4222  → nats client  :8222 → nats monitor
+     :6379  → redis        (iii queue/state adapter)
+     :3111  → iii HTTP     (Go outbox 推事件用)
+     :49134 → iii WS       (Mastra SDK worker 连接用)
 ```
 
 ### 一次性配置
@@ -251,7 +259,7 @@ NPM_REGISTRY=https://registry.npmmirror.com/
 | INTERNAL_LOOPBACK | `true` (同机 loopback) | **`false`** (容器之间走 docker 网络) |
 | 重启某个组件 | `systemctl restart flashfi-mastra` | `docker compose restart mastra` |
 
-两条路可以同机切换, 但不要同时跑 (NATS durable consumer 是独占的, mastra 会冲突).
+两条路可以同机切换, 但不要同时跑 (iii queue 同名 consumer 多实例会争消息, mastra 会冲突).
 
 ---
 

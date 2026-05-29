@@ -144,3 +144,15 @@ export async function submitAnswer(input: SubmitAnswerInput): Promise<AnswerResp
     .json();
   return AnswerResponse.parse(json);
 }
+
+/**
+ * reinferQuestion — 用户主动触发: 等下一题超 60s (mastra socratic DLQ 了).
+ * server 重发最近一条 refinement.answered event, mastra 重新跑 socratic.
+ *
+ * 失败:
+ *   - 404 不属于该 user
+ *   - 409 已 completed / 有 pending question / 还没答任何一轮
+ */
+export async function reinferQuestion(sessionId: string): Promise<void> {
+  await api.post(`v1/refinement/sessions/${sessionId}/reinfer-question`).json();
+}

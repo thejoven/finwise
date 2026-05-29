@@ -1,0 +1,79 @@
+# iii engine config (v0.13.0 schema). 部署到 /opt/flashfi/iii/config.yaml 后由
+# systemd unit (iii/flashfi-iii.service) 拉起.
+#
+# 端口:
+#   • 49134 — SDK worker WebSocket (engine 内置默认, 不再走 yaml)
+#   • 3111  — HTTP worker. Go outbox POST 事件到这里, 触发函数.
+#   • 9464  — Prometheus metrics
+#
+# Redis 在 docker-compose.yml 起, 同主机 6380 (205 上 mm-redis 占了 6379).
+
+workers:
+  # 结构化日志 + Prometheus metrics. 字段名按 v0.13.0 出的 default 模板写.
+  - name: iii-observability
+    config:
+      enabled: true
+      service_name: flashfi-iii
+      exporter: memory
+      memory_max_spans: 10000
+      metrics_enabled: true
+      metrics_exporter: memory
+      logs_enabled: true
+      logs_exporter: memory
+      logs_console_output: true
+      sampling_ratio: 1.0
+
+  # HTTP 入口. Mastra SDK 注册的 http-trigger 函数从这里暴露.
+  - name: iii-http
+    config:
+      port: 3111
+      host: "0.0.0.0"
+      default_timeout: 60000
+      concurrency_request_limit: 256
+      cors:
+        allowed_origins: ["*"]
+        allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+
+  # 队列后端. queue_configs 里每个 key 是一条命名队列, retry/concurrency 独立.
+  # 5 条 NATS subject 通过 mastra 侧 HTTP shim 落到 4 条命名队列.
+  #
+  # ⚠ v0.13.0 限制: iii-queue 的 Redis adapter "not yet implemented" — 启动时报
+  # "Redis function queue consumer not yet implemented". 这里降级到 builtin
+  # file-based (单机持久化, 重启不丢消息). 后续 iii 加上 Redis queue support
+  # 后可以切回去, 那时 redis_url 已经准备好.
+  - name: iii-queue
+    config:
+      queue_configs:
+        signal-inference:
+          max_retries: 3
+          concurrency: 2
+          type: standard
+        refinement-step:
+          max_retries: 3
+          concurrency: 2
+          type: standard
+        attention-analyze:
+          max_retries: 3
+          concurrency: 2
+          type: standard
+        commitment-draft:
+          max_retries: 3
+          concurrency: 1   # narrator 单并发, 避免对同一 user 抢
+          type: standard
+      adapter:
+        name: builtin
+        config:
+          store_method: file_based
+          file_path: /app/data/queue_store.db
+          save_interval_ms: 2000
+
+  # 分布式状态. v0.16.0 把 iii-state 的 adapter 从 redis/builtin 改成 kv (含子 store_method).
+  # file_based 存到容器内 /app/data/ — docker volume 挂出来持久化.
+  - name: iii-state
+    config:
+      adapter:
+        name: kv
+        config:
+          store_method: file_based
+          file_path: /app/data/state_store
+          save_interval_ms: 5000
