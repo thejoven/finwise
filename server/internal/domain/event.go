@@ -30,16 +30,16 @@ const (
 	EventCommitmentAbandoned EventType = "commitment.abandoned"
 
 	// Phase 3 · 镜子
-	EventCommitmentOpened        EventType = "commitment.opened"        // M9
-	EventCompanionShown          EventType = "companion.shown"          // M9
-	EventCompanionExitInsisted   EventType = "companion.exit_insisted"  // M9
-	EventExitConditionChecked    EventType = "exit.condition.checked"   // M10
-	EventExitConditionTriggered  EventType = "exit.condition.triggered" // M10
-	EventHoldingStateChanged     EventType = "holding.state_changed"    // M10
-	EventRetrospectStarted       EventType = "retrospect.started"       // M11
-	EventRetrospectAnswered      EventType = "retrospect.answered"      // M11
-	EventRetrospectFinalized     EventType = "retrospect.finalized"     // M11
-	EventTrainingFocusUpdated    EventType = "training.focus.updated"   // M11.5
+	EventCommitmentOpened       EventType = "commitment.opened"        // M9
+	EventCompanionShown         EventType = "companion.shown"          // M9
+	EventCompanionExitInsisted  EventType = "companion.exit_insisted"  // M9
+	EventExitConditionChecked   EventType = "exit.condition.checked"   // M10
+	EventExitConditionTriggered EventType = "exit.condition.triggered" // M10
+	EventHoldingStateChanged    EventType = "holding.state_changed"    // M10
+	EventRetrospectStarted      EventType = "retrospect.started"       // M11
+	EventRetrospectAnswered     EventType = "retrospect.answered"      // M11
+	EventRetrospectFinalized    EventType = "retrospect.finalized"     // M11
+	EventTrainingFocusUpdated   EventType = "training.focus.updated"   // M11.5
 )
 
 // Event mirrors a row in the events table.

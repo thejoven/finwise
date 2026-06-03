@@ -4,6 +4,7 @@ import { RefreshCw, CheckCircle2, Clock } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import {
   Table,
   TableBody,
@@ -22,68 +23,53 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
-import { flashfi, type CommitmentRow } from "@/lib/api";
+import { wiseflow, type CommitmentRow } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
+import { uuidv4 } from "@/lib/uuid";
+
+function StatusBadge({ s }: { s: string }) {
+  const variant =
+    s === "signed"
+      ? "success"
+      : s === "postponed"
+      ? "warning"
+      : s === "abandoned"
+      ? "destructive"
+      : "outline";
+  return <Badge variant={variant}>{s}</Badge>;
+}
 
 export function CommitmentsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const [filter, setFilter] = React.useState("");
+  const [openId, setOpenId] = React.useState<string | null>(null);
 
   const q = useQuery({
-    queryKey: ["commitments-active"],
-    queryFn: flashfi.commitments.active,
+    queryKey: ["commitments", "list"],
+    queryFn: wiseflow.commitments.list,
   });
 
-  const sign = useMutation({
-    mutationFn: (id: string) => flashfi.commitments.sign(id),
-    onSuccess: () => {
-      toast({ title: "已签字", variant: "success" });
-      qc.invalidateQueries({ queryKey: ["commitments-active"] });
-    },
-    onError: (err) =>
-      toast({
-        title: "签字失败",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      }),
-  });
+  const rows = q.data?.commitments ?? [];
+  const filtered = filter
+    ? rows.filter((c) =>
+        ((c.thesis?.asset_ticker ?? "") + " " + (c.thesis?.asset_name ?? "") + " " + c.status + " " + c.id)
+          .toLowerCase()
+          .includes(filter.toLowerCase()),
+      )
+    : rows;
 
-  const [postponeFor, setPostponeFor] = React.useState<CommitmentRow | null>(null);
-  const [postponeDate, setPostponeDate] = React.useState("");
-
-  const postpone = useMutation({
-    mutationFn: ({ id, until }: { id: string; until: string }) =>
-      flashfi.commitments.postpone(id, until),
-    onSuccess: () => {
-      toast({ title: "已推迟", variant: "success" });
-      setPostponeFor(null);
-      qc.invalidateQueries({ queryKey: ["commitments-active"] });
-    },
-    onError: (err) =>
-      toast({
-        title: "推迟失败",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "destructive",
-      }),
-  });
-
-  const rows: CommitmentRow[] = q.data ? [q.data] : [];
+  const selected = rows.find((c) => c.id === openId) ?? null;
 
   return (
     <div>
       <PageHeader
         title="Commitments"
-        description="承诺书 (M7-8). 状态流转: drafted → signed / postponed → closed."
+        description="承诺书 (M7-8). drafted → signed / postponed → abandoned. 点行看正文."
         actions={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => q.refetch()}
-            disabled={q.isFetching}
-          >
+          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
             <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
@@ -92,78 +78,60 @@ export function CommitmentsPage() {
 
       <Card>
         <CardContent className="p-0">
+          <div className="flex items-center justify-between gap-3 border-b p-3">
+            <Input
+              placeholder="按 标的 / 状态 / id 过滤…"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="max-w-sm"
+            />
+            <div className="shrink-0 text-xs text-muted-foreground">共 {rows.length} 份</div>
+          </div>
+
           {q.isLoading && <Loading />}
           {q.isError && (
             <div className="p-4">
               <ErrorBox error={q.error} />
             </div>
           )}
-          {q.data && rows.length === 0 && <EmptyBox label="当前没有活跃承诺" />}
-          {q.data && rows.length > 0 && (
+          {q.data && filtered.length === 0 && (
+            <EmptyBox label={filter ? "没有匹配的承诺" : "还没有承诺书"} />
+          )}
+          {filtered.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Ticker</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Signed at</TableHead>
-                  <TableHead>Postponed until</TableHead>
-                  <TableHead className="text-right">动作</TableHead>
+                  <TableHead>标的</TableHead>
+                  <TableHead>动作</TableHead>
+                  <TableHead>状态</TableHead>
+                  <TableHead className="text-right">仓位</TableHead>
+                  <TableHead>签字时间</TableHead>
+                  <TableHead>起草时间</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-mono text-xs">
-                      {c.id.slice(0, 8)}…
-                    </TableCell>
+                {filtered.map((c) => (
+                  <TableRow key={c.id} className="cursor-pointer" onClick={() => setOpenId(c.id)}>
                     <TableCell className="font-medium">
-                      {c.ticker ?? "—"}
+                      {c.thesis?.asset_ticker || "—"}
+                      {c.thesis?.asset_name && (
+                        <span className="ml-1 text-xs text-muted-foreground">
+                          {c.thesis.asset_name}
+                        </span>
+                      )}
                     </TableCell>
+                    <TableCell className="text-sm">{c.thesis?.action ?? "—"}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant={
-                          c.status === "signed"
-                            ? "success"
-                            : c.status === "postponed"
-                            ? "warning"
-                            : "outline"
-                        }
-                      >
-                        {c.status}
-                      </Badge>
+                      <StatusBadge s={c.status} />
                     </TableCell>
-                    <TableCell className="text-xs">
+                    <TableCell className="text-right tabular-nums">
+                      {c.thesis?.position_pct != null ? `${c.thesis.position_pct}%` : "—"}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       {formatDate(c.signed_at, "—")}
                     </TableCell>
-                    <TableCell className="text-xs">
-                      {formatDate(c.postponed_until, "—")}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => sign.mutate(c.id)}
-                          disabled={sign.isPending}
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> 签字
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            setPostponeFor(c);
-                            setPostponeDate(
-                              new Date(Date.now() + 86400_000 * 7)
-                                .toISOString()
-                                .slice(0, 10),
-                            );
-                          }}
-                        >
-                          <Clock className="h-3.5 w-3.5" /> 推迟
-                        </Button>
-                      </div>
+                    <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                      {formatDate(c.drafted_at)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -173,40 +141,138 @@ export function CommitmentsPage() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!postponeFor} onOpenChange={(o) => !o && setPostponeFor(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>推迟承诺</DialogTitle>
-            <DialogDescription>
-              {postponeFor?.ticker} — {postponeFor?.id}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="until">推迟到</Label>
-            <Input
-              id="until"
-              type="date"
-              value={postponeDate}
-              onChange={(e) => setPostponeDate(e.target.value)}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setPostponeFor(null)}>
-              取消
-            </Button>
-            <Button
-              disabled={postpone.isPending || !postponeDate}
-              onClick={() => {
-                if (!postponeFor) return;
-                const iso = new Date(postponeDate).toISOString();
-                postpone.mutate({ id: postponeFor.id, until: iso });
+      <Dialog open={!!selected} onOpenChange={(o) => !o && setOpenId(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          {selected && (
+            <CommitmentDetail
+              c={selected}
+              onDone={() => {
+                qc.invalidateQueries({ queryKey: ["commitments"] });
+                qc.invalidateQueries({ queryKey: ["holdings"] });
               }}
-            >
-              {postpone.isPending ? "提交中…" : "确认"}
-            </Button>
-          </DialogFooter>
+              toast={toast}
+            />
+          )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function CommitmentDetail({
+  c,
+  onDone,
+  toast,
+}: {
+  c: CommitmentRow;
+  onDone: () => void;
+  toast: ReturnType<typeof useToast>["toast"];
+}) {
+  const t = c.thesis;
+  const [reason, setReason] = React.useState("");
+
+  const sign = useMutation({
+    mutationFn: () => wiseflow.commitments.sign(c.id, uuidv4()),
+    onSuccess: () => {
+      toast({ title: "已签字", description: "已翻面为持仓.", variant: "success" });
+      onDone();
+    },
+    onError: (err) =>
+      toast({ title: "签字失败", description: String(err), variant: "destructive" }),
+  });
+  const postpone = useMutation({
+    mutationFn: () => wiseflow.commitments.postpone(c.id, uuidv4(), reason || undefined),
+    onSuccess: () => {
+      toast({ title: "已推迟", variant: "success" });
+      onDone();
+    },
+    onError: (err) =>
+      toast({ title: "推迟失败", description: String(err), variant: "destructive" }),
+  });
+
+  const canAct = c.status === "drafted" || c.status === "postponed";
+
+  return (
+    <>
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          {t?.asset_ticker || "承诺书"} <StatusBadge s={c.status} />
+        </DialogTitle>
+        <DialogDescription className="font-mono text-[11px]">{c.id}</DialogDescription>
+      </DialogHeader>
+
+      {t && (
+        <div className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="标的" value={`${t.asset_ticker}${t.asset_name ? " · " + t.asset_name : ""}`} />
+            <Field label="动作" value={t.action} />
+            <Field label="仓位" value={`${t.position_pct}%`} />
+            <Field label="持有期" value={`${t.duration_months} 个月`} />
+          </div>
+          {t.entry_method && <Field label="入场方式" value={t.entry_method} />}
+
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">退出条件</p>
+            <ul className="list-disc space-y-0.5 pl-5">
+              {(t.exit_conditions ?? []).map((e, i) => (
+                <li key={i}>{e}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="mb-1 text-xs text-muted-foreground">给未来自己的理由 (原话)</p>
+            <ul className="list-disc space-y-0.5 pl-5">
+              {(t.reasons_for_future_self ?? []).map((r, i) => (
+                <li key={i} className="text-muted-foreground">
+                  {r}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <Separator />
+          <div className="grid grid-cols-2 gap-3 text-xs text-muted-foreground">
+            <Field label="evaluation_id" value={c.evaluation_id} mono />
+            <Field label="推迟次数" value={String(c.postpone_count)} />
+            <Field label="起草" value={formatDate(c.drafted_at)} />
+            <Field label="签字" value={formatDate(c.signed_at, "—")} />
+          </div>
+        </div>
+      )}
+
+      {canAct && (
+        <DialogFooter className="mt-2 flex-col gap-2 sm:flex-row sm:items-end">
+          <div className="flex-1 space-y-1">
+            <Input
+              placeholder="推迟原因 (可选)"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={postpone.isPending}
+              onClick={() => postpone.mutate()}
+            >
+              <Clock className="mr-1.5 h-4 w-4" /> 推迟
+            </Button>
+            <Button disabled={sign.isPending} onClick={() => sign.mutate()}>
+              <CheckCircle2 className="mr-1.5 h-4 w-4" /> 签字
+            </Button>
+          </div>
+        </DialogFooter>
+      )}
+    </>
+  );
+}
+
+function Field({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="space-y-0.5">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={mono ? "break-all font-mono text-xs" : "text-sm"}>{value}</p>
     </div>
   );
 }

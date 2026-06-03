@@ -20,14 +20,31 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2866,
+    "dur_ms": 6371,
     "raw": {
-      "score": 70,
-      "narrative_summary": "HBM 持续涨价已被市场充分预期，SK 海力士作为 HBM 龙头受益明确，但涨价逻辑已多次计价。",
+      "score": 80,
+      "narrative_summary": "mid-late 叙事, HBM 涨价已是行业共识, 反身性走到 self-reinforcing 中后段, sell-side 覆盖密集.",
       "evidence": [
-        "HBM 已是第三次涨价，市场对此已有充分预期和定价",
-        "SK 海力士 HBM 产能满载，卖方普遍看好但观点已不新鲜",
-        "AI 推理盒 BOM 承压反映涨价传导至下游，非新增叙事"
+        "HBM 连续三轮涨价, 主流券商深度覆盖已超 6 个月",
+        "AI 推理盒 BOM 重算 — 涨价已传导至下游成本端",
+        "SK Hynix 作为 HBM 龙头, 叙事已跨圈至主流财经"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往 HBM 上游设备·材料看",
+          "why_unpriced": "市场停在一阶受益方 (SK Hynix), 但涨价持续时上游设备产能瓶颈才是二阶约束, sell-side 尚未密集覆盖",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注下游推理盒厂商的利润率压缩",
+          "why_unpriced": "叙事退潮后, 涨价受益方 vs 成本承压方的现金流分化会被重新定价, 目前市场只看了受益端",
+          "lens": "叙事退潮"
+        },
+        {
+          "angle": "往 HBM 同链被错杀的小型封测看",
+          "why_unpriced": "涨价叙事下资金集中龙头, 同链封测环节的 convexity (凸性) 被忽略, 一旦产能外溢它们弹性更大",
+          "lens": "凸性·optionality"
+        }
       ]
     }
   },
@@ -52,14 +69,26 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2654,
+    "dur_ms": 7443,
     "raw": {
-      "score": 30,
-      "narrative_summary": "日本半导体工程师为中国设备公司站台，在小圈层引发关注，但主流市场尚未广泛讨论。",
+      "score": 20,
+      "narrative_summary": "early-stage leading view, 反身性未启动, 赔率远大于概率.",
       "evidence": [
-        "日本半导体老工程师为中国设备公司站台，属于行业人际动态",
-        "该事件在半导体设备小圈层有讨论，但未进入主流财经视野",
-        "8035.T（东京电子）本身是日本半导体设备龙头，此事件对其叙事热度影响有限"
+        "日本老工程师站台中国设备公司, 圈内偶发事件",
+        "主流财经媒体 / sell-side 尚未覆盖此信号",
+        "retail 讨论密度接近零"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往日本半导体设备上游材料 / 耗材看",
+          "why_unpriced": "市场只看到'中国设备公司受益', 没推演日本工程师流出后, 日本本土供应链的耗材 / 备件缺口谁补",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注中国设备公司的客户验证进展",
+          "why_unpriced": "工程师站台是信号, 但 enabling condition (客户导入 / 良率验证) 还没被验证, 市场没定价这个验证失败的风险",
+          "lens": "根因还原"
+        }
       ]
     }
   },
@@ -84,14 +113,31 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2665,
+    "dur_ms": 3753,
     "raw": {
-      "score": 85,
-      "narrative_summary": "NVDA 受益于 AI 训练需求持续增长及 hyperscaler 资本支出扩张，市场叙事高度集中且充分定价。",
+      "score": 80,
+      "narrative_summary": "late-stage 拥挤交易, 反身性已近 self-defeating 拐点, 一阶已被定价.",
       "evidence": [
-        "Hyperscaler (MSFT, GOOG, AMZN, META) 持续上调 2024-2025 年资本支出指引",
-        "AI 训练芯片需求强劲，Hopper/Blackwell 产品线供不应求",
-        "NVDA 是 AI 基础设施核心标的，主流卖方广泛覆盖且媒体高频报道"
+        "sell-side 全覆盖, 共识预期已打满",
+        "主流财经媒体连续数周头条",
+        "retail 讨论密度极高"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往 AI 推理侧 / 边缘推理芯片看",
+          "why_unpriced": "市场叙事仍停在训练 scaling law, 推理侧 monetization 路径尚未被 sell-side 充分推演",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "往 NVDA 下游客户 capex 回报率拐点看",
+          "why_unpriced": "反身性走到中后段, 但 hyperscaler ROI 何时 self-defeating 未被定价",
+          "lens": "反身性反馈环"
+        },
+        {
+          "angle": "往同链被错杀的定制芯片 (ASIC) 方向看",
+          "why_unpriced": "NVDA 叙事拥挤时, 替代方案的价值重估被一阶叙事掩盖",
+          "lens": "多元思维栅格"
+        }
       ]
     }
   },
@@ -116,14 +162,26 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2160,
+    "dur_ms": 3212,
     "raw": {
-      "score": 45,
-      "narrative_summary": "咖啡豆减产推高成本，市场关注星巴克等连锁品牌利润压力与提价传导能力。",
+      "score": 60,
+      "narrative_summary": "mid-stage narrative, 一阶已被定价但分歧仍在, 反身性尚未启动.",
       "evidence": [
-        "巴西咖啡豆减产新闻在农产品和消费板块有讨论",
-        "国内咖啡品牌涨价消息引发对星巴克中国区成本压力的关注",
-        "行业媒体有覆盖但尚未成为主流财经头条"
+        "巴西减产新闻已上主流财经版面",
+        "国内咖啡品牌涨价消息零售端有讨论",
+        "sell-side 覆盖以 commodity 视角为主, 消费端分析少"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往咖啡品牌的上游供应链看",
+          "why_unpriced": "市场只 price 了终端涨价, 但供应链锁定 / 对冲成本的能力差异是二阶变量, sell-side 尚未覆盖.",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注咖啡豆替代品 / 罗布斯塔豆受益方",
+          "why_unpriced": "市场叙事停在阿拉比卡减产, 罗布斯塔替代逻辑在 commodity 圈外未被讨论.",
+          "lens": "多元思维栅格"
+        }
       ]
     }
   },
@@ -137,7 +195,7 @@
       {
         "name": "score_in_range",
         "passed": false,
-        "detail": "got 85, want [30, 70]"
+        "detail": "got 80, want [30, 70]"
       },
       {
         "name": "summary_length",
@@ -149,14 +207,31 @@
       }
     ],
     "passed": false,
-    "dur_ms": 2454,
+    "dur_ms": 4265,
     "raw": {
-      "score": 85,
-      "narrative_summary": "红海/苏伊士运河中断导致绕行好望角，推高航运运价与马士基盈利预期，市场叙事热度极高。",
+      "score": 80,
+      "narrative_summary": "mid-late 叙事, 绕行好望角已成行业共识, 运价已涨, 反身性走到 self-reinforcing 中后段.",
       "evidence": [
-        "胡塞武装袭击红海商船持续，多家航运巨头绕行好望角",
-        "马士基多次上调全年盈利指引，运价大幅攀升",
-        "主流财经媒体密集报道航运中断对全球供应链的冲击"
+        "绕行好望角已成行业标准操作",
+        "运价连续数周上涨已被主流媒体覆盖",
+        "sell-side 密集上调航运板块盈利预测"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往集装箱与船舶租赁市场看",
+          "why_unpriced": "运价涨→船东抢租船→租金上行, 但市场还停在一阶运价叙事, 没 price 租船费率弹性",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "往绕行导致的燃油成本与保险溢价看",
+          "why_unpriced": "好望角航线燃油消耗+20%, 战争险保费飙升, 这部分成本传导到货主端还没被充分定价",
+          "lens": "根因还原"
+        },
+        {
+          "angle": "往苏伊士运河通行费收入锐减的连锁反应看",
+          "why_unpriced": "埃及外汇收入承压→可能引发主权信用事件, 市场还停留在航运受益方, 没看受损方的二阶传导",
+          "lens": "反身性反馈环"
+        }
       ]
     }
   },
@@ -181,14 +256,26 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2466,
+    "dur_ms": 3441,
     "raw": {
       "score": 30,
-      "narrative_summary": "GLP-1 依从性下降信号出现，市场关注 Eli Lilly 需求持续性，但讨论仍限于专业圈内。",
+      "narrative_summary": "early-stage 信号, 反身性未启动, 市场主流叙事仍停在\"GLP-1 需求爆发\", 依从性下降尚未被定价.",
       "evidence": [
-        "诊所反馈 GLP-1 依从性下降，引发对 Tirzepatide 长期需求的质疑",
-        "部分 sell-side 分析师开始下调依从性假设，但尚未形成广泛共识",
-        "主流财经媒体未大规模报道此信号，讨论集中在医疗投资社区"
+        "诊所反馈依从性下降, 非公开数据",
+        "sell-side 仍聚焦产能与放量, 未讨论脱落率",
+        "主流财经媒体未报道此信号"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往 GLP-1 上游 API 与辅料看",
+          "why_unpriced": "若依从性下降持续, 终端需求预期下修, 但上游供应链的产能利用率拐点更晚暴露, 市场尚未price in",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注口服小分子替代路径",
+          "why_unpriced": "注射依从性下降会加速口服 GLP-1 的叙事切换, 市场仍以注射为主逻辑定价",
+          "lens": "10x 拐点"
+        }
       ]
     }
   },
@@ -209,18 +296,36 @@
       },
       {
         "name": "no_action_words",
-        "passed": true
+        "passed": false,
+        "detail": "found: 目标价"
       }
     ],
-    "passed": true,
-    "dur_ms": 2250,
+    "passed": false,
+    "dur_ms": 4234,
     "raw": {
-      "score": 70,
-      "narrative_summary": "Vistra 作为美国独立电力生产商，受益于 AI 数据中心电力需求激增，市场已充分定价该逻辑。",
+      "score": 80,
+      "narrative_summary": "mid-late 叙事, 电力基建受益已被 sell-side 充分覆盖, 一阶定价已满.",
       "evidence": [
-        "数据中心电力排队反映需求紧张，利好电力供应商",
-        "Vistra 被多家卖方覆盖为 AI 电力受益标的",
-        "2024 年以来股价已大幅上涨，叙事已被消化"
+        "多家投行上调独立电力商目标价",
+        "数据中心电力瓶颈成主流财经头条",
+        "Vistra 年内涨幅已反映电力需求预期"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往电力设备上游看 — 变压器/开关柜交期溢价",
+          "why_unpriced": "市场仍聚焦独立电力商受益, 设备端产能瓶颈和定价权提升尚未被充分 price in.",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注天然气燃料长协的定价权转移",
+          "why_unpriced": "电力需求激增下燃料供应合同重谈窗口打开, 但叙事仍停在'电力涨价'一阶.",
+          "lens": "反身性反馈环"
+        },
+        {
+          "angle": "往电网调度软件/虚拟电厂方向看",
+          "why_unpriced": "排队 6 个月意味着调度效率成为瓶颈, 软件层受益方被市场忽略.",
+          "lens": "多元思维栅格"
+        }
       ]
     }
   },
@@ -233,7 +338,8 @@
       },
       {
         "name": "score_in_range",
-        "passed": true
+        "passed": false,
+        "detail": "got 80, want [10, 55]"
       },
       {
         "name": "summary_length",
@@ -244,15 +350,32 @@
         "passed": true
       }
     ],
-    "passed": true,
-    "dur_ms": 2790,
+    "passed": false,
+    "dur_ms": 8906,
     "raw": {
-      "score": 55,
-      "narrative_summary": "DeepSeek 私有化部署需求带动国产 AI 服务器关注，联想作为头部服务器厂商受益于该叙事，但尚未成为广泛共识。",
+      "score": 80,
+      "narrative_summary": "mid-late 叙事, 一阶\"DeepSeek 部署拉动服务器出货\"已被 sell-side 充分覆盖, 反身性进入自我强化中后段.",
       "evidence": [
-        "DeepSeek 爆火后企业私有化部署需求上升，利好服务器厂商",
-        "联想服务器在国内市场份额靠前，具备 AI 整机交付能力",
-        "该叙事在 IT 采购圈和部分卖方报告中出现，但未达大众财经热度"
+        "2 月起至少 5 家主流券商出 DeepSeek 服务器受益链深度",
+        "联想 AI 服务器订单新闻连续 3 周出现在财经头条",
+        "retail 讨论从'DeepSeek 模型'转向'买哪家服务器'"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往服务器上游的散热 / 电源环节看",
+          "why_unpriced": "市场还停在一阶'整机出货量'叙事, 没推演到高功率密度带来的散热方案升级和电源价值量提升",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "关注同链被错杀的边缘服务器厂商",
+          "why_unpriced": "市场集中定价头部品牌, 但 DeepSeek 私有化部署的长尾需求可能让二线厂商获得增量份额, 叙事退潮后资金会找补涨",
+          "lens": "叙事退潮"
+        },
+        {
+          "angle": "往 DeepSeek 推理成本下降后激活的软件 / 应用层看",
+          "why_unpriced": "硬件受益已被 price in, 但推理成本下降→应用爆发→反身性回馈到算力需求的二阶链还没被定价",
+          "lens": "反身性反馈环"
+        }
       ]
     }
   },
@@ -265,8 +388,7 @@
       },
       {
         "name": "score_in_range",
-        "passed": false,
-        "detail": "got 65, want [70, 100]"
+        "passed": true
       },
       {
         "name": "summary_length",
@@ -277,15 +399,32 @@
         "passed": true
       }
     ],
-    "passed": false,
-    "dur_ms": 2450,
+    "passed": true,
+    "dur_ms": 4149,
     "raw": {
-      "score": 65,
-      "narrative_summary": "ASML 对华出口限制加码，EUV/DUV 设备管制收紧，市场关注地缘风险对营收影响。",
+      "score": 80,
+      "narrative_summary": "mid-late 叙事, 出口管制对 ASML 的影响已被 sell-side 充分覆盖, 一阶已定价.",
       "evidence": [
-        "荷兰政府近期进一步收紧对华出口许可",
-        "ASML 财报电话会提及出口管制为关键风险",
-        "多家卖方下调中国区收入预期，但长期需求叙事仍在"
+        "过去 3 个月 6+ 家主流券商出深度分析出口管制影响",
+        "彭博/路透连续报道荷兰政府立场变化",
+        "ASML 股价已反映中国收入占比下调预期"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往 EUV 上游光学/精密零部件供应商看",
+          "why_unpriced": "市场聚焦 ASML 收入损失, 但供应链本土化替代的受益方 (如蔡司 SMT 的竞争格局变化) 未被定价",
+          "lens": "二阶思考"
+        },
+        {
+          "angle": "往中国本土光刻机产业链的凸性机会看",
+          "why_unpriced": "出口限制加速国产替代, 但市场仍用渐进式线性外推估值, 忽略了 10x 拐点可能",
+          "lens": "10x 拐点"
+        },
+        {
+          "angle": "往非中国区 EUV 客户的议价能力变化看",
+          "why_unpriced": "ASML 被迫将产能集中到非中国客户, 台积电/三星/Intel 的采购条款可能变优, 这条反身性链条未被讨论",
+          "lens": "反身性反馈环"
+        }
       ]
     }
   },
@@ -310,14 +449,26 @@
       }
     ],
     "passed": true,
-    "dur_ms": 2337,
+    "dur_ms": 3017,
     "raw": {
-      "score": 30,
-      "narrative_summary": "Apple 新品 Mac Studio 存储配置引发抢购，供应链带宽话题在极客圈内讨论。",
+      "score": 20,
+      "narrative_summary": "early-stage leading view, 反身性未启动, 赔率 > 概率.",
       "evidence": [
-        "Mac Studio 512G 版本在部分渠道出现抢购现象",
-        "用户讨论集中在存储带宽限制上",
-        "话题主要出现在数码/极客社群，未扩散至主流财经媒体"
+        "群内抢购 Mac Studio 512G 属小圈子行为",
+        "无主流卖方覆盖或财经媒体讨论",
+        "带宽吃紧尚未被验证为系统性瓶颈"
+      ],
+      "unpriced_directions": [
+        {
+          "angle": "往上游存储颗粒看",
+          "why_unpriced": "市场只看到终端抢货, 没追问 NAND 产能分配是否已结构性偏紧",
+          "lens": "根因还原"
+        },
+        {
+          "angle": "关注同链的接口芯片",
+          "why_unpriced": "带宽吃紧的真正瓶颈可能在 PCIe/控制器端, 而非存储本身",
+          "lens": "二阶思考"
+        }
       ]
     }
   }

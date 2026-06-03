@@ -15,11 +15,10 @@ import {
   type Holding,
 } from "@/core/api/commitment";
 import { uuidV4 } from "@/core/uuid";
+import { byIdQuery } from "@/core/api/query";
 
 const ACTIVE_KEY = ["commitment", "active"] as const;
-const COMMITMENT_KEY = (id: string) => ["commitment", id] as const;
 const ACTIVE_HOLDING_KEY = ["holding", "active"] as const;
-const HOLDING_KEY = (id: string) => ["holding", id] as const;
 
 /** 拉当前活跃承诺书 (drafted/signed/postponed); 204 → null. */
 export function useActiveCommitment() {
@@ -37,11 +36,7 @@ export function useActiveCommitment() {
 }
 
 export function useCommitment(id: string | undefined) {
-  return useQuery({
-    queryKey: id ? COMMITMENT_KEY(id) : ["commitment", "none"],
-    queryFn: () => getCommitment(id!),
-    enabled: !!id,
-  });
+  return useQuery(byIdQuery(["commitment"], id, getCommitment));
 }
 
 export function useActiveHolding() {
@@ -52,11 +47,7 @@ export function useActiveHolding() {
 }
 
 export function useHolding(id: string | undefined) {
-  return useQuery({
-    queryKey: id ? HOLDING_KEY(id) : ["holding", "none"],
-    queryFn: () => getHolding(id!),
-    enabled: !!id,
-  });
+  return useQuery(byIdQuery(["holding"], id, getHolding));
 }
 
 /**

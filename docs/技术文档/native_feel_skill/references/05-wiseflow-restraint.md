@@ -1,7 +1,7 @@
-# 05 · Flashfi Engine 专属克制项 · RN
+# 05 · 财富密码 专属克制项 · RN
 
 > "原生感"做到位之后, 这一份把项目灵魂注入到 UI 行为里的最后一层。
-> 这些规则**不是**主流 RN 应用的规则, 是 Flashfi Engine 这个产品的规则。
+> 这些规则**不是**主流 RN 应用的规则, 是 财富密码 这个产品的规则。
 
 ---
 
@@ -25,7 +25,7 @@ UI 是产品哲学的物质载体。
 
 **主流 RN 做法**:用 `react-native-toast-message` 或 `react-native-flash-message` 弹 "已保存"。
 
-**Flashfi Engine 做法**:**直接关闭模态**, 收件箱 listener 自动反映新数据。
+**财富密码 做法**:**直接关闭模态**, 收件箱 listener 自动反映新数据。
 
 ```typescript
 // ❌ 错误
@@ -55,7 +55,7 @@ async function handleSubmit() {
 
 **主流做法**:网络错误 → Alert.alert。
 
-**Flashfi Engine 做法**:
+**财富密码 做法**:
 
 ```typescript
 // 录入页底部 inline
@@ -116,7 +116,7 @@ function TypewriterText({ stream }: { stream: AsyncIterable<string> }) {
 
 ### 1.4 不用红点角标
 
-**Flashfi Engine 永远不用**:
+**财富密码 永远不用**:
 
 - Tab 上不放未读数字
 - 不调 `expo-notifications` 的 badge API
@@ -197,32 +197,55 @@ function EmptyInbox() {
 
 ---
 
-## § 3. 动画的克制
+## § 3. 动画:克制喧哗, 但追求丝滑
 
-### 3.1 不引 Reanimated 做复杂动画
+> 本节 2026-06 修订。旧规则一刀切禁掉了 spring 和复杂过渡, 结果"克制"变成了"僵硬"。
+> 新原则:**克制的是装饰与庆祝, 不是运动本身。** 运动要做到丝滑 —— 丝滑正是"严肃、有重量"的手感来源(iOS 本身就这么丝滑)。
+> 哲学没变, 沉默优于发声:**丝滑的运动不是"发声", 喧闹的装饰才是。**
 
-`react-native-reanimated` 是好库, 但本项目只用它的基础能力:
+### 3.1 运动要丝滑, 而且跟手
 
-- ✓ 用 Expo Router 默认的页面切换动画
-- ✓ 用 Modal 的 slide_from_bottom
-- ✗ 不写 Lottie 动画
-- ✗ 不写复杂的 shared element transition
-- ✗ 不写 spring 物理动画
+`react-native-reanimated`(已装)+ `react-native-gesture-handler` 是运动基座, 放开用:
 
-### 3.2 不用 Lottie / Rive
+- ✓ **spring 物理动画** —— sheet、抽屉、卡片入场都用 spring 自然收尾, 这是丝滑的来源
+- ✓ **手势跟手 + 可打断** —— 内容跟着手指走, 中途松手顺势接管(interruptible), 而不是播一段写死时长的动画
+- ✓ **共享元素 / 连续过渡** —— 当它表达"这东西从哪来、到哪去"的空间连续性时, 用
+- ✓ **布局动画**(Reanimated 的 `entering` / `exiting` / `layout`)—— 列表增删、展开收起别"啪"地跳变
+- ✓ Expo Router 页面切换、Modal `slide_from_bottom` 照旧
+
+一句话判断标准:**这个运动是在帮用户理解"东西去哪了"(✓), 还是在表演给用户看(✗)?**
 
 ```typescript
-// ❌
+// ✓ 跟手、可打断、spring 收尾的 sheet —— 这就是丝滑
+const ty = useSharedValue(0);
+const pan = Gesture.Pan()
+  .onChange((e) => { ty.value += e.changeY; })
+  .onEnd((e) => {
+    // 顺着手指的速度用 spring 收尾, 而不是写死时长
+    ty.value = withSpring(snapTo(ty.value, e.velocityY), { damping: 28, stiffness: 240 });
+  });
+```
+
+### 3.2 仍然不要"装饰性 / 庆祝性"特效
+
+放开的是"运动", 不是"特效"。下面这些依旧不做 —— 它们属于 § 1 的"喧哗":
+
+- ✗ Lottie / Rive 装饰动画(`lottie-react-native` 仍在黑名单)
+- ✗ 彩带、撒花、成功打勾的庆祝动画(`react-native-confetti`)
+- ✗ 为了"显得活泼"、与用户操作无关的循环 / 入场动画
+
+```typescript
+// ❌ 仍然不装、不写
 import LottieView from 'lottie-react-native';
 ```
 
-不安装。
+区别在于:**spring 是物理, Lottie 是表演。** 我们要前者, 不要后者。
 
-### 3.3 唯一的动画是打字机效果
+### 3.3 叙述时刻仍用打字机效果
 
-承诺书生成、复盘对话的 LLM 流式输出, 字符一个个出现。
+承诺书生成、复盘对话的 LLM 流式输出, 字符一个个出现。每字符 30-60ms, 句末停顿 200ms。
 
-每字符 30-60ms, 句末停顿 200ms。
+(它现在是"运动"家族里的普通一员, 不再是"唯一允许的动画"。)
 
 ---
 
@@ -239,7 +262,7 @@ import LottieView from 'lottie-react-native';
 
 ### 4.2 用产品词汇
 
-| 主流词 | Flashfi Engine |
+| 主流词 | 财富密码 |
 |---|---|
 | 保存 | 归档 |
 | 提交 | 签字 / 记下 |
@@ -333,7 +356,7 @@ import LottieView from 'lottie-react-native';
   </Pressable>
 </View>
 
-// ✓ Flashfi Engine
+// ✓ 财富密码
 <View style={styles.empty}>
   <Text style={styles.emptyText}>
     这里会显示你的观察记录。{'\n'}
@@ -507,9 +530,9 @@ done
 
 ## 一句话总结
 
-> **iOS 让它好看, Flashfi Engine 让它有重量。**
+> **iOS 让它好看, 财富密码 让它有重量。**
 >
-> 主流 RN 应用用反馈、动画、Toast 来"让产品看起来活跃"。
+> 主流 RN 应用用反馈、装饰动效、Toast 来"让产品看起来活跃"。
 > 本产品反过来——**让用户感到自己在做严肃的事**。
 >
 > 这一点上, **不安装的库比安装的库更能塑造产品**。

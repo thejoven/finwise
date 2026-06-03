@@ -23,11 +23,11 @@ import (
 type QuestionKind string
 
 const (
-	QuestionKindSingle           QuestionKind = "single"
-	QuestionKindMulti            QuestionKind = "multi"
-	QuestionKindOrdering         QuestionKind = "ordering"
-	QuestionKindOpen             QuestionKind = "open"
-	QuestionKindCommitmentSetup  QuestionKind = "commitment_setup" // r5 · 收集 action + duration + 理由
+	QuestionKindSingle          QuestionKind = "single"
+	QuestionKindMulti           QuestionKind = "multi"
+	QuestionKindOrdering        QuestionKind = "ordering"
+	QuestionKindOpen            QuestionKind = "open"
+	QuestionKindCommitmentSetup QuestionKind = "commitment_setup" // r5 · 收集 action + duration + 理由
 )
 
 // AnswerDiagnosisKind 是对用户答题的诊断 (不是"标准答案对错", 是"训练信号").
@@ -82,7 +82,7 @@ type AnswerDiagnosis struct {
 type RefinementAnsweredPayload struct {
 	RefinementID uuid.UUID        `json:"refinement_id"`
 	UserID       uuid.UUID        `json:"user_id"`
-	Round        int              `json:"round"`         // 1..5
+	Round        int              `json:"round"` // 1..5
 	QuestionID   string           `json:"question_id"`
 	QuestionKind QuestionKind     `json:"question_kind"`
 	QuestionText string           `json:"question_text"`
@@ -128,10 +128,19 @@ type GateG1 struct {
 	Detail *string `json:"detail,omitempty"`
 }
 
+// UnpricedDirection 是共识分析师判定"已被定价"时附带的"未被定价的方向" (指方向, 不荐股).
+// ticker 只作为方向示意出现在 Angle 里, 不带估值 / 数字 (那是 Beneficiary 的职责).
+type UnpricedDirection struct {
+	Angle       string `json:"angle"`          // 往哪看的指针
+	WhyUnpriced string `json:"why_unpriced"`   // 为什么市场还没定价
+	Lens        string `json:"lens,omitempty"` // 产品语言 lens, 可选
+}
+
 type GateG2 struct {
-	Pass   bool    `json:"pass"`
-	Score  int     `json:"score"` // 0..100
-	Detail *string `json:"detail,omitempty"`
+	Pass               bool                `json:"pass"`
+	Score              int                 `json:"score"` // 0..100
+	Detail             *string             `json:"detail,omitempty"`
+	UnpricedDirections []UnpricedDirection `json:"unpriced_directions,omitempty"` // 未被定价的方向 (≤3, 可空)
 }
 
 type GateG3 struct {
@@ -148,9 +157,9 @@ type GateG4Sub struct {
 }
 
 type GateG4 struct {
-	Pass   bool       `json:"pass"`
-	Sub    GateG4Sub  `json:"sub"`
-	Detail *string    `json:"detail,omitempty"`
+	Pass   bool      `json:"pass"`
+	Sub    GateG4Sub `json:"sub"`
+	Detail *string   `json:"detail,omitempty"`
 }
 
 type GateEvaluatedPayload struct {
@@ -190,10 +199,10 @@ type Thesis struct {
 	AssetTicker          string           `json:"asset_ticker"`
 	AssetName            string           `json:"asset_name"`
 	Action               CommitmentAction `json:"action"`
-	PositionPct          float64          `json:"position_pct"`      // 0..100
-	DurationMonths       int              `json:"duration_months"`   // 1..36
-	EntryMethod          string           `json:"entry_method"`      // ≤ 100 字
-	ExitConditions       []string         `json:"exit_conditions"`   // 2..4 条
+	PositionPct          float64          `json:"position_pct"`            // 0..100
+	DurationMonths       int              `json:"duration_months"`         // 1..36
+	EntryMethod          string           `json:"entry_method"`            // ≤ 100 字
+	ExitConditions       []string         `json:"exit_conditions"`         // 2..4 条
 	ReasonsForFutureSelf []string         `json:"reasons_for_future_self"` // 3..5 条
 }
 
@@ -216,7 +225,7 @@ type CommitmentSignedPayload struct {
 type CommitmentPostponedPayload struct {
 	CommitmentID uuid.UUID `json:"commitment_id"`
 	UserID       uuid.UUID `json:"user_id"`
-	Count        int       `json:"count"`           // 1..3
+	Count        int       `json:"count"` // 1..3
 	Reason       *string   `json:"reason,omitempty"`
 	PostponedAt  time.Time `json:"postponed_at"`
 }

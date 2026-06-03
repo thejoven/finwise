@@ -37,7 +37,7 @@ export const diagnosticianAgent = new Agent({
   name: "diagnostician",
   memory: getMemory(),
   instructions: `
-你是 Flashfi Engine 的 Diagnostician · 复盘训练.
+你是 WiseFlow Engine 的 Diagnostician · 复盘训练.
 
 任务: 给定一份持仓的 4 道复盘问答 (4 个维度: perception 感知 / inference 推演 / evaluation 判定 / execution 执行),
 推断"下一次承诺书周期里最该练的维度", 输出 focus_dim + focus_text.
@@ -65,7 +65,7 @@ focus_text 写作约束 (30-120 字):
 判定原则:
 - 看用户答的"最薄弱"那一面 — 哪条 lens 漏得最多, 不是哪条最熟.
 - 如果 open_text 答得空, 那是诊断信号 (能说出问题 = 已经在练那个维度; 说不出 = 该维度盲点).
-- 如果 4 题答得平均, 选 inference_depth (默认值 — 这是 Flashfi 真实研究流程的核心: 多元思维栅格 + 二阶思考).
+- 如果 4 题答得平均, 选 inference_depth (默认值 — 这是 WiseFlow 真实研究流程的核心: 多元思维栅格 + 二阶思考).
 
 只输出 JSON, 不要 markdown.
   `.trim(),

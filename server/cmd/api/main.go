@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -17,23 +16,24 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"flashfi/server/internal/config"
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi"
-	"flashfi/server/internal/infra/db"
-	iiix "flashfi/server/internal/infra/iii"
-	mastrax "flashfi/server/internal/infra/mastra"
-	accountmod "flashfi/server/internal/module/account"
-	commitmentmod "flashfi/server/internal/module/commitment"
-	companionmod "flashfi/server/internal/module/companion"
-	exitmod "flashfi/server/internal/module/exit"
-	gatemod "flashfi/server/internal/module/gate"
-	projectmod "flashfi/server/internal/module/project"
-	refinementmod "flashfi/server/internal/module/refinement"
-	attentionmod "flashfi/server/internal/module/attention"
-	researchmod "flashfi/server/internal/module/research"
-	retrospectmod "flashfi/server/internal/module/retrospect"
-	signalmod "flashfi/server/internal/module/signal"
+	"wiseflow/server/internal/config"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi"
+	"wiseflow/server/internal/infra/db"
+	iiix "wiseflow/server/internal/infra/iii"
+	mastrax "wiseflow/server/internal/infra/mastra"
+	accountmod "wiseflow/server/internal/module/account"
+	attentionmod "wiseflow/server/internal/module/attention"
+	commitmentmod "wiseflow/server/internal/module/commitment"
+	companionmod "wiseflow/server/internal/module/companion"
+	distillationmod "wiseflow/server/internal/module/distillation"
+	exitmod "wiseflow/server/internal/module/exit"
+	gatemod "wiseflow/server/internal/module/gate"
+	projectmod "wiseflow/server/internal/module/project"
+	refinementmod "wiseflow/server/internal/module/refinement"
+	researchmod "wiseflow/server/internal/module/research"
+	retrospectmod "wiseflow/server/internal/module/retrospect"
+	signalmod "wiseflow/server/internal/module/signal"
 )
 
 func main() {
@@ -151,6 +151,11 @@ func run() error {
 	attentionSvc := attentionmod.NewService(attentionRepo)
 	attentionHandler := attentionmod.NewHandler(attentionSvc)
 
+	// distillation: 降噪页. mastra post-refinement workflow 写回, mobile 读.
+	distillationRepo := distillationmod.NewRepository(pool)
+	distillationSvc := distillationmod.NewService(distillationRepo)
+	distillationHandler := distillationmod.NewHandler(distillationSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -159,8 +164,9 @@ func run() error {
 		InternalToken:    cfg.InternalToken,
 		InternalLoopback: cfg.InternalLoopback,
 		Sessions:         accountSvc,
-		RegisterModules: func(anon, v1, internal *gin.RouterGroup) {
-			accountHandler.Register(anon, v1, internal)
+		AdminLookup:      accountSvc,
+		RegisterModules: func(anon, v1, internal, admin *gin.RouterGroup) {
+			accountHandler.Register(anon, v1, internal, admin)
 			projectHandler.Register(v1, internal)
 			signalHandler.Register(v1, internal)
 			refinementHandler.Register(v1, internal)
@@ -170,6 +176,7 @@ func run() error {
 			retrospectHandler.Register(v1, internal)
 			researchHandler.Register(v1, internal)
 			attentionHandler.Register(v1, internal)
+			distillationHandler.Register(v1, internal)
 		},
 	})
 
@@ -184,41 +191,14 @@ func run() error {
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
 
-	// gate 评估: 原来由 NATS pull consumer 异步触发 (refinement.completed durable
-	// "gate-evaluator"). 切到 iii 后, iii 没有 Go SDK, 所以把 gate.Evaluate 作为
-	// outbox 的 postPublish 回调内联起来 — 事件成功 POST 到 iii 之后, 同一进程里
-	// 顺手把 gate 跑完, 跑出来的 gate.passed/gate.archived 走正常 outbox 路径.
-	postPublish := func(ctx context.Context, subject string, payload []byte) {
-		if subject != "refinement.completed" {
-			return
-		}
-		var p domain.RefinementCompletedPayload
-		if err := json.Unmarshal(payload, &p); err != nil {
-			logger.Error("gate inline: decode payload", zap.Error(err))
-			return
-		}
-		if p.Decision == domain.RefinementTrainingOnly {
-			logger.Info("gate inline: skipped (training_only)",
-				zap.String("refinement_id", p.RefinementID.String()))
-			return
-		}
-		start := time.Now()
-		if _, err := gateSvc.Evaluate(ctx, p.RefinementID); err != nil {
-			logger.Warn("gate inline evaluate failed",
-				zap.String("refinement_id", p.RefinementID.String()),
-				zap.Error(err))
-			return
-		}
-		logger.Info("gate inline evaluated",
-			zap.String("refinement_id", p.RefinementID.String()),
-			zap.Duration("dur", time.Since(start)))
-	}
-
+	// gate 评估不再自动触发. 改成"前置于四道门": refinement 完成后先进降噪页
+	// (mastra post-refinement: distiller + beneficiary), 由用户在降噪页手动点
+	// "进入四道门"才走 gate (POST /v1/gate/evaluate → gateSvc.EvaluateDetached).
+	// attention-analyze 仍由 iii 在 refinement.completed 上照常跑, 不受影响.
 	outbox := iiix.NewOutboxWorker(pool, iiiClient, logger, iiix.OutboxConfig{
 		PollInterval: cfg.OutboxPollInterval,
 		BatchSize:    cfg.OutboxBatchSize,
 		MaxAttempts:  cfg.OutboxMaxAttempts,
-		PostPublish:  postPublish,
 	})
 	workerWG.Add(1)
 	go func() {
@@ -283,4 +263,3 @@ func newLogger(level string) (*zap.Logger, error) {
 	cfg.EncoderConfig.EncodeTime = zapcore.RFC3339NanoTimeEncoder
 	return cfg.Build()
 }
-

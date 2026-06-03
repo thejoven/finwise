@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/mastra"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/mastra"
 )
 
 var ErrInvalidInput = errors.New("invalid input")

@@ -313,7 +313,7 @@ export function Masthead({ volume, edition, date, weekday }: Props) {
         </Sans>
         <TapEffect onPress={openSearch}><Text style={styles.icon}>⌕</Text></TapEffect>
       </View>
-      <Display size={38} italic style={styles.nameplate}>Flashfi</Display>
+      <Display size={38} italic style={styles.nameplate}>财富密码</Display>
       <Serif size={11} italic style={styles.subline}>Conviction Quarterly</Serif>
       <Serif size={10} italic style={styles.tagline}>
         A Quiet Journal of High-Confidence Calls
@@ -390,5 +390,5 @@ const styles = StyleSheet.create({
 
 ## 一句话总结
 
-> 平台行为听 iOS / Android 的, 视觉设计听 Flashfi Engine 的。
+> 平台行为听 iOS / Android 的, 视觉设计听 财富密码 的。
 > 这条边界画清楚, 跨平台一致和原生感就能同时成立。

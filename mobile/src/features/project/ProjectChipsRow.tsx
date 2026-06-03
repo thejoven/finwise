@@ -2,7 +2,8 @@
  * ProjectChipsRow — 报刊头下的"分类条".
  *
  * 视觉:
- *   [全部] [🧸 泡泡玛特] [🔋 新能源] ... [＋]
+ *   [🧸 泡泡玛特] [🔋 新能源] ... [＋]
+ *   - 不含"全部": 始终停在某一真实分类 (见 GOAL); active 恒为其中一项.
  *   - active: ink 填充 + paper 文字
  *   - inactive: paper2 + 细线 + ink 文字
  *   - 末尾 + 号: 打开 ProjectSelectModal (创建 / 管理)
@@ -20,12 +21,11 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import { Plus } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
-import { Sans, TapEffect } from "@/shared/components";
+import { Icon, Sans, TapEffect } from "@/shared/components";
 
 import { useActiveProject } from "./store";
 import { ProjectSelectModal } from "./ProjectSelectModal";
@@ -68,11 +68,6 @@ export function ProjectChipsRow({ parentPadded = false }: ProjectChipsRowProps =
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={parentPadded ? styles.rowBleed : styles.row}
       >
-        <Chip
-          label="全部"
-          active={activeId === null}
-          onPress={() => void setActive(null)}
-        />
         {items.map((p) => (
           <Chip
             key={p.id}
@@ -84,7 +79,7 @@ export function ProjectChipsRow({ parentPadded = false }: ProjectChipsRowProps =
           />
         ))}
         <TapEffect onPress={openCreate} style={[styles.chip, styles.chipAdd]}>
-          <Plus size={12} color={theme.color.ink2} strokeWidth={2} />
+          <Icon name="plus" size={12} color={theme.color.ink2} strokeWidth={2} />
         </TapEffect>
       </ScrollView>
 
@@ -97,7 +92,7 @@ export function ProjectChipsRow({ parentPadded = false }: ProjectChipsRowProps =
   );
 }
 
-interface ChipProps {
+export interface ChipProps {
   label: string;
   active: boolean;
   color?: string;
@@ -105,7 +100,7 @@ interface ChipProps {
   onLongPress?: () => void;
 }
 
-function Chip({ label, active, color, onPress, onLongPress }: ChipProps) {
+export function Chip({ label, active, color, onPress, onLongPress }: ChipProps) {
   const tinted = !active && color ? { borderColor: color } : null;
   return (
     <TapEffect

@@ -143,7 +143,7 @@ tsconfig.json
 - ❌ Realm(WatermelonDB 比它 RN 体验好)
 - ❌ NativeBase / Tamagui / RN Paper(本项目自绘 UI, 不引 UI 库)
 - ❌ Detox(Maestro 更简单)
-- ❌ Reanimated 复杂动画(本项目动画极简)
+- ❌ Lottie / Rive 等装饰动画库(运动本身用 Reanimated spring 自绘, 放开做丝滑 —— 见 restraint § 3)
 
 ---
 
@@ -463,7 +463,7 @@ Metro bundler 自动选择。但本项目 Phase 1 几乎用不到, 简单 if-els
 
 ## § 14. 原生感工程清单
 
-RN 的原生感和 Flutter 不同:RN 默认就是原生组件, 但 Flashfi Engine 的克制哲学需要额外约束。
+RN 的原生感和 Flutter 不同:RN 默认就是原生组件, 但 财富密码 的克制哲学需要额外约束。
 
 完整清单见 `/native_feel_skill/SKILL.md`, 这里只列纲要:
 
@@ -482,7 +482,7 @@ RN 的原生感和 Flutter 不同:RN 默认就是原生组件, 但 Flashfi Engin
 - 不用 react-native-toast-message
 - 不显示 Loading Spinner
 
-**Flashfi Engine 专属**
+**财富密码 专属**
 - 永远不要在录入成功后 Toast
 - 永远不要 push notification 权限
 - 不用 FAB pattern

@@ -15,11 +15,11 @@ import { useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 
 import {
   Display,
   DoubleRule,
+  Icon,
   Mono,
   Sans,
   SectionHeader,
@@ -45,7 +45,8 @@ export default function RetrospectScreen() {
   const currentIdx = retro ? retro.answers.length : 0;
   const finalized = retro?.state === "finalized";
   const allAnswered = (retro?.answers.length ?? 0) >= 4;
-  const currentQ: RetrospectQuestion | undefined = currentIdx < 4 ? RETROSPECT_QUESTIONS[currentIdx] : undefined;
+  const currentQ: RetrospectQuestion | undefined =
+    currentIdx < 4 ? RETROSPECT_QUESTIONS[currentIdx] : undefined;
 
   const [choice, setChoice] = useState<string | null>(null);
   const [openText, setOpenText] = useState("");
@@ -98,14 +99,12 @@ export default function RetrospectScreen() {
       </ScrollView>
 
       {finalized ? (
-        <Footer
-          label="回到收件箱"
-          onPress={() => router.replace("/(tabs)/inbox")}
-          enabled
-        />
+        <Footer label="回到收件箱" onPress={() => router.replace("/(tabs)/inbox")} enabled />
       ) : currentQ ? (
         <Footer
-          label={isSubmitting ? "正在记下..." : currentIdx === 3 ? "记下第 4 题" : "记下这一答 · 下一题"}
+          label={
+            isSubmitting ? "正在记下..." : currentIdx === 3 ? "记下第 4 题" : "记下这一答 · 下一题"
+          }
           onPress={handleSubmit}
           enabled={!!choice && !isSubmitting}
         />
@@ -125,7 +124,7 @@ function Header({ step, finalized }: { step: number; finalized: boolean }) {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
-        <ChevronLeft size={18} color={theme.color.ink} strokeWidth={1.5} />
+        <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
@@ -144,7 +143,13 @@ interface QuestionBlockProps {
   onOpenTextChange: (s: string) => void;
 }
 
-function QuestionBlock({ q, choice, openText, onChoiceChange, onOpenTextChange }: QuestionBlockProps) {
+function QuestionBlock({
+  q,
+  choice,
+  openText,
+  onChoiceChange,
+  onOpenTextChange,
+}: QuestionBlockProps) {
   return (
     <View style={styles.qBlock}>
       <Mono size={9} style={styles.qStamp}>
@@ -223,7 +228,15 @@ function Finalized({ retro }: { retro: NonNullable<ReturnType<typeof useRetrospe
   );
 }
 
-function Footer({ label, onPress, enabled }: { label: string; onPress: () => void; enabled: boolean }) {
+function Footer({
+  label,
+  onPress,
+  enabled,
+}: {
+  label: string;
+  onPress: () => void;
+  enabled: boolean;
+}) {
   return (
     <View style={styles.footer}>
       <TapEffect
@@ -362,4 +375,3 @@ const styles = StyleSheet.create({
   buttonDim: { backgroundColor: theme.color.muted2 },
   primaryLabel: { color: theme.color.paper, letterSpacing: 2, textTransform: "uppercase" },
 });
-

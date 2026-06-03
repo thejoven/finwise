@@ -23,11 +23,12 @@ import {
   postRefinementQuestion,
   postResearch,
   type SessionView,
-} from "../tools/flashfi-api.js";
+} from "../tools/wiseflow-api.js";
 import { webSearch, type SearchResult } from "../tools/exa-search.js";
+import { searchPredictionMarkets } from "../tools/polymarket.js";
 import { config } from "../config/env.js";
 
-const SEARCH_MODEL = "exa-search-v1";
+const RESEARCH_MODEL = "exa+polymarket-v1";
 
 export interface RefinementStepInput {
   refinement_id: string;
@@ -133,6 +134,8 @@ export async function runRefinementStep(input: RefinementStepInput): Promise<Ref
       training_focus_dim: view.training_focus_dim,
       training_focus_text: view.training_focus_text,
       round_research: roundResearch,
+      project_name: view.project_name,
+      project_guidance: view.project_guidance,
     });
   } catch (err) {
     return {
@@ -205,8 +208,13 @@ async function researchRound(in_: RoundResearchInput): Promise<SearchResult[]> {
   if (!base) return [];
   const query = `${base} ${angle}`;
 
-  // type=auto + freshness=month: neural 模式按概念查询; 近一个月时效保证.
-  const results = await webSearch(query, { count: 5, freshness: "month", type: "auto" });
+  // Exa 定向新闻 (lens query) + Polymarket 市场概率 (按信号主题, 跨轮稳定) 并发.
+  // 两者都是增强材料, 各自失败静默. market 排前, 与 Analyst/Socratic 的 slice 优先级一致.
+  const [webResults, marketResults] = await Promise.all([
+    webSearch(query, { count: 8, freshness: "month", type: "auto" }),
+    searchPredictionMarkets(in_.signal_raw_text).catch(() => [] as SearchResult[]),
+  ]);
+  const results = [...marketResults, ...webResults];
   if (results.length === 0) return results;
 
   try {
@@ -218,7 +226,7 @@ async function researchRound(in_: RoundResearchInput): Promise<SearchResult[]> {
       round: in_.round,
       query,
       results,
-      model: SEARCH_MODEL,
+      model: RESEARCH_MODEL,
     });
   } catch (err) {
     logWarn("postResearch failed (refinement_round scope)", {

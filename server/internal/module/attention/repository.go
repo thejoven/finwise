@@ -15,7 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/infra/db"
 )
 
 var ErrNotFound = errors.New("attention summary not found")

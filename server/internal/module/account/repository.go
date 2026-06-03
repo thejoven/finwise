@@ -19,7 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/infra/db"
 )
 
 var (
@@ -44,6 +44,7 @@ type User struct {
 	DisplayName  *string
 	AvatarURL    *string
 	Bio          *string
+	IsAdmin      bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -63,7 +64,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 	const q = `
 		INSERT INTO users (id, email, email_lower, password_hash, display_name)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, in.ID, in.Email, emailLower, in.PasswordHash, in.DisplayName)
 	u, err := scanUser(row)
@@ -80,7 +81,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 // FindByEmail 用小写邮箱查找用户. 找不到返回 ErrNotFound.
 func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
 		FROM users
 		WHERE email_lower = $1
 	`
@@ -98,7 +99,7 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, erro
 // FindByID 按 uuid 查用户.
 func (r *Repository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -129,7 +130,7 @@ func (r *Repository) UpdateProfile(ctx context.Context, id uuid.UUID, in UpdateP
 			avatar_url   = COALESCE($4, avatar_url),
 			updated_at   = NOW()
 		WHERE id = $1
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, id, in.DisplayName, in.Bio, in.AvatarURL)
 	u, err := scanUser(row)
@@ -144,10 +145,14 @@ func (r *Repository) UpdateProfile(ctx context.Context, id uuid.UUID, in UpdateP
 
 // EnsurePlaceholder 是给 dev bearer 兼容用的: 没行就插一行 placeholder,
 // 有行就 noop. 不返回 user — 调用方只关心存在性.
+//
+// is_admin=true: dev token 等价于管理员 (web-admin/mastra/curl 都靠它), 新库
+// 直接把占位行建成 admin, 让 GET /v1/me 在 dev token 模式下也返回 is_admin=true,
+// 前端无需为 dev-token 回退做特例. 存量库的 dev 行由迁移 017 补提权.
 func (r *Repository) EnsurePlaceholder(ctx context.Context, id uuid.UUID, email string) error {
 	const q = `
-		INSERT INTO users (id, email, email_lower, password_hash, display_name)
-		VALUES ($1, $2, $3, '!', 'dev')
+		INSERT INTO users (id, email, email_lower, password_hash, display_name, is_admin)
+		VALUES ($1, $2, $3, '!', 'dev', TRUE)
 		ON CONFLICT DO NOTHING
 	`
 	_, err := r.pool.Exec(ctx, q, id, email, strings.ToLower(email))
@@ -165,6 +170,90 @@ func (r *Repository) UpdatePasswordHash(ctx context.Context, id uuid.UUID, newHa
 		return ErrNotFound
 	}
 	return nil
+}
+
+// ────── admin ──────
+
+// IsAdmin 是给 admin 中间件用的轻量查询 — 只取 is_admin 一列, 不拉整行.
+// 用户不存在返回 ErrNotFound.
+func (r *Repository) IsAdmin(ctx context.Context, id uuid.UUID) (bool, error) {
+	const q = `SELECT is_admin FROM users WHERE id = $1`
+	var isAdmin bool
+	if err := r.pool.QueryRow(ctx, q, id).Scan(&isAdmin); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, ErrNotFound
+		}
+		return false, fmt.Errorf("lookup is_admin: %w", err)
+	}
+	return isAdmin, nil
+}
+
+// SetAdminByEmail 按邮箱授予/收回 admin. 返回更新后的用户. 找不到返回 ErrNotFound.
+// 给 grant-admin 脚本和未来的"管理员管理"用.
+func (r *Repository) SetAdminByEmail(ctx context.Context, email string, isAdmin bool) (*User, error) {
+	const q = `
+		UPDATE users SET is_admin = $2, updated_at = NOW()
+		WHERE email_lower = $1
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+	`
+	row := r.pool.QueryRow(ctx, q, strings.ToLower(strings.TrimSpace(email)), isAdmin)
+	u, err := scanUser(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("set admin: %w", err)
+	}
+	return u, nil
+}
+
+// UserListRow 是 admin 用户列表的一行: 用户基本信息 + 轻量活动指标.
+// signal_count / last_seen_at 让"接入用户"页一眼看出谁活跃, 无需逐个点开.
+type UserListRow struct {
+	User
+	SignalCount int
+	LastSeenAt  *time.Time
+}
+
+// ListUsers 返回所有用户 (新→旧) + 每人信号数 + 最近一次 session 活动时间.
+// 单 host 个人 app, 用户量小, 不分页.
+func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
+	const q = `
+		SELECT u.id, u.email, u.password_hash, u.display_name, u.avatar_url, u.bio,
+		       u.is_admin, u.created_at, u.updated_at,
+		       COALESCE(sig.cnt, 0)        AS signal_count,
+		       sess.last_seen              AS last_seen_at
+		FROM users u
+		LEFT JOIN (
+			SELECT user_id, COUNT(*) AS cnt FROM signals GROUP BY user_id
+		) sig ON sig.user_id = u.id
+		LEFT JOIN (
+			SELECT user_id, MAX(last_seen_at) AS last_seen FROM sessions GROUP BY user_id
+		) sess ON sess.user_id = u.id
+		ORDER BY u.created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	defer rows.Close()
+
+	var out []UserListRow
+	for rows.Next() {
+		var row UserListRow
+		if err := rows.Scan(
+			&row.ID, &row.Email, &row.PasswordHash, &row.DisplayName, &row.AvatarURL, &row.Bio,
+			&row.IsAdmin, &row.CreatedAt, &row.UpdatedAt,
+			&row.SignalCount, &row.LastSeenAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan user row: %w", err)
+		}
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iter users: %w", err)
+	}
+	return out, nil
 }
 
 // ────── sessions ──────
@@ -229,7 +318,7 @@ func (r *Repository) DeleteUserSessions(ctx context.Context, userID uuid.UUID) e
 
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.Bio, &u.CreatedAt, &u.UpdatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.Bio, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil

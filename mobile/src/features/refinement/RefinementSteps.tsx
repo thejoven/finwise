@@ -32,7 +32,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Mono, TapEffect } from "@/shared/components";
-import { theme } from "@/core/theme";
+import { theme, useThemeColors } from "@/core/theme";
 
 interface Props {
   /** 0..5; 5 表示全部答完 (current 不存在) */
@@ -144,6 +144,8 @@ function CurrentDot() {
     };
   }, [haloScale, haloOpacity]);
 
+  // Reanimated 不认 DynamicColorIOS 动态色 → halo 底色取 resolved hex.
+  const c = useThemeColors();
   const haloStyle = useAnimatedStyle(() => ({
     transform: [{ scale: haloScale.value }],
     opacity: haloOpacity.value,
@@ -151,7 +153,7 @@ function CurrentDot() {
 
   return (
     <View style={styles.currentWrap}>
-      <Animated.View style={[styles.dotHalo, haloStyle]} />
+      <Animated.View style={[styles.dotHalo, { backgroundColor: c.ink }, haloStyle]} />
       <View style={styles.dotCurrent} />
     </View>
   );
@@ -207,7 +209,7 @@ const styles = StyleSheet.create({
     width: DOT,
     height: DOT,
     borderRadius: DOT / 2,
-    backgroundColor: theme.color.ink,
+    // backgroundColor 内联 resolved hex — Reanimated 不认动态色.
   },
   dotCurrent: {
     width: DOT,

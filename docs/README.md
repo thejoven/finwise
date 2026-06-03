@@ -1,17 +1,18 @@
-# Flashfi Engine · 完整文档包
+# 财富密码（Cipher） · 完整文档包
 
 > 一个把模糊的高价值信号, 转化为少数高确定性承诺的 AI 产品。
 >
-> 这份压缩包是 Flashfi Engine 从产品哲学到技术架构到开发任务的完整文档。
+> 这份压缩包是 财富密码 从产品哲学到技术架构到开发任务的完整文档。
 
 ---
 
 ## 目录结构
 
 ```
-flashfi-bundle/
+wiseflow-bundle/
+├── 产品简介.md                            ← 5 分钟产品简介(从这里开始)
 ├── 产品文档/                              ← 产品哲学与五层架构(7 份)
-│   ├── 00_总览_Flashfi_Engine.md
+│   ├── 00_总览_WiseFlow_Engine.md
 │   ├── 01_第一层_信号捕捉.md
 │   ├── 02_第二层_模式识别与推演训练.md
 │   ├── 03_第三层_确定性评估.md
@@ -49,7 +50,7 @@ flashfi-bundle/
 │       └── M11-retrospect-training.md
 │
 └── 原型/
-    └── flashfi-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
+    └── wiseflow-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
 ```
 
 ---
@@ -57,9 +58,10 @@ flashfi-bundle/
 ## 阅读顺序
 
 ### 如果你是产品方 / 投资方
-1. `产品文档/00_总览_Flashfi_Engine.md` — 一页讲完产品是什么
-2. `产品文档/06_产品哲学.md` — 12 条反直觉设计原则
-3. 用浏览器打开 `原型/flashfi-prototype-v4.html` — 3 屏交互原型
+1. `产品简介.md` — 5 分钟读完: 产品是什么、长什么样、凭什么
+2. `产品文档/00_总览_WiseFlow_Engine.md` — 五层架构总览
+3. `产品文档/06_产品哲学.md` — 反直觉设计原则
+4. 用浏览器打开 `原型/wiseflow-prototype-v4.html` — 3 屏交互原型
 
 ### 如果你是技术合作者
 1. 先读产品文档六份 — 理解世界观
@@ -86,11 +88,13 @@ flashfi-bundle/
 | 客户端离线 | WatermelonDB / expo-sqlite + Drizzle |
 | 后端 | Go + Gin + Ent ORM |
 | 数据库 | PostgreSQL 16 + pgvector |
-| 缓存 / 总线 | Redis + NATS JetStream |
+| 异步编排 / 事件总线 | iii engine(替代 NATS;Redis 仅限流 / 行为指纹) |
 | LLM 编排 | Mastra (Node.js) |
 | LLM 模型 | Claude Sonnet 4.5 (主) + Haiku (辅) |
 | PDF 渲染 | chromedp (Chromium headless) |
 | Phase 1 部署 | Docker Compose · 单 VPS |
+
+> 注:事件路由已从 NATS 迁到 **iii 编排引擎**(详见 `architecture-iii.html`);近期新增 **项目分组** 与 **注意力诊断** 两项能力,产品视角见 `产品简介.md`。
 
 ---
 
@@ -122,13 +126,12 @@ flashfi-bundle/
 
 ## 关于产品名
 
-- **Flashfi** — 产品名
+- **财富密码** — 产品名(中文)
+- **Cipher** — 产品名(英文)
 - **Conviction Quarterly** — 报刊系列名(原型 v4 报刊头副线)
-- **Flashfi Engine** — 完整产品定位(强信念引擎)
 
 文档里:
-- "Flashfi Engine" 用于正式称呼
-- "Flashfi" 用于简称
+- 中文语境用「财富密码」, 英文语境用「Cipher」, 正式全称「财富密码（Cipher）」
 - "conviction" 作为类别概念词(对比 trading) 保留小写, 不是品牌词
 
 ---
@@ -149,7 +152,7 @@ flashfi-bundle/
 🟢 文档体系完整
 🟢 GOAL 路线图就绪(45 份文件, 含 11 个模块任务单)
 🟡 等待开始 W1: M1 数据底座
-⚪ 6 个月后: Flashfi Engine v1.0
+⚪ 6 个月后: 财富密码 v1.0
 
 ---
 

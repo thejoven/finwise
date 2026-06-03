@@ -1,9 +1,9 @@
-import { View } from "react-native";
+import { View, type ColorValue } from "react-native";
 import { theme } from "@/core/theme";
 
 export interface DoubleRuleProps {
   thickness?: number;
-  color?: string;
+  color?: ColorValue;
   gap?: number;
 }
 

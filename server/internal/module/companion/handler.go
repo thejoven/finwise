@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {

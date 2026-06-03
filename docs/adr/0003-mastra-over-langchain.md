@@ -6,7 +6,7 @@
 
 ## 上下文
 
-Flashfi Engine 需要在 Node 进程里跑 LLM 推演:
+财富密码 需要在 Node 进程里跑 LLM 推演:
 - 接受结构化输入 (signal.captured payload)
 - 调一个或多个 Agent (Analyst 是第一个; Phase 2 还会有 Socratic Refinement, Gate, Narrator, Editor, Diagnostician)
 - 输出严格 schema (zod)

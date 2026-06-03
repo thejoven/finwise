@@ -1,22 +1,31 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
 
-import { Display, DoubleRule, Mono, Sans, Serif, TapEffect } from "@/shared/components";
+import {
+  Display,
+  DoubleRule,
+  Icon,
+  Mono,
+  Sans,
+  SectionHeader,
+  Serif,
+  TapEffect,
+} from "@/shared/components";
 import { theme } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
+import { useAppearance, type AppearancePref } from "@/core/theme/store";
 import { useNotifications } from "@/features/notifications";
 
 /**
  * 个人资料 tab.
  *
  * 内容:
- *   · 用户邮箱 + 昵称 + 创建日期 (报刊头风格)
+ *   · 报刊头 (卷号戳 + 标题) + 方形字母章 + 用户昵称 / 邮箱 / 加入日期
  *   · bio (如果有)
- *   · 行: 编辑资料 / 修改密码 / 关于 / 退出登录
+ *   · 分组 (红菱形栏目戳): 账号 / 通讯 / 外观 / 其他 + 退出登录
  *
  * 首次进入会调一次 GET /v1/me 同步最新 — store 里可能是离线时的旧值.
  */
@@ -27,6 +36,11 @@ export default function ProfileScreen() {
   const token = useAuth((s) => s.token);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
+  // 悬浮"灵动岛" tab 顶 ≈ insets.bottom + 64 (见 DynamicIslandTabBar). 退出登录是按钮,
+  // 必须整条在岛上方可点 — 不像其它 tab 末尾是列表(内容透到岛下是有意的). 故在 64 之上
+  // 再加一档留白. 原来用静态 xxxl(48) 不含 safe-area, 在刘海机上被岛盖住, 这是本次修复点.
+  const bottomPad = insets.bottom + 64 + theme.spacing.lg;
 
   // 进入时拉一次最新. 没 token (dev fallback 模式) 就不拉.
   useEffect(() => {
@@ -80,7 +94,10 @@ export default function ProfileScreen() {
   if (!user && !token) {
     return (
       <SafeAreaView style={styles.root} edges={["top"]}>
-        <ScrollView contentContainerStyle={styles.scroll}>
+        <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
+          <Mono size={9} style={styles.headStamp}>
+            VOL. I · 读者档案
+          </Mono>
           <Display size={28} italic style={styles.title}>
             个人资料.
           </Display>
@@ -95,28 +112,42 @@ export default function ProfileScreen() {
   }
 
   const displayName = user?.display_name?.trim() || user?.email || "—";
+  const initial = displayName.charAt(0).toUpperCase();
   const createdLabel = user?.created_at
     ? new Date(user.created_at).toISOString().slice(0, 10)
     : "—";
 
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
+        <Mono size={9} style={styles.headStamp}>
+          VOL. I · 读者档案
+        </Mono>
         <Display size={28} italic style={styles.title}>
           个人资料.
         </Display>
         <DoubleRule />
 
+        {/* 字母章 + 身份 */}
         <View style={styles.headBlock}>
-          <Serif size={20} weight="semibold" style={styles.name}>
-            {displayName}
-          </Serif>
-          <Mono size={11} style={styles.email}>
-            {user?.email ?? ""}
-          </Mono>
-          <Mono size={9} style={styles.metaLine}>
-            加入于 {createdLabel}
-          </Mono>
+          <View style={styles.monogram}>
+            <Display size={30} style={styles.monogramText}>
+              {initial}
+            </Display>
+          </View>
+          <View style={styles.identity}>
+            <Serif size={20} weight="semibold" style={styles.name}>
+              {displayName}
+            </Serif>
+            {user?.email ? (
+              <Mono size={11} style={styles.email}>
+                {user.email}
+              </Mono>
+            ) : null}
+            <Mono size={9} style={styles.metaLine}>
+              加入于 {createdLabel}
+            </Mono>
+          </View>
         </View>
 
         {user?.bio ? (
@@ -145,18 +176,23 @@ export default function ProfileScreen() {
         ) : null}
 
         <View style={styles.section}>
-          <SectionLabel>账号</SectionLabel>
+          <SectionHeader label="账号" />
           <RowLink label="编辑资料" onPress={() => router.push("/profile/edit")} />
           <RowLink label="修改密码" onPress={() => router.push("/profile/password")} />
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>通讯</SectionLabel>
+          <SectionHeader label="通讯" />
           <NotificationRow />
         </View>
 
         <View style={styles.section}>
-          <SectionLabel>其他</SectionLabel>
+          <SectionHeader label="外观" />
+          <AppearanceRows />
+        </View>
+
+        <View style={styles.section}>
+          <SectionHeader label="其他" />
           <RowLink label="卷首语 · 关于" onPress={() => router.push("/colophon")} />
           <RowLink label="搜索观察记录" onPress={() => router.push("/search")} />
         </View>
@@ -175,11 +211,83 @@ export default function ProfileScreen() {
   );
 }
 
-function SectionLabel({ children }: { children: string }) {
+const APPEARANCE_OPTIONS: { key: AppearancePref; label: string }[] = [
+  { key: "light", label: "光亮" },
+  { key: "dark", label: "暗黑" },
+  { key: "system", label: "跟随系统" },
+];
+
+/**
+ * @expo/ui 是 beta **原生**模块: 只有 `expo prebuild` + 原生重建后, 二进制里才有 'ExpoUI'
+ * 原生模块. Expo Go / 未重建的 dev client 里没有 —— 此时连 require 它的 JS 顶层都会抛
+ * (Cannot find native module 'ExpoUI'). 故把 require 包在 try/catch 里探测: 有就用原生
+ * SwiftUI 控件, 没有就优雅回退到自绘行 —— App 照常跑、不崩; 原生重建后此控件自动点亮.
+ */
+let SwiftUI: typeof import("@expo/ui/swift-ui") | null = null;
+let SwiftUIModifiers: typeof import("@expo/ui/swift-ui/modifiers") | null = null;
+if (Platform.OS === "ios") {
+  try {
+    SwiftUI = require("@expo/ui/swift-ui");
+    SwiftUIModifiers = require("@expo/ui/swift-ui/modifiers");
+  } catch {
+    SwiftUI = null;
+    SwiftUIModifiers = null;
+  }
+}
+
+/**
+ * 外观选择器 — 光亮 / 暗黑 / 跟随系统.
+ *
+ * iOS + 已原生重建: 原生 SwiftUI 分段控件 (@expo/ui) —— 真·原生控件, 不是自绘. 这是"用
+ *   AppKit/原生 UI"的示范面: 设置类工具控件用系统外观本就合适, SwiftUI Picker 自带
+ *   Dynamic Type / 暗色 / 触感.
+ * 其他情况 (Android / Expo Go / 未 rebuild): 自绘行 + 红菱形 (Android 故意只跑浅色).
+ * 切换即时生效: useAppearance → Appearance.setColorScheme → 全 App 动态色重解析.
+ */
+function AppearanceRows() {
+  const pref = useAppearance((s) => s.pref);
+  const setPref = useAppearance((s) => s.setAppearance);
+
+  if (SwiftUI && SwiftUIModifiers) {
+    const { Host, Picker, Text: SwiftUIText } = SwiftUI;
+    const { pickerStyle, tag } = SwiftUIModifiers;
+    return (
+      <View style={styles.appearanceHost}>
+        <Host matchContents>
+          <Picker
+            selection={pref}
+            onSelectionChange={(value) => void setPref(value as AppearancePref)}
+            modifiers={[pickerStyle("segmented")]}
+          >
+            {APPEARANCE_OPTIONS.map((o) => (
+              <SwiftUIText key={o.key} modifiers={[tag(o.key)]}>
+                {o.label}
+              </SwiftUIText>
+            ))}
+          </Picker>
+        </Host>
+      </View>
+    );
+  }
+
   return (
-    <Sans size={10} weight="600" style={styles.sectionLabel}>
-      {children}
-    </Sans>
+    <>
+      {APPEARANCE_OPTIONS.map((o) => (
+        <TapEffect
+          key={o.key}
+          style={styles.row}
+          onPress={() => {
+            void setPref(o.key);
+          }}
+          pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+        >
+          <Serif size={14} style={styles.rowLabel}>
+            {o.label}
+          </Serif>
+          {pref === o.key ? <View style={styles.badgeDot} /> : null}
+        </TapEffect>
+      ))}
+    </>
   );
 }
 
@@ -193,7 +301,7 @@ function RowLink({ label, onPress }: { label: string; onPress: () => void }) {
       <Serif size={14} style={styles.rowLabel}>
         {label}
       </Serif>
-      <ChevronRight size={16} color={theme.color.muted2} strokeWidth={1.5} />
+      <Icon name="chevronRight" size={16} color={theme.color.muted2} strokeWidth={1.5} />
     </TapEffect>
   );
 }
@@ -213,14 +321,14 @@ function NotificationRow() {
         <Mono size={10} style={styles.badgeCount}>
           {unread}
         </Mono>
-        <ChevronRight size={16} color={theme.color.ink2} strokeWidth={1.5} />
+        <Icon name="chevronRight" size={16} color={theme.color.ink2} strokeWidth={1.5} />
       </View>
     ) : (
       <View style={styles.badgeRow}>
         <Mono size={10} style={styles.badgeMuted}>
           {total === 0 ? "无" : `${total}`}
         </Mono>
-        <ChevronRight size={16} color={theme.color.muted2} strokeWidth={1.5} />
+        <Icon name="chevronRight" size={16} color={theme.color.muted2} strokeWidth={1.5} />
       </View>
     );
   return (
@@ -244,6 +352,12 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxxl,
   },
+  headStamp: {
+    color: theme.color.muted,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    marginBottom: theme.spacing.xs,
+  },
   title: { marginBottom: theme.spacing.sm },
   hint: {
     color: theme.color.muted,
@@ -252,6 +366,22 @@ const styles = StyleSheet.create({
   },
   headBlock: {
     marginTop: theme.spacing.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.base,
+  },
+  monogram: {
+    width: 56,
+    height: 56,
+    borderWidth: 1.5,
+    borderColor: theme.color.ink,
+    backgroundColor: theme.color.paper2,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monogramText: { color: theme.color.ink },
+  identity: {
+    flex: 1,
     gap: theme.spacing.xs,
   },
   name: { color: theme.color.ink },
@@ -275,12 +405,6 @@ const styles = StyleSheet.create({
   error: { color: theme.color.red, marginTop: theme.spacing.md },
 
   section: { marginTop: theme.spacing.xl },
-  sectionLabel: {
-    color: theme.color.muted,
-    letterSpacing: 2,
-    textTransform: "uppercase",
-    marginBottom: theme.spacing.sm,
-  },
   row: {
     flexDirection: "row",
     alignItems: "center",
@@ -290,6 +414,10 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.ruleSoft,
   },
   rowLabel: { color: theme.color.ink },
+  appearanceHost: {
+    // 原生 SwiftUI 分段控件的容器 — 与列表行同一纵向节奏.
+    paddingVertical: theme.spacing.md,
+  },
   dangerBtn: {
     paddingVertical: theme.spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,

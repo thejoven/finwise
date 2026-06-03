@@ -16,4 +16,4 @@ coverage.html
 migrations/
 
 # 不要把本地构建出来的二进制带进 context.
-flashfi-api
+wiseflow-api

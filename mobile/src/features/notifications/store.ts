@@ -6,7 +6,7 @@
  * "我的 → 消息通知" 中查到历史.
  *
  * 存储:
- *   - 单 AsyncStorage key = "flashfi.notifications.v1"
+ *   - 单 AsyncStorage key = "wiseflow.notifications.v1"
  *   - 上限 100 条, 超出按 FIFO 丢弃 (最旧)
  *   - 每次 mutation 落盘 (项目通知量小, 不需要 debounce)
  *
@@ -16,7 +16,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-const STORAGE_KEY = "flashfi.notifications.v1";
+const STORAGE_KEY = "wiseflow.notifications.v1";
 const MAX_ITEMS = 100;
 
 export type NotificationType =

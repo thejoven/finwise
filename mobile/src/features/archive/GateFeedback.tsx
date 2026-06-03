@@ -1,10 +1,10 @@
 /**
- * 四道门反馈卡 — signal 详情页底部.
+ * 分析师评审反馈卡 — signal 详情页底部. (原"四道门"反馈卡; 底层数据仍是 g1..g4)
  *
  * 状态:
  *   · 还没评估 (refinement 完成后异步触发, 可能滞后几秒) → 显示 "等待评估"
- *   · 评估完成且通过 → 四道门全 ✓ + 一句 "已进入承诺书草案"
- *   · 评估完成但失败 → 失败那道门 ✗ + 该门 detail; 其它门按 pass 标 ✓
+ *   · 评估完成且通过 → 四位分析师全 ✓ + 一句 "已进入承诺书草案"
+ *   · 评估完成但失败 → 否决那位分析师 ✗ + 其 detail; 之前的按 pass 标 ✓, 之后的算 skipped
  *
  * 不在产品哲学里催促用户复盘失败 — 只是把"为什么没进"摆出来.
  */
@@ -13,7 +13,12 @@ import { StyleSheet, View } from "react-native";
 
 import { Mono, Sans, Serif, SectionHeader } from "@/shared/components";
 import { theme } from "@/core/theme";
-import type { GateEvaluation } from "@/core/api/gate";
+import {
+  ANALYSTS,
+  analystByGate,
+  type GateEvaluation,
+  type UnpricedDirection,
+} from "@/core/api/gate";
 
 interface GateFeedbackProps {
   /** undefined = 还没拉到 / 还没评估; null 也算 "还没". 评估完成的对象在这里 */
@@ -22,12 +27,7 @@ interface GateFeedbackProps {
   refinementCompleted: boolean;
 }
 
-const GATE_META = [
-  { id: 1 as const, label: "G1 · 厚度", hint: "信号是否足够厚" },
-  { id: 2 as const, label: "G2 · 反共识", hint: "市场是否已定价" },
-  { id: 3 as const, label: "G3 · 窗口", hint: "时机是否合适" },
-  { id: 4 as const, label: "G4 · 能力圈", hint: "你是否能解释" },
-];
+// 分析师名单来自 @/core/api/gate 的 ANALYSTS (单一事实源).
 
 export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackProps) {
   if (!refinementCompleted) return null;
@@ -35,9 +35,10 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
   if (!evaluation) {
     return (
       <View style={styles.container}>
-        <SectionHeader label="四道门" meta="等待评估" />
+        <SectionHeader label="分析师评审" meta="等待评估" />
         <Serif size={12} italic style={styles.muted}>
-          追问完成后, 后台会跑四道门评估. 通常在一两分钟内出结果.
+          追问完成后, 后台会请四位分析师 (佐证 · 共识 · 时机 · 能力圈) 各审一遍.
+          通常在一两分钟内出结果.
         </Serif>
       </View>
     );
@@ -49,16 +50,20 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
   return (
     <View style={styles.container}>
       <SectionHeader
-        label="四道门"
-        meta={passedAll ? "已通过 · 进入承诺书草案" : `第 ${failedGate} 道没过`}
+        label="分析师评审"
+        meta={
+          passedAll
+            ? "全员通过 · 进入承诺书草案"
+            : `${analystByGate(failedGate)?.name ?? "分析师"}没通过`
+        }
       />
 
       <View style={styles.list}>
-        {GATE_META.map((g) => {
-          const status = gateStatus(g.id, evaluation);
-          const detail = gateDetailText(g.id, evaluation);
+        {ANALYSTS.map((a) => {
+          const status = gateStatus(a.gate, evaluation);
+          const detail = gateDetailText(a.gate, evaluation);
           return (
-            <View key={g.id} style={styles.row}>
+            <View key={a.gate} style={styles.row}>
               <View style={[styles.icon, statusStyle(status)]}>
                 <Mono size={11} style={[styles.iconText, statusIconColor(status)]}>
                   {status === "pass" ? "✓" : status === "fail" ? "✗" : "·"}
@@ -67,10 +72,10 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
               <View style={styles.body}>
                 <View style={styles.headRow}>
                   <Sans size={12} weight="600" style={styles.label}>
-                    {g.label}
+                    {a.name}
                   </Sans>
                   <Serif size={11} italic style={styles.hint}>
-                    {g.hint}
+                    {a.role}
                   </Serif>
                 </View>
                 {detail ? (
@@ -82,11 +87,44 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
                     {detail}
                   </Serif>
                 ) : null}
+                {a.gate === 2 ? (
+                  <DirectionList
+                    directions={evaluation.gates.g2_anti_consensus.unpriced_directions}
+                  />
+                ) : null}
               </View>
             </View>
           );
         })}
       </View>
+    </View>
+  );
+}
+
+// 共识分析师的"未被定价的方向". 已被定价时把死路改成指方向 — angle 指针 + why 解释 + 可选 lens.
+// 没有方向 (老评估行 / 沉默) 就整块不渲染. 这不是荐股, 只是"往哪看".
+function DirectionList({ directions }: { directions?: UnpricedDirection[] }) {
+  if (!directions || directions.length === 0) return null;
+  return (
+    <View style={styles.directions}>
+      <Mono size={10} style={styles.directionsLabel}>
+        未被定价的方向
+      </Mono>
+      {directions.map((d, i) => (
+        <View key={i} style={styles.directionItem}>
+          <Sans size={12} weight="600" style={styles.directionAngle}>
+            {d.angle}
+          </Sans>
+          <Serif size={12} italic style={styles.directionWhy}>
+            {d.why_unpriced}
+          </Serif>
+          {d.lens ? (
+            <Mono size={10} style={styles.directionLens}>
+              {d.lens}
+            </Mono>
+          ) : null}
+        </View>
+      ))}
     </View>
   );
 }
@@ -196,5 +234,29 @@ const styles = StyleSheet.create({
   failDetail: {
     color: theme.color.red,
     lineHeight: 18,
+  },
+  directions: {
+    marginTop: theme.spacing.xs,
+    gap: theme.spacing.xs,
+    paddingLeft: theme.spacing.sm,
+    borderLeftWidth: StyleSheet.hairlineWidth,
+    borderLeftColor: theme.color.rule,
+  },
+  directionsLabel: {
+    color: theme.color.muted2,
+    letterSpacing: 0.5,
+  },
+  directionItem: {
+    gap: 1,
+  },
+  directionAngle: {
+    color: theme.color.ink,
+  },
+  directionWhy: {
+    color: theme.color.muted,
+    lineHeight: 17,
+  },
+  directionLens: {
+    color: theme.color.muted2,
   },
 });

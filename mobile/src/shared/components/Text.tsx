@@ -105,9 +105,17 @@ export interface SansProps extends TextProps {
   weight?: "400" | "500" | "600" | "700";
 }
 
-export function Sans({ children, style, size = 13, weight = "400", ...props }: SansProps) {
+export function Sans({
+  children,
+  style,
+  size = 13,
+  weight = "400",
+  maxFontSizeMultiplier = 1.2, // 系统大字号下封顶, 防紧凑 chrome/邮票字溢出 (见 02-checklist §6.5)
+  ...props
+}: SansProps) {
   return (
     <RNText
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         {
           // 故意不设 fontFamily — 让系统选 SF Pro (iOS) / Roboto (Android)
@@ -132,9 +140,17 @@ export interface MonoProps extends TextProps {
   weight?: "regular" | "medium";
 }
 
-export function Mono({ children, style, size = 11, weight = "regular", ...props }: MonoProps) {
+export function Mono({
+  children,
+  style,
+  size = 11,
+  weight = "regular",
+  maxFontSizeMultiplier = 1.2, // 同 Sans — 时间戳/邮票数字也封顶, 防溢出
+  ...props
+}: MonoProps) {
   return (
     <RNText
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         {
           fontFamily:

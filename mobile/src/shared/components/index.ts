@@ -6,6 +6,9 @@ export type { DisplayProps, SerifProps, SansProps, MonoProps } from "./Text";
 
 export { RichText } from "./RichText";
 
+export { Icon } from "./Icon";
+export type { IconName, IconProps } from "./Icon";
+
 export { DoneAccessory } from "./DoneAccessory";
 
 export { TapEffect } from "./TapEffect";
@@ -33,4 +36,8 @@ export {
 } from "./CollapsibleMasthead";
 export type { CollapsibleMastheadProps } from "./CollapsibleMasthead";
 
-export { GlassTabBarBackground } from "./GlassTabBarBackground";
+export { DynamicIslandTabBar } from "./DynamicIslandTabBar";
+
+export { KeyboardForm } from "./KeyboardForm";
+
+export { ModalTopBar } from "./ModalTopBar";

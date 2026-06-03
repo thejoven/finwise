@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
 )
 
 var (
@@ -53,9 +53,11 @@ type Session struct {
 	CompletedAt     *time.Time
 	UpdatedAt       time.Time
 
-	// Joined from signals — only填充 in Get (Mastra 用), Start 返回时为空.
-	PrimarySignalRawText    string
-	PrimarySignalSummary    *string
+	// Joined from signals/projects — only填充 in Get (Mastra 用), Start 返回时为空.
+	PrimarySignalRawText string
+	PrimarySignalSummary *string
+	ProjectName          *string // 分类名 (经 signal.project_id JOIN projects)
+	ProjectGuidance      *string // 分类的分析指引, 注入 socratic/narrator/attention prompt
 }
 
 type Round struct {
@@ -222,10 +224,10 @@ type AnswerInput struct {
 }
 
 type AnswerResult struct {
-	EventID     int64
-	NewRound    int
-	Completed   bool
-	Decision    *domain.RefinementDecision
+	EventID   int64
+	NewRound  int
+	Completed bool
+	Decision  *domain.RefinementDecision
 }
 
 // RecordAnswer 写 refinement.answered event + 更新 sessions.rounds_done.
@@ -373,6 +375,48 @@ func (r *Repository) RecordAnswer(ctx context.Context, in AnswerInput) (*AnswerR
 	return result, nil
 }
 
+// ───── List ─────
+
+// List 返回该用户的全部 refinement 会话 (新→旧), 带 signal 摘要供列表展示.
+// 不含 rounds (详情走 Get 拉) 也不查 project guidance (列表不需要, 省带宽).
+func (r *Repository) List(ctx context.Context, userID uuid.UUID, limit int) ([]Session, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	const q = `
+		SELECT rs.id, rs.user_id, rs.primary_signal_id, rs.primary_asset, rs.status, rs.rounds_done,
+		       rs.decision, rs.started_at, rs.completed_at, rs.updated_at,
+		       s.raw_text, s.inference_summary,
+		       p.name
+		FROM refinement_sessions rs
+		JOIN signals s ON s.id = rs.primary_signal_id
+		LEFT JOIN projects p ON p.id = s.project_id
+		WHERE rs.user_id = $1
+		ORDER BY rs.started_at DESC
+		LIMIT $2
+	`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	defer rows.Close()
+
+	var out []Session
+	for rows.Next() {
+		var s Session
+		if err := rows.Scan(
+			&s.ID, &s.UserID, &s.PrimarySignalID, &s.PrimaryAsset, &s.Status, &s.RoundsDone,
+			&s.Decision, &s.StartedAt, &s.CompletedAt, &s.UpdatedAt,
+			&s.PrimarySignalRawText, &s.PrimarySignalSummary,
+			&s.ProjectName,
+		); err != nil {
+			return nil, fmt.Errorf("scan session: %w", err)
+		}
+		out = append(out, s)
+	}
+	return out, rows.Err()
+}
+
 // ───── Get ─────
 
 // GetLatestCompletedBySignal 返回该 signal 上最近一次已完成 (status='completed')
@@ -449,9 +493,11 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 	const q = `
 		SELECT rs.id, rs.user_id, rs.primary_signal_id, rs.primary_asset, rs.status, rs.rounds_done,
 		       rs.decision, rs.started_at, rs.completed_at, rs.updated_at,
-		       s.raw_text, s.inference_summary
+		       s.raw_text, s.inference_summary,
+		       p.name, p.guidance
 		FROM refinement_sessions rs
 		JOIN signals s ON s.id = rs.primary_signal_id
+		LEFT JOIN projects p ON p.id = s.project_id
 		WHERE rs.user_id = $1 AND rs.id = $2
 	`
 	var s Session
@@ -459,6 +505,7 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 		&s.ID, &s.UserID, &s.PrimarySignalID, &s.PrimaryAsset, &s.Status, &s.RoundsDone,
 		&s.Decision, &s.StartedAt, &s.CompletedAt, &s.UpdatedAt,
 		&s.PrimarySignalRawText, &s.PrimarySignalSummary,
+		&s.ProjectName, &s.ProjectGuidance,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound

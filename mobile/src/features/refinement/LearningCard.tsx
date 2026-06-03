@@ -22,11 +22,10 @@
 
 import { useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
-import { ChevronDown, ChevronUp } from "lucide-react-native";
 
-import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
+import { Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
-import type { ResearchRecord } from "@/core/api/research";
+import type { ResearchRecord, MarketData } from "@/core/api/research";
 
 export interface LearningCardProps {
   items?: ResearchRecord[]; // undefined = 还在拉; [] = 拉到了但空
@@ -57,9 +56,9 @@ export function LearningCard({ items, loading, defaultExpanded = false }: Learni
         </Serif>
         {statusMeta && totalResults > 0 ? (
           expanded ? (
-            <ChevronUp size={14} color={theme.color.muted} strokeWidth={1.5} />
+            <Icon name="chevronUp" size={14} color={theme.color.muted} strokeWidth={1.5} />
           ) : (
-            <ChevronDown size={14} color={theme.color.muted} strokeWidth={1.5} />
+            <Icon name="chevronDown" size={14} color={theme.color.muted} strokeWidth={1.5} />
           )
         ) : null}
       </TapEffect>
@@ -164,16 +163,26 @@ function TimelineNode({
           {title.toUpperCase()}
         </Mono>
         <View style={styles.resultStack}>
-          {record.results.map((r, idx) => (
-            <ResultRow
-              key={`${record.id}-${idx}`}
-              title={r.title}
-              url={r.url}
-              description={r.description}
-              age={r.age}
-              domain={r.domain}
-            />
-          ))}
+          {record.results.map((r, idx) =>
+            r.kind === "market" && r.market ? (
+              <MarketRow
+                key={`${record.id}-${idx}`}
+                title={r.title}
+                url={r.url}
+                age={r.age}
+                market={r.market}
+              />
+            ) : (
+              <ResultRow
+                key={`${record.id}-${idx}`}
+                title={r.title}
+                url={r.url}
+                description={r.description}
+                age={r.age}
+                domain={r.domain}
+              />
+            ),
+          )}
         </View>
       </View>
     </View>
@@ -224,6 +233,89 @@ function ResultRow({
       ) : null}
     </TapEffect>
   );
+}
+
+/**
+ * MarketRow — Polymarket 预测市场线索: 标题 + 各结果的概率条 + 成交额.
+ * 点击 → 系统浏览器打开 Polymarket 事件页. 概率条用红色填充, 宽度 = 隐含概率.
+ */
+function MarketRow({
+  title,
+  url,
+  age,
+  market,
+}: {
+  title: string;
+  url: string;
+  age?: string;
+  market: MarketData;
+}) {
+  const handlePress = () => {
+    if (url) Linking.openURL(url).catch(() => undefined);
+  };
+  const top = market.outcomes.slice(0, 4);
+  return (
+    <TapEffect
+      style={styles.row}
+      pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+      onPress={handlePress}
+    >
+      <View style={styles.rowHeader}>
+        <Sans size={9} weight="600" style={styles.domain}>
+          POLYMARKET
+        </Sans>
+        {age ? (
+          <Serif size={10} italic style={styles.age}>
+            {age}
+          </Serif>
+        ) : null}
+      </View>
+      <Serif size={13} style={styles.title}>
+        {title}
+      </Serif>
+      <View style={styles.bars}>
+        {top.map((o, i) => (
+          <View key={i} style={styles.barRow}>
+            <Serif size={11} style={styles.barLabel} numberOfLines={1}>
+              {o.label}
+            </Serif>
+            <View style={styles.barTrack}>
+              <View style={[styles.barFill, { width: `${barWidth(o.probability)}%` }]} />
+            </View>
+            <Mono size={10} style={styles.barPct}>
+              {formatPct(o.probability)}
+            </Mono>
+          </View>
+        ))}
+      </View>
+      {market.volumeUsd ? (
+        <Serif size={11} italic style={styles.vol}>
+          成交 {formatUsd(market.volumeUsd)}
+        </Serif>
+      ) : null}
+    </TapEffect>
+  );
+}
+
+/** 0.62 → "62%"; 极小/极大概率折成 "<1%" / ">99%" 避免显示 0%/100%. */
+function formatPct(p: number): string {
+  if (!Number.isFinite(p) || p <= 0) return "0%";
+  if (p < 0.01) return "<1%";
+  if (p > 0.99 && p < 1) return ">99%";
+  return `${Math.round(p * 100)}%`;
+}
+
+/** 概率 → 条宽百分比, 下限 2% 让极小概率仍可见. */
+function barWidth(p: number): number {
+  if (!Number.isFinite(p) || p <= 0) return 2;
+  return Math.max(2, Math.min(100, Math.round(p * 100)));
+}
+
+/** 成交额 → "$4.2M" / "$320K" / "$540". */
+function formatUsd(v: number): string {
+  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
+  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
+  return `$${Math.round(v)}`;
 }
 
 const styles = StyleSheet.create({
@@ -344,5 +436,41 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     lineHeight: 18,
     marginTop: 2,
+  },
+
+  // ── Market Row (Polymarket 概率条) ──
+  bars: {
+    marginTop: theme.spacing.xs,
+    gap: 4,
+  },
+  barRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  barLabel: {
+    width: 96,
+    color: theme.color.ink,
+  },
+  barTrack: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.color.ruleSoft,
+    overflow: "hidden",
+  },
+  barFill: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: theme.color.red,
+  },
+  barPct: {
+    width: 40,
+    textAlign: "right",
+    color: theme.color.ink3,
+  },
+  vol: {
+    marginTop: theme.spacing.xs,
+    color: theme.color.muted,
   },
 });

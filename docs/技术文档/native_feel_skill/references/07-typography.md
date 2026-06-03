@@ -1,6 +1,6 @@
 # 07 · 字体与中文混排 · RN
 
-> Flashfi Engine 视觉灵魂是"报刊感"。字体选择是这个感觉成败的核心。
+> 财富密码 视觉灵魂是"报刊感"。字体选择是这个感觉成败的核心。
 
 ---
 
@@ -226,7 +226,7 @@ export function Mono({ children, style, size = 11, weight = 'regular', ...props 
 
 ```typescript
 // Masthead
-<Display size={38} italic>Flashfi</Display>
+<Display size={38} italic>财富密码</Display>
 
 // 信号正文
 <Serif size={13}>{signal.rawText}</Serif>
@@ -249,7 +249,7 @@ export function Mono({ children, style, size = 11, weight = 'regular', ...props 
 | 下载 Inter | 跨平台一致 | 体积大、和系统 UI 字体不匹配 |
 | 用系统字体 | 体积零、系统级渲染 | 跨平台不一致 |
 
-Flashfi Engine 选系统字体。Sans 用在 UI 控件上, 必须和系统 UI 自然融合。
+财富密码 选系统字体。Sans 用在 UI 控件上, 必须和系统 UI 自然融合。
 报刊感的灵魂在 Display 和 Serif Body, Sans 是配角。
 
 ---
@@ -264,11 +264,11 @@ RN 不像 CSS 那样可以列多个 fontFamily fallback。它是单字体。
 
 ```typescript
 // iOS 测试: 显示英文 + 中文混排
-<Display>Flashfi · 一份克制的判断</Display>
+<Display>财富密码 · 一份克制的判断</Display>
 ```
 
-iOS 上"Flashfi"用 Playfair Display 渲染, "一份克制的判断"自动用 PingFang SC。
-Android 上"Flashfi"用 Playfair Display, 中文用 Roboto fallback(系统选择)。
+iOS 上"财富密码"用 Playfair Display 渲染, "一份克制的判断"自动用 PingFang SC。
+Android 上"财富密码"用 Playfair Display, 中文用 Roboto fallback(系统选择)。
 
 如果 Android 中文 fallback 不理想, 显式安装 Noto Sans CJK 字体并在样式里用条件:
 
@@ -309,7 +309,7 @@ export const fontSize = {
 ### 8.1 收件箱 Masthead
 
 ```typescript
-<Display size={38} italic>Flashfi</Display>
+<Display size={38} italic>财富密码</Display>
 <Serif size={11} italic style={{ color: theme.color.ink2, letterSpacing: 1 }}>
   Conviction Quarterly
 </Serif>
@@ -348,7 +348,7 @@ iOS 用户可调全局字号(Settings → Accessibility → Display & Text Size)
 
 ```typescript
 // 标题不缩放
-<Display allowFontScaling={false}>Flashfi</Display>
+<Display allowFontScaling={false}>财富密码</Display>
 
 // 正文允许缩放, 不超过 1.2x
 <Serif maxFontSizeMultiplier={1.2}>...</Serif>
@@ -375,4 +375,4 @@ iOS 用户可调全局字号(Settings → Accessibility → Display & Text Size)
 > 系统 Sans 让 UI 控件像 iOS,
 > JetBrains Mono 让数字有可信度。
 >
-> 四种字体, 一起组成 Flashfi Engine "严肃但不冰冷"的气质。
+> 四种字体, 一起组成 财富密码 "严肃但不冰冷"的气质。

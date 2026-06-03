@@ -46,4 +46,4 @@ CREATE INDEX IF NOT EXISTS idx_events_correlation
 -- append-only 物理保护. 即使 dev 期间也开, 防止任何代码绕过.
 -- INSERT 仍允许; SELECT 不受影响.
 REVOKE UPDATE, DELETE, TRUNCATE ON events FROM PUBLIC;
-REVOKE UPDATE, DELETE, TRUNCATE ON events FROM flashfi;
+REVOKE UPDATE, DELETE, TRUNCATE ON events FROM wiseflow;

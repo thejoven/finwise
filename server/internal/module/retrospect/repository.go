@@ -16,16 +16,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
 )
 
 const trainingFocusKeepN = 5
 
 var (
-	ErrNotFound          = errors.New("retrospect not found")
-	ErrAlreadyFinalized  = errors.New("retrospect already finalized")
-	ErrInvalidState      = errors.New("retrospect not in expected state")
+	ErrNotFound         = errors.New("retrospect not found")
+	ErrAlreadyFinalized = errors.New("retrospect already finalized")
+	ErrInvalidState     = errors.New("retrospect not in expected state")
 )
 
 type Repository struct {
@@ -50,10 +50,10 @@ type Retrospect struct {
 }
 
 type AnswerEntry struct {
-	Q        int                       `json:"q"`
+	Q        int                        `json:"q"`
 	Dim      domain.RetrospectDimension `json:"dim"`
-	Choice   string                    `json:"choice"`
-	OpenText *string                   `json:"open_text,omitempty"`
+	Choice   string                     `json:"choice"`
+	OpenText *string                    `json:"open_text,omitempty"`
 }
 
 // ───── Start ─────
@@ -424,16 +424,30 @@ func (r *Repository) GetByCommitment(ctx context.Context, userID, commitmentID u
 	return scanRetrospect(r.pool.QueryRow(ctx, q, commitmentID, userID))
 }
 
-func (r *Repository) List(ctx context.Context, userID uuid.UUID, limit int) ([]Retrospect, error) {
+func (r *Repository) List(ctx context.Context, userID uuid.UUID, limit int, projectID *uuid.UUID) ([]Retrospect, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 20
 	}
-	const q = `
-		SELECT id, user_id, commitment_id, started_at, finalized_at, state, answers,
-		       focus_dim, focus_text, diagnostician_model
-		FROM retrospects WHERE user_id = $1 ORDER BY started_at DESC LIMIT $2
-	`
-	rows, err := r.pool.Query(ctx, q, userID, limit)
+	// 过滤分类时 JOIN 回 signals (retrospect→commitment→gate_eval→refinement→signal).
+	// projectID==nil 时不 JOIN, 查询与原来等价.
+	q := `
+		SELECT r.id, r.user_id, r.commitment_id, r.started_at, r.finalized_at, r.state, r.answers,
+		       r.focus_dim, r.focus_text, r.diagnostician_model
+		FROM retrospects r`
+	where := " WHERE r.user_id = $1"
+	args := []any{userID}
+	if projectID != nil {
+		q += ` JOIN commitments c ON c.id = r.commitment_id
+		       JOIN gate_evaluations ge ON ge.id = c.evaluation_id
+		       JOIN refinement_sessions rs ON rs.id = ge.refinement_id
+		       JOIN signals s ON s.id = rs.primary_signal_id`
+		args = append(args, *projectID)
+		where += fmt.Sprintf(" AND s.project_id = $%d", len(args))
+	}
+	args = append(args, limit)
+	q += where + fmt.Sprintf(" ORDER BY r.started_at DESC LIMIT $%d", len(args))
+
+	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err
 	}

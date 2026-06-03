@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Plus, RefreshCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,10 +27,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
-import { flashfi } from "@/lib/api";
+import { wiseflow } from "@/lib/api";
 import { formatDate, truncate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 import { uuidv4 } from "@/lib/uuid";
+
+const PAGE_SIZE = 20;
+
+// useDebounced 把高频输入降频, 避免每个按键都打一次服务端搜索.
+function useDebounced<T>(value: T, ms: number): T {
+  const [v, setV] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setV(value), ms);
+    return () => clearTimeout(t);
+  }, [value, ms]);
+  return v;
+}
 
 function StatusBadge({ s }: { s: string }) {
   const variant =
@@ -41,17 +53,30 @@ function StatusBadge({ s }: { s: string }) {
 export function SignalsPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
-  const [filter, setFilter] = React.useState("");
+  const [search, setSearch] = React.useState("");
+  const debouncedSearch = useDebounced(search.trim(), 300);
   const [open, setOpen] = React.useState(false);
   const [draft, setDraft] = React.useState("");
 
-  const q = useQuery({
-    queryKey: ["signals"],
-    queryFn: flashfi.signals.list,
+  // 游标分页: pageParam = 上一页最后一条的 captured_at (后端 captured_at < before).
+  const q = useInfiniteQuery({
+    queryKey: ["signals", "list", debouncedSearch],
+    queryFn: ({ pageParam }) =>
+      wiseflow.signals.list({
+        q: debouncedSearch || undefined,
+        limit: PAGE_SIZE,
+        before: pageParam,
+      }),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.has_more) return undefined;
+      const last = lastPage.signals[lastPage.signals.length - 1];
+      return last?.captured_at;
+    },
   });
 
   const capture = useMutation({
-    mutationFn: (raw: string) => flashfi.signals.capture(raw, uuidv4()),
+    mutationFn: (raw: string) => wiseflow.signals.capture(raw, uuidv4()),
     onSuccess: () => {
       toast({
         title: "信号已捕获",
@@ -71,14 +96,7 @@ export function SignalsPage() {
     },
   });
 
-  const rows = q.data?.signals ?? [];
-  const filtered = filter
-    ? rows.filter((r) =>
-        (r.raw_text + " " + (r.inference_summary ?? "") + " " + r.id)
-          .toLowerCase()
-          .includes(filter.toLowerCase()),
-      )
-    : rows;
+  const rows = q.data?.pages.flatMap((p) => p.signals) ?? [];
 
   return (
     <div>
@@ -142,13 +160,20 @@ export function SignalsPage() {
 
       <Card>
         <CardContent className="p-0">
-          <div className="border-b p-3">
-            <Input
-              placeholder="按 raw_text / summary / id 搜索…"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="max-w-sm"
-            />
+          <div className="flex items-center justify-between gap-3 border-b p-3">
+            <div className="relative max-w-sm flex-1">
+              <Input
+                placeholder="服务端搜索 raw_text / summary…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {q.isFetching && !q.isFetchingNextPage && (
+                <RefreshCw className="absolute right-2.5 top-2.5 h-3.5 w-3.5 animate-spin text-muted-foreground" />
+              )}
+            </div>
+            <div className="shrink-0 text-xs text-muted-foreground">
+              已加载 {rows.length} 条{q.hasNextPage ? " · 还有更多" : ""}
+            </div>
           </div>
 
           {q.isLoading && <Loading />}
@@ -157,8 +182,10 @@ export function SignalsPage() {
               <ErrorBox error={q.error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && <EmptyBox />}
-          {q.data && filtered.length > 0 && (
+          {!q.isLoading && !q.isError && rows.length === 0 && (
+            <EmptyBox label={debouncedSearch ? "没有匹配的信号" : "还没有信号"} />
+          )}
+          {rows.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -170,7 +197,7 @@ export function SignalsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((s) => (
+                {rows.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-mono text-xs">
                       <Link
@@ -207,6 +234,19 @@ export function SignalsPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+
+          {q.hasNextPage && (
+            <div className="flex justify-center border-t p-3">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => q.fetchNextPage()}
+                disabled={q.isFetchingNextPage}
+              >
+                {q.isFetchingNextPage ? "加载中…" : "加载更多"}
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

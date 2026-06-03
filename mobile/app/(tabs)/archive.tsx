@@ -18,25 +18,17 @@
 
 import { useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, {
-  useAnimatedScrollHandler,
-  useSharedValue,
-} from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { router } from "expo-router";
 
-import {
-  CollapsibleMasthead,
-  COLLAPSIBLE_MASTHEAD_EXPANDED,
-  Mono,
-  SectionHeader,
-  Serif,
-} from "@/shared/components";
-import { chineseMonthDay, chineseWeekday, isoWeekOfYear } from "@/features/capture";
+import { CollapsibleMasthead, Mono, SectionHeader, Serif } from "@/shared/components";
+import { chineseMonthDay, chineseWeekday, isoWeekOfYear } from "@/shared/format";
 import { useGatePool, type GateEvaluation } from "@/features/archive";
 import { useRetrospectList, type Retrospect } from "@/features/retrospect";
-import type { ArchivePoolT } from "@/core/api/gate";
+import { analystByGate, type ArchivePoolT } from "@/core/api/gate";
 import { theme } from "@/core/theme";
+import { LIST_LAYOUT } from "@/shared/motion";
+import { useCollapsibleScroll } from "@/shared/hooks";
 
 // 两个语义组. 每组合并多个底层 pool, 用一句口语说人话.
 // pools 定为 [A, B] 定长元组, 让 GroupSection 里两次 useGatePool 顺序固定 (rules-of-hooks).
@@ -60,27 +52,17 @@ const GROUPS: PoolGroup[] = [
   {
     label: "已经放下",
     meta: "能力圈外 · 市场已定价",
-    intro: "这些已经清楚 \"不进\". 留着不是为了出手, 是为了下次再遇到类似的, 能更快认出来.",
+    intro: '这些已经清楚 "不进". 留着不是为了出手, 是为了下次再遇到类似的, 能更快认出来.',
     pools: ["lesson", "discard"] as const,
     tagOf: { lesson: "圈外", discard: "已定价" },
   },
 ];
 
 export default function ArchiveScreen() {
-  const insets = useSafeAreaInsets();
+  const { scrollY, onScroll, headerPad, bottomPad } = useCollapsibleScroll();
   const today = useMemo(() => new Date(), []);
   const { data: retrospects } = useRetrospectList();
   const finalizedRetrospects = (retrospects ?? []).filter((r) => r.state === "finalized");
-
-  const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
-  const headerPad = insets.top + COLLAPSIBLE_MASTHEAD_EXPANDED;
-  const bottomPad = insets.bottom + 64; // 给 NativeTabs glass bar 让出空间
 
   return (
     <View style={styles.root}>
@@ -180,15 +162,17 @@ function GroupSection({ group }: { group: PoolGroup }) {
 function PoolRow({ ev, tag }: { ev: GateEvaluation; tag: string }) {
   const date = ev.evaluated_at.slice(0, 10).replace(/-/g, "·");
   const detail = poolDetail(ev);
+  // 共识分析师指的"未被定价的方向" (多在 discard 池) — 死路改成往哪看. 列表里只列 angle, 详情页给全文.
+  const directions = ev.gates.g2_anti_consensus.unpriced_directions ?? [];
   return (
-    <View style={styles.poolRow}>
+    <Animated.View style={styles.poolRow} layout={LIST_LAYOUT}>
       <Mono size={10} style={styles.date}>
         {date}
       </Mono>
       <View style={styles.poolBody}>
         <View style={styles.poolHeadRow}>
           <Serif size={13} style={styles.poolMain}>
-            门 {ev.failed_gate ?? "?"} 没过
+            {analystByGate(ev.failed_gate)?.name ?? "分析师"}没通过
           </Serif>
           {tag ? (
             <View style={styles.tagPill}>
@@ -203,15 +187,20 @@ function PoolRow({ ev, tag }: { ev: GateEvaluation; tag: string }) {
             {detail}
           </Serif>
         ) : null}
+        {directions.length > 0 ? (
+          <Serif size={12} italic style={styles.poolDirections}>
+            未被定价的方向: {directions.map((d) => d.angle).join(" · ")}
+          </Serif>
+        ) : null}
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
 function RetrospectRow({ retro }: { retro: Retrospect }) {
   const date = (retro.finalized_at ?? retro.started_at).slice(0, 10).replace(/-/g, "·");
   return (
-    <View style={styles.retroRow}>
+    <Animated.View style={styles.retroRow} layout={LIST_LAYOUT}>
       <Mono size={10} style={styles.date}>
         {date}
       </Mono>
@@ -223,7 +212,7 @@ function RetrospectRow({ retro }: { retro: Retrospect }) {
           {retro.focus_text ?? "(无)"}
         </Serif>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -282,6 +271,7 @@ const styles = StyleSheet.create({
   },
   poolMain: { color: theme.color.ink },
   poolDetail: { color: theme.color.muted, lineHeight: 18 },
+  poolDirections: { color: theme.color.ink, lineHeight: 18, marginTop: theme.spacing.xs },
   tagPill: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.color.muted,

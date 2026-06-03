@@ -11,8 +11,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
 )
 
 var ErrNotFound = errors.New("signal not found")
@@ -54,6 +54,18 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 		ProjectID:  in.ProjectID,
 		RawText:    in.RawText,
 		CapturedAt: in.CapturedAt,
+	}
+	// 带上分类名 + 分析指引 (best-effort), 供 mastra analyst 按分类推理.
+	// 跨模块只读 projects 表; 失败不阻断捕获.
+	if in.ProjectID != nil {
+		var name string
+		var guidance *string
+		if err := r.pool.QueryRow(ctx,
+			`SELECT name, guidance FROM projects WHERE id = $1`, *in.ProjectID,
+		).Scan(&name, &guidance); err == nil {
+			payload.ProjectName = &name
+			payload.ProjectGuidance = guidance
+		}
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -202,10 +214,12 @@ func (r *Repository) EnqueueReinferOutbox(ctx context.Context, sig *domain.Signa
 
 // ListInput is the filter/page args for ListByUser.
 type ListInput struct {
-	UserID uuid.UUID
-	Before *time.Time // captured_at < Before (cursor pagination)
-	Limit  int
-	Query  string // 非空 → ILIKE raw_text/inference_summary; 已经 trim 过.
+	UserID     uuid.UUID
+	Before     *time.Time // captured_at < Before (cursor pagination)
+	Limit      int
+	Query      string     // 非空 → ILIKE raw_text/inference_summary; 已经 trim 过.
+	ProjectID  *uuid.UUID // 非 nil → 只返回该分类; nil = 全部 (不过滤)
+	HasTargets bool       // true → 只返回 related_assets 非空 (降噪后有标的) 的信号
 }
 
 // List returns signals for the user, newest first, with a cursor on captured_at.
@@ -223,7 +237,7 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 	const baseSelect = `
 		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
-		       inference_model, inference_done_at,
+		       inference_model, inference_done_at, inference_related_assets,
 		       created_at, updated_at
 		FROM signals
 		WHERE user_id = $1
@@ -240,6 +254,15 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 	if in.Before != nil {
 		args = append(args, *in.Before)
 		sql += fmt.Sprintf(" AND captured_at < $%d", len(args))
+	}
+	if in.ProjectID != nil {
+		args = append(args, *in.ProjectID)
+		sql += fmt.Sprintf(" AND project_id = $%d", len(args))
+	}
+	if in.HasTargets {
+		// 只留"降噪后推演出相关标的"的信号 — related_assets 是非空数组.
+		// jsonb_typeof 守卫: 非 array (NULL / 标量) 时不进 jsonb_array_length, 避免报错.
+		sql += " AND jsonb_typeof(inference_related_assets) = 'array' AND jsonb_array_length(inference_related_assets) > 0"
 	}
 	args = append(args, limit)
 	sql += fmt.Sprintf(" ORDER BY captured_at DESC LIMIT $%d", len(args))
@@ -274,7 +297,7 @@ func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (*domain.Sig
 	const q = `
 		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
-		       inference_model, inference_done_at,
+		       inference_model, inference_done_at, inference_related_assets,
 		       created_at, updated_at
 		FROM signals
 		WHERE user_id = $1 AND id = $2
@@ -329,18 +352,29 @@ func (r *Repository) RecordInference(ctx context.Context, payload domain.SignalI
 		return fmt.Errorf("insert inference event: %w", err)
 	}
 
+	// related_assets 落表 (nil 归一成 '[]', 避免 jsonb 标量 'null' 破坏 jsonb_array_length).
+	related := payload.RelatedAssets
+	if related == nil {
+		related = []domain.RelatedAsset{}
+	}
+	relatedBytes, err := json.Marshal(related)
+	if err != nil {
+		return fmt.Errorf("marshal related_assets: %w", err)
+	}
+
 	const updateSignal = `
 		UPDATE signals SET
-			inference_status   = 'done',
-			inference_summary  = $1,
-			inference_tags     = $2,
-			inference_model    = $3,
-			inference_done_at  = NOW(),
-			updated_at         = NOW()
-		WHERE id = $4 AND user_id = $5
+			inference_status         = 'done',
+			inference_summary        = $1,
+			inference_tags           = $2,
+			inference_model          = $3,
+			inference_related_assets = $4,
+			inference_done_at        = NOW(),
+			updated_at               = NOW()
+		WHERE id = $5 AND user_id = $6
 	`
 	tag, err := tx.Exec(ctx, updateSignal,
-		payload.Summary, payload.Tags, payload.Model, payload.SignalID, payload.UserID,
+		payload.Summary, payload.Tags, payload.Model, relatedBytes, payload.SignalID, payload.UserID,
 	)
 	if err != nil {
 		return fmt.Errorf("update signal: %w", err)
@@ -377,19 +411,26 @@ type rowScanner interface {
 
 func scanSignal(r rowScanner) (*domain.Signal, error) {
 	var (
-		s         domain.Signal
-		statusStr string
-		tags      []string
+		s          domain.Signal
+		statusStr  string
+		tags       []string
+		relatedRaw []byte
 	)
 	if err := r.Scan(
 		&s.ID, &s.UserID, &s.ProjectID, &s.RawText, &s.CapturedAt, &s.SourceEventID,
 		&statusStr, &s.InferenceSummary, &tags,
-		&s.InferenceModel, &s.InferenceDoneAt,
+		&s.InferenceModel, &s.InferenceDoneAt, &relatedRaw,
 		&s.CreatedAt, &s.UpdatedAt,
 	); err != nil {
 		return nil, err
 	}
 	s.InferenceStatus = domain.InferenceStatus(statusStr)
 	s.InferenceTags = tags
+	if len(relatedRaw) > 0 {
+		var ra []domain.RelatedAsset
+		if err := json.Unmarshal(relatedRaw, &ra); err == nil {
+			s.InferenceRelatedAssets = ra
+		}
+	}
 	return &s, nil
 }

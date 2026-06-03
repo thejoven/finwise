@@ -13,9 +13,8 @@
  */
 
 import { StyleSheet, View } from "react-native";
-import { ArrowUpRight } from "lucide-react-native";
 
-import { Serif, TapEffect } from "@/shared/components";
+import { Icon, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 
 interface Props {
@@ -50,7 +49,8 @@ export function InputTrigger({ value, placeholder, onPress, preview = 120, small
         >
           {display}
         </Serif>
-        <ArrowUpRight
+        <Icon
+          name="arrowUpRight"
           size={16}
           color={isEmpty ? theme.color.muted2 : theme.color.ink2}
           strokeWidth={1.5}

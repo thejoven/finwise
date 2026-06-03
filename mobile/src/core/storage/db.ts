@@ -14,7 +14,7 @@
 
 import * as SQLite from "expo-sqlite";
 
-const DB_NAME = "flashfi.db";
+const DB_NAME = "wiseflow.db";
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 

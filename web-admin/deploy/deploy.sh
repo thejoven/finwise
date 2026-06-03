@@ -10,14 +10,14 @@
 #
 # Env overrides:
 #   REMOTE_HOST    (default: root@192.168.1.205)
-#   REMOTE_DIR     (default: /opt/flashfi/web-admin)
+#   REMOTE_DIR     (default: /opt/wiseflow/web-admin)
 #   SSH_KEY        (default: $HOME/.ssh/id_ed25519_clh_520jwenlee)
 #   ADMIN_PORT     (default: 8082)
 
 set -euo pipefail
 
 REMOTE_HOST="${REMOTE_HOST:-root@192.168.1.205}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/flashfi/web-admin}"
+REMOTE_DIR="${REMOTE_DIR:-/opt/wiseflow/web-admin}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519_clh_520jwenlee}"
 ADMIN_PORT="${ADMIN_PORT:-8082}"
 
@@ -53,16 +53,16 @@ do_sync() {
 }
 
 do_nginx() {
-  local conf="$here/deploy/flashfi-admin.nginx.conf"
-  echo "→ install nginx site flashfi-admin (port $ADMIN_PORT)"
+  local conf="$here/deploy/wiseflow-admin.nginx.conf"
+  echo "→ install nginx site wiseflow-admin (port $ADMIN_PORT)"
   # Allow overriding the listen port at deploy time.
   sed "s/listen 8082;/listen ${ADMIN_PORT};/; s/listen \[::\]:8082;/listen [::]:${ADMIN_PORT};/" \
-    "$conf" > /tmp/flashfi-admin.nginx.conf
-  scp $SSH_OPTS /tmp/flashfi-admin.nginx.conf "$REMOTE_HOST:/etc/nginx/sites-available/flashfi-admin" >/dev/null
-  rm -f /tmp/flashfi-admin.nginx.conf
+    "$conf" > /tmp/wiseflow-admin.nginx.conf
+  scp $SSH_OPTS /tmp/wiseflow-admin.nginx.conf "$REMOTE_HOST:/etc/nginx/sites-available/wiseflow-admin" >/dev/null
+  rm -f /tmp/wiseflow-admin.nginx.conf
   remote '
     set -e
-    ln -sf /etc/nginx/sites-available/flashfi-admin /etc/nginx/sites-enabled/flashfi-admin
+    ln -sf /etc/nginx/sites-available/wiseflow-admin /etc/nginx/sites-enabled/wiseflow-admin
     nginx -t
     systemctl reload nginx
   '

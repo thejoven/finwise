@@ -19,16 +19,16 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
 )
 
 const PostponeThreshold = 3
 
 var (
-	ErrNotFound     = errors.New("commitment not found")
+	ErrNotFound      = errors.New("commitment not found")
 	ErrAlreadySigned = errors.New("commitment already signed")
-	ErrAbandoned    = errors.New("commitment abandoned")
+	ErrAbandoned     = errors.New("commitment abandoned")
 )
 
 type Repository struct {
@@ -51,21 +51,24 @@ type Commitment struct {
 	SignedAt      *time.Time
 	DraftedAt     time.Time
 	UpdatedAt     time.Time
+	// ProjectID 是经 evaluation→refinement→signal JOIN 回 signals 得到的分类标签
+	// (不在 commitments 落列). 仅 GetByID / LoadActive 填充, 其余读路径为 nil.
+	ProjectID *uuid.UUID
 }
 
 // Holding mirrors a holdings row.
 type Holding struct {
-	ID              uuid.UUID
-	UserID          uuid.UUID
-	Status          string // active | triggered | expired | closed | archived
-	SignedAt        time.Time
-	ExitConditions  []string
-	ExpiresAt       time.Time
-	ExitCheckState  json.RawMessage
-	TriggeredAt     *time.Time
-	ClosedAt        *time.Time
-	ArchivedAt      *time.Time
-	UpdatedAt       time.Time
+	ID             uuid.UUID
+	UserID         uuid.UUID
+	Status         string // active | triggered | expired | closed | archived
+	SignedAt       time.Time
+	ExitConditions []string
+	ExpiresAt      time.Time
+	ExitCheckState json.RawMessage
+	TriggeredAt    *time.Time
+	ClosedAt       *time.Time
+	ArchivedAt     *time.Time
+	UpdatedAt      time.Time
 }
 
 // ───── Draft (M7) ─────
@@ -158,9 +161,9 @@ func (r *Repository) InsertDraft(ctx context.Context, in InsertDraftInput) (*Com
 // ───── Sign (M8) ─────
 
 type SignInput struct {
-	UserID           uuid.UUID
-	CommitmentID     uuid.UUID
-	SigningClientID  string // 防双击的客户端幂等 key
+	UserID          uuid.UUID
+	CommitmentID    uuid.UUID
+	SigningClientID string // 防双击的客户端幂等 key
 }
 
 // Sign 是 M8 核心. 事务保证:
@@ -294,10 +297,10 @@ func (r *Repository) Sign(ctx context.Context, in SignInput) (*Commitment, *Hold
 // ───── Postpone (M8) ─────
 
 type PostponeInput struct {
-	UserID         uuid.UUID
-	CommitmentID   uuid.UUID
-	ClientEventID  uuid.UUID
-	Reason         *string
+	UserID        uuid.UUID
+	CommitmentID  uuid.UUID
+	ClientEventID uuid.UUID
+	Reason        *string
 }
 
 // Postpone 写 events.commitment.postponed, count+1. count>=3 自动 abandoned.
@@ -415,6 +418,21 @@ func (r *Repository) Postpone(ctx context.Context, in PostponeInput) (*Commitmen
 
 // ───── reads ─────
 
+// projectIDForCommitment 经 evaluation→refinement→signal JOIN 回 signals 拿分类标签.
+// best-effort: 查不到 / 未分类 / 链不全都返回 nil, 不影响主读路径.
+func (r *Repository) projectIDForCommitment(ctx context.Context, evaluationID uuid.UUID) *uuid.UUID {
+	const q = `
+		SELECT s.project_id
+		FROM gate_evaluations ge
+		JOIN refinement_sessions rs ON rs.id = ge.refinement_id
+		JOIN signals s ON s.id = rs.primary_signal_id
+		WHERE ge.id = $1
+	`
+	var pid *uuid.UUID
+	_ = r.pool.QueryRow(ctx, q, evaluationID).Scan(&pid)
+	return pid
+}
+
 func (r *Repository) GetByID(ctx context.Context, userID, id uuid.UUID) (*Commitment, error) {
 	const q = `
 		SELECT id, user_id, evaluation_id, status, thesis, pdf_path, postpone_count, signed_at, drafted_at, updated_at
@@ -427,6 +445,7 @@ func (r *Repository) GetByID(ctx context.Context, userID, id uuid.UUID) (*Commit
 		}
 		return nil, err
 	}
+	c.ProjectID = r.projectIDForCommitment(ctx, c.EvaluationID)
 	return c, nil
 }
 
@@ -451,6 +470,7 @@ func (r *Repository) LoadActive(ctx context.Context, userID uuid.UUID) (*Commitm
 		}
 		return nil, err
 	}
+	c.ProjectID = r.projectIDForCommitment(ctx, c.EvaluationID)
 	return c, nil
 }
 
@@ -489,6 +509,110 @@ func (r *Repository) GetHolding(ctx context.Context, userID, id uuid.UUID) (*Hol
 	return h, nil
 }
 
+// ListCommitments 返回该用户全部承诺 (新→旧). web-admin "承诺" 列表用.
+func (r *Repository) ListCommitments(ctx context.Context, userID uuid.UUID, limit int) ([]Commitment, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	const q = `
+		SELECT id, user_id, evaluation_id, status, thesis, pdf_path, postpone_count, signed_at, drafted_at, updated_at
+		FROM commitments
+		WHERE user_id = $1
+		ORDER BY drafted_at DESC
+		LIMIT $2
+	`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list commitments: %w", err)
+	}
+	defer rows.Close()
+	var out []Commitment
+	for rows.Next() {
+		c, err := scanCommitmentRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *c)
+	}
+	return out, rows.Err()
+}
+
+// GetByEvaluation 按 evaluation_id 查承诺 (公开, 走 pool — 区别于 Sign 内的 tx 版).
+// 给信号详情链路用 (evaluation → commitment). 找不到返回 ErrNotFound.
+func (r *Repository) GetByEvaluation(ctx context.Context, userID, evalID uuid.UUID) (*Commitment, error) {
+	const q = `
+		SELECT id, user_id, evaluation_id, status, thesis, pdf_path, postpone_count, signed_at, drafted_at, updated_at
+		FROM commitments WHERE user_id = $1 AND evaluation_id = $2
+	`
+	c, err := scanCommitmentRow(r.pool.QueryRow(ctx, q, userID, evalID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	c.ProjectID = r.projectIDForCommitment(ctx, c.EvaluationID)
+	return c, nil
+}
+
+// HoldingListItem 是持仓列表行: holding + 从承诺书 thesis 取的标的/动作 (列表展示用).
+type HoldingListItem struct {
+	Holding
+	Ticker string
+	Action string
+}
+
+// ListHoldings 返回该用户全部持仓 (新→旧), JOIN commitments 取标的 ticker.
+// holdings.id == commitments.id (1:1), 所以 JOIN on id.
+func (r *Repository) ListHoldings(ctx context.Context, userID uuid.UUID, limit int) ([]HoldingListItem, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	const q = `
+		SELECT h.id, h.user_id, h.status, h.signed_at, h.exit_conditions, h.expires_at, h.exit_check_state,
+		       h.triggered_at, h.closed_at, h.archived_at, h.updated_at,
+		       c.thesis->>'asset_ticker', c.thesis->>'action'
+		FROM holdings h
+		JOIN commitments c ON c.id = h.id
+		WHERE h.user_id = $1
+		ORDER BY h.signed_at DESC
+		LIMIT $2
+	`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list holdings: %w", err)
+	}
+	defer rows.Close()
+	var out []HoldingListItem
+	for rows.Next() {
+		var (
+			h       Holding
+			exitRaw []byte
+			ticker  *string
+			action  *string
+		)
+		if err := rows.Scan(
+			&h.ID, &h.UserID, &h.Status, &h.SignedAt, &exitRaw, &h.ExpiresAt, &h.ExitCheckState,
+			&h.TriggeredAt, &h.ClosedAt, &h.ArchivedAt, &h.UpdatedAt,
+			&ticker, &action,
+		); err != nil {
+			return nil, fmt.Errorf("scan holding row: %w", err)
+		}
+		if err := json.Unmarshal(exitRaw, &h.ExitConditions); err != nil {
+			return nil, fmt.Errorf("unmarshal exit_conditions: %w", err)
+		}
+		item := HoldingListItem{Holding: h}
+		if ticker != nil {
+			item.Ticker = *ticker
+		}
+		if action != nil {
+			item.Action = *action
+		}
+		out = append(out, item)
+	}
+	return out, rows.Err()
+}
+
 // ───── private ─────
 
 func (r *Repository) getByEvaluation(ctx context.Context, tx pgx.Tx, userID, evalID uuid.UUID) (*Commitment, error) {
@@ -521,8 +645,8 @@ type rowScanner interface {
 
 func scanCommitmentRow(r rowScanner) (*Commitment, error) {
 	var (
-		c          Commitment
-		thesisRaw  []byte
+		c         Commitment
+		thesisRaw []byte
 	)
 	if err := r.Scan(
 		&c.ID, &c.UserID, &c.EvaluationID, &c.Status, &thesisRaw, &c.PDFPath, &c.PostponeCount,
@@ -538,8 +662,8 @@ func scanCommitmentRow(r rowScanner) (*Commitment, error) {
 
 func scanHoldingRow(r rowScanner) (*Holding, error) {
 	var (
-		h           Holding
-		exitRaw     []byte
+		h       Holding
+		exitRaw []byte
 	)
 	if err := r.Scan(
 		&h.ID, &h.UserID, &h.Status, &h.SignedAt, &exitRaw, &h.ExpiresAt, &h.ExitCheckState,

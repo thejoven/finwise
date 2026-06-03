@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Settings as SettingsIcon,
   Sparkles,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,10 +25,11 @@ const nav: NavItem[] = [
   { to: "/", label: "概览", icon: LayoutDashboard },
   { to: "/signals", label: "信号 Signals", icon: Inbox, hint: "M1" },
   { to: "/refinements", label: "追问 Refinement", icon: Sparkles, hint: "M5" },
-  { to: "/gate", label: "四道门 Gate", icon: ShieldCheck, hint: "M6" },
+  { to: "/gate", label: "分析师评审", icon: ShieldCheck, hint: "M6" },
   { to: "/commitments", label: "承诺 Commitments", icon: ClipboardCheck, hint: "M7-8" },
   { to: "/holdings", label: "持仓 Holdings", icon: Briefcase, hint: "M9" },
   { to: "/retrospects", label: "复盘 Retrospects", icon: History, hint: "M11" },
+  { to: "/users", label: "用户 Users", icon: Users },
   { to: "/metrics", label: "Metrics", icon: Activity },
   { to: "/settings", label: "设置", icon: SettingsIcon },
 ];
@@ -44,7 +46,7 @@ export function Sidebar() {
           F
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold">Flashfi</span>
+          <span className="text-sm font-semibold">WiseFlow</span>
           <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
             Admin · 内网
           </span>
@@ -77,7 +79,7 @@ export function Sidebar() {
       </nav>
       <div className="border-t p-3 text-[10px] text-muted-foreground">
         <p>backend · 192.168.1.205:8080</p>
-        <p className="mt-1">© Flashfi Engine</p>
+        <p className="mt-1">© WiseFlow Engine</p>
       </div>
     </aside>
   );

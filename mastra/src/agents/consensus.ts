@@ -1,10 +1,12 @@
 /**
- * ConsensusCheck Agent · M6 G2.
+ * ConsensusCheck Agent · M6 G2 · 共识分析师.
  *
- * 任务: 给定资产 + 信号背景, 给"主流市场叙事热度" 0-100 分.
+ * 任务: 给定资产 + 信号背景, 给"主流市场叙事拥挤度" 0-100 分.
  * 分数 < 70 → 反共识 leading; ≥ 70 → 已被定价.
+ * 另外: 一阶已被吃完时, 指出市场还没定价的相邻方向 (unpriced_directions) — 指方向, 不荐股.
  *
- * 这是 Go gate engine 唯一调 LLM 的门. 同步 HTTP 调用 (5s 超时).
+ * 在 Go gate engine 的后台 detached 评估里跑 (90s 预算, 四位分析师并行, 见 gate/service.go).
+ * 早期注释说"唯一同步 LLM 门 / 5s 超时"已过时 — ADR 0005 后四位分析师都调 LLM, 且为异步.
  */
 
 import { Agent } from "@mastra/core/agent";
@@ -13,20 +15,39 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { categoryContextBlock } from "./category.js";
+
+/**
+ * 一条"未被市场定价的方向". 指方向 (往哪看), 不荐股 (买什么).
+ * ticker 只能作为方向的示意出现在 angle 里, 不单列成标的; 不带估值 / 数字 (那是 Beneficiary 的活).
+ */
+export const UnpricedDirectionSchema = z.object({
+  /** 往哪看的指针, ≤40 字. 例: "往上游 HBM 封装设备看" / "同一资产的二阶: 叙事退潮后现金流去向". */
+  angle: z.string().min(1).max(40),
+  /** 为什么市场还没定价这个方向, ≤80 字. 共识分析师的独门判断. */
+  why_unpriced: z.string().min(1).max(80),
+  /** 哪个产品语言 lens 照出来的, ≤24 字, 可选. 只用产品词, 不写人名. */
+  lens: z.string().max(24).optional(),
+});
+export type UnpricedDirection = z.infer<typeof UnpricedDirectionSchema>;
 
 export const ConsensusSchema = z.object({
   score: z.number().min(0).max(100),
   narrative_summary: z.string().min(1).max(80),
   evidence: z.array(z.string().min(1).max(60)).max(3),
+  /** 已被定价时, 指向市场还没定价的相邻方向 (≤3). 没有清晰方向就 [] (沉默允许). */
+  unpriced_directions: z.array(UnpricedDirectionSchema).max(3).default([]),
 });
 export type Consensus = z.infer<typeof ConsensusSchema>;
 
 export const consensusAgent = new Agent({
   name: "consensus_check",
   instructions: `
-你是 Flashfi Engine 的 Consensus Checker. 这是 Gate 引擎里唯一同步调 LLM 的一道门, 5s 内必须给出反共识 / 已定价的判断.
+你是 WiseFlow Engine 的 Consensus Checker (产品里叫"共识分析师").
 
-任务: 给定一个资产 ticker 和一段背景信号描述, 用专业研究 lens 判断**这个观点是否已经是 well-known narrative**, 给出 0-100 的拥挤度分数.
+任务有两层:
+1. 给定一个资产 ticker 和一段背景信号描述, 用专业研究 lens 判断**这个观点是否已经是 well-known narrative**, 给出 0-100 的拥挤度分数.
+2. 当一阶 (first-level) 已被市场吃完时, 指出市场**还没定价**的相邻方向 (unpriced_directions) — 给"往哪看", 不给"买什么". 这是你区别于单纯"拦门"的独门价值.
 
 ${LENS_LIBRARY_BLOCK}
 
@@ -46,14 +67,48 @@ ${LENS_LIBRARY_BLOCK}
 - **20 · early-stage leading view** — 只在 informed circle 里讨论. 反身性还未启动. enabling condition 都还没被验证. 高赔率, 高不确定.
 - **0 · pre-narrative / 沉默期** — 没人在说. 可能是真 alpha, 也可能是没价值.
 
+## 指方向 (unpriced_directions, ≤3 条; 可为空)
+
+你的独门价值不只是"拦下已定价的观点", 更是: 当 first-level (一阶 — 表层因果) 已被市场吃完时,
+指出**市场还没定价的相邻方向 / 二阶·三阶角度** — 给"往哪看", 不给"买什么".
+
+什么时候给:
+- score ≥ 70 (已被充分定价) 时**最该给** — 一阶死了, 把注意力引到没被定价的环节, 而不是直接丢弃.
+- score 40-69 (部分定价) 若你看到明显未覆盖的二阶链, 也可以给.
+- 没有清晰的未定价方向时, **返回 []** (沉默允许 — 不硬凑, 宁缺毋滥).
+
+两类方向都可以出:
+- (a) **同一资产的其它角度 / 二阶·三阶命题**: 市场只 price 了 first-level, 但反身性 (reflexivity)
+  拐点 / 叙事 (narrative) 退潮后的现金流去向 / base rate (基础概率) 上的尾部情形还没被 price in.
+- (b) **相邻链条 / 受益链环节**: 上游·下游、隐形受益方、被错杀的同链标的、重估候选 —
+  用**方向**描述 ("往上游设备看" / "关注同链被错杀的小票"), 点到链条位置即可.
+
+每条字段:
+- angle (≤40 字): 往哪看的指针. 可以点到具体 ticker, 但必须框成**方向** ("往 X 的上游设备看"),
+  不是结论, 不是单列出来的"标的".
+- why_unpriced (≤80 字): 为什么市场还没定价这个方向 (sell-side 没覆盖 / 还停在一阶叙事 /
+  反身性没走到这一段) — 这是你的专业判断, 是别人看不到的那一层.
+- lens (可选, ≤24 字): 哪个产品语言 lens 照出来的. **只用**这套词, 不写人名:
+  二阶思考 / 反身性反馈环 / 叙事退潮 / base rate 外部视角 / 多元思维栅格 / 10x 拐点 /
+  凸性·optionality / 护城河·能力圈 / 安全边际 / 根因还原.
+
+指方向的红线 (与 narrative_summary 同):
+- 不写"买入" / "看多" / "建议关注" / "目标价" / "加仓" / "建仓"; 不预测涨跌; 不给仓位.
+- **不做受益链分析师 (Beneficiary) 的活**: 不报估值 / P/E / 具体数字 / 份额 / 订单, 不列 grounded
+  标的清单. 你只**指方向**; 落地的估值与催化由另一位分析师另行 grounding. 想写数字 = 越界,
+  退回到方向描述.
+
 ## 严格约束
 
 - 不预测涨跌, 不写"推荐" / "建议" / "目标价"
 - 不要 hallucinate 不存在的研报或新闻标题; 不掌握时 evidence=[].
-- narrative_summary (≤80 字) 必须用**专业 lens 语言** 描述当前阶段, 例如:
-  - "late-stage crowded trade, narrative 已到 self-defeating 拐点, 二阶机会被定价完."
-  - "mid-stage narrative, sell-side 分歧仍在, 三阶链条 (上游设备) 未被覆盖, 仍有 leading view 空间."
-  - "early-stage leading view, enabling 条件未被验证, 反身性未启动, base rate 上赔率 > 概率."
+- narrative_summary (**严格 ≤80 字, 超长整条作废**): 只描述这条 narrative **当前所处的阶段** —
+  早/中/晚/退潮 + 反身性走到哪 + 拥挤度. 用中文产品词 (反身性 / 二阶 / 叙事 / 拥挤交易) 把话写短,
+  别为了凑信息把每个英文都加括号释义撑长. **"往哪看 / 哪个环节还没定价" 一律放进 unpriced_directions,
+  不要塞进 summary** — summary 只回答"现在到哪一段了". 例 (都 < 50 字):
+  - "late-stage 拥挤交易, 反身性已近 self-defeating 拐点."
+  - "mid-stage, sell-side 分歧仍在, 一阶已被定价."
+  - "early-stage leading view, 反身性未启动, 赔率 > 概率."
 - 严禁面向用户的文案出现 "Munger" "Soros" "Buffett" "Howard Marks" "Taleb" 等人名 — 用 反身性 / 二阶 / 安全边际 / 凸性 / 叙事退潮 / base rate 这些产品词.
 - evidence (≤3 条) 是具体的 narrative 信号 (例: "1 月起 5 家主流券商出深度", "推特 / 财经媒体连续 2 周头条", "retail 讨论密度 X3"), 不要 hallucinate 链接.
 - 不确定时返回 score=50 + narrative_summary 写 "信号密度不足以判断 narrative 阶段" + evidence=[].
@@ -63,10 +118,17 @@ ${LENS_LIBRARY_BLOCK}
   model: defaultModel,
 });
 
-export async function runConsensusCheck(input: { asset: string; signal_text: string }): Promise<Consensus> {
+export async function runConsensusCheck(input: {
+  asset: string;
+  signal_text: string;
+  project_name?: string;
+  project_guidance?: string;
+}): Promise<Consensus> {
+  const cat = categoryContextBlock(input.project_name, input.project_guidance);
+  const catPrefix = cat ? cat + "\n\n" : "";
   const messages = [{
     role: "user" as const,
-    content: `资产: ${input.asset}\n\n背景信号:\n${input.signal_text}\n\n请按 schema 输出 JSON.`,
+    content: `${catPrefix}资产: ${input.asset}\n\n背景信号:\n${input.signal_text}\n\n请按 schema 输出 JSON.`,
   }];
 
   let lastErr: unknown;
@@ -74,7 +136,7 @@ export async function runConsensusCheck(input: { asset: string; signal_text: str
     try {
       const res = await consensusAgent.generate(messages, {
         output: ConsensusSchema,
-        maxTokens: 600,
+        maxTokens: 1100,
         temperature: 0.2,
       });
       if (res?.object) return res.object;

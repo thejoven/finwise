@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Flashfi Engine API
+  title: 财富密码 API
   version: 0.2.0
   description: |
     Phase 1 surface. Single user; bearer is a static dev token until Phase 4+ auth lands.
@@ -130,8 +130,8 @@ paths:
     post:
       summary: Capture a signal
       description: |
-        Returns 202 immediately. AI inference happens async via NATS → Mastra.
-        Idempotent on (user_id, client_event_id).
+        Returns 202 immediately. AI inference happens async via the event outbox → iii engine → Mastra.
+        Optional project_id attributes the signal to a project. Idempotent on (user_id, client_event_id).
       security: [ { DevBearer: [] } ]
       requestBody:
         required: true

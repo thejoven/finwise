@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {
@@ -35,6 +35,7 @@ type projectView struct {
 	Color      *string   `json:"color,omitempty"`
 	Emoji      *string   `json:"emoji,omitempty"`
 	SortOrder  int       `json:"sort_order"`
+	Guidance   *string   `json:"guidance,omitempty"`
 	ArchivedAt *string   `json:"archived_at,omitempty"`
 	CreatedAt  time.Time `json:"created_at"`
 }
@@ -48,6 +49,7 @@ type createRequest struct {
 	Color     *string `json:"color,omitempty"`
 	Emoji     *string `json:"emoji,omitempty"`
 	SortOrder *int    `json:"sort_order,omitempty"`
+	Guidance  *string `json:"guidance,omitempty"`
 }
 
 type updateRequest struct {
@@ -55,6 +57,7 @@ type updateRequest struct {
 	Color     *string `json:"color,omitempty"`
 	Emoji     *string `json:"emoji,omitempty"`
 	SortOrder *int    `json:"sort_order,omitempty"`
+	Guidance  *string `json:"guidance,omitempty"`
 }
 
 // ───── Handlers ─────
@@ -98,6 +101,7 @@ func (h *Handler) create(c *gin.Context) {
 		Color:     req.Color,
 		Emoji:     req.Emoji,
 		SortOrder: sort,
+		Guidance:  req.Guidance,
 	})
 	if err != nil {
 		if errors.Is(err, ErrDuplicateName) {
@@ -133,6 +137,7 @@ func (h *Handler) update(c *gin.Context) {
 		Color:     req.Color,
 		Emoji:     req.Emoji,
 		SortOrder: req.SortOrder,
+		Guidance:  req.Guidance,
 	})
 	if err != nil {
 		if errors.Is(err, ErrNotFound) {
@@ -180,6 +185,7 @@ func toView(p Project) projectView {
 		Color:     p.Color,
 		Emoji:     p.Emoji,
 		SortOrder: p.SortOrder,
+		Guidance:  p.Guidance,
 		CreatedAt: p.CreatedAt,
 	}
 	if p.ArchivedAt != nil {

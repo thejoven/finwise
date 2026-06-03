@@ -11,9 +11,29 @@ import { api } from "./client";
 export const ArchivePool = z.enum(["observation", "lesson", "calendar", "discard"]);
 export type ArchivePoolT = z.infer<typeof ArchivePool>;
 
-const GateG1 = z.object({ pass: z.boolean(), count: z.number(), detail: z.string().nullable().optional() });
-const GateG2 = z.object({ pass: z.boolean(), score: z.number(), detail: z.string().nullable().optional() });
-const GateG3 = z.object({ pass: z.boolean(), months: z.number(), detail: z.string().nullable().optional() });
+const GateG1 = z.object({
+  pass: z.boolean(),
+  count: z.number(),
+  detail: z.string().nullable().optional(),
+});
+// 共识分析师的"未被定价的方向" (指方向, 不荐股). 老评估行没有这个字段 → [].
+const UnpricedDirection = z.object({
+  angle: z.string(),
+  why_unpriced: z.string(),
+  lens: z.string().nullable().optional(),
+});
+export type UnpricedDirection = z.infer<typeof UnpricedDirection>;
+const GateG2 = z.object({
+  pass: z.boolean(),
+  score: z.number(),
+  detail: z.string().nullable().optional(),
+  unpriced_directions: z.array(UnpricedDirection).optional().default([]),
+});
+const GateG3 = z.object({
+  pass: z.boolean(),
+  months: z.number(),
+  detail: z.string().nullable().optional(),
+});
 const GateG4Sub = z.object({
   explain: z.boolean(),
   direct: z.boolean(),
@@ -45,12 +65,38 @@ export const GateEvaluation = z.object({
 });
 export type GateEvaluation = z.infer<typeof GateEvaluation>;
 
+/**
+ * 分析师审核团 · 用户看到的命名 (替代抽象的"门 1 / 门 2").
+ * 与后端 service.go / mastra analysts.ts 一致; 底层数据仍用 g1..g4 键.
+ */
+export const ANALYSTS = [
+  { gate: 1 as const, key: "g1_thickness" as const, name: "佐证分析师", role: "证据够不够厚" },
+  {
+    gate: 2 as const,
+    key: "g2_anti_consensus" as const,
+    name: "共识分析师",
+    role: "市场是否已定价",
+  },
+  { gate: 3 as const, key: "g3_window" as const, name: "时机分析师", role: "时机对不对" },
+  { gate: 4 as const, key: "g4_edge" as const, name: "能力圈分析师", role: "你是否真的懂" },
+];
+
+export function analystByGate(gate: number | null | undefined) {
+  return ANALYSTS.find((a) => a.gate === gate);
+}
+
 const PoolListResponse = z.object({
   evaluations: z.array(GateEvaluation),
 });
 
-export async function listGatePool(pool: ArchivePoolT, limit = 50): Promise<GateEvaluation[]> {
-  const json = await api.get(`v1/gate/pools/${pool}`, { searchParams: { limit: String(limit) } }).json();
+export async function listGatePool(
+  pool: ArchivePoolT,
+  limit = 50,
+  projectId?: string | null,
+): Promise<GateEvaluation[]> {
+  const searchParams: Record<string, string> = { limit: String(limit) };
+  if (projectId) searchParams.project_id = projectId;
+  const json = await api.get(`v1/gate/pools/${pool}`, { searchParams }).json();
   return PoolListResponse.parse(json).evaluations;
 }
 
@@ -61,7 +107,7 @@ export async function getGateEvaluation(id: string): Promise<GateEvaluation> {
 
 /**
  * 按 refinement_id 拿评估. 没评估过 → null (404 静默, 不抛).
- * signal 详情页底部展示四道门反馈用.
+ * signal 详情页底部展示分析师评审反馈用.
  */
 export async function getGateByRefinement(refinementId: string): Promise<GateEvaluation | null> {
   try {

@@ -18,11 +18,11 @@
 import { ScrollView, StyleSheet, Text as RNText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 
 import {
   Display,
   DoubleRule,
+  Icon,
   Mono,
   RomanList,
   SectionHeader,
@@ -36,7 +36,7 @@ export default function ColophonScreen() {
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <View style={styles.topBar}>
         <TapEffect onPress={() => router.back()} style={styles.backBtn}>
-          <ChevronLeft size={22} color={theme.color.ink} strokeWidth={1.5} />
+          <Icon name="chevronLeft" size={22} color={theme.color.ink} strokeWidth={1.5} />
         </TapEffect>
         <Mono size={10} style={styles.topMeta}>
           卷首语 · COLOPHON
@@ -69,8 +69,7 @@ export default function ColophonScreen() {
 
         <View style={styles.body}>
           <Serif size={14} style={styles.lede}>
-            财知是一款<RNText style={styles.bodyBold}>不打扰你</RNText>
-            的 AI 财富伙伴。
+            财知是一款<RNText style={styles.bodyBold}>不打扰你</RNText>的 AI 财富伙伴。
           </Serif>
 
           <Serif size={14} style={styles.para}>
@@ -81,6 +80,33 @@ export default function ColophonScreen() {
             <View style={styles.pullRule} />
             <Serif size={16} italic style={styles.pullQuote}>
               少一点决策，{"\n"}多一份信念。
+            </Serif>
+            <View style={styles.pullRule} />
+          </View>
+        </View>
+
+        <DoubleRule />
+
+        <View style={styles.debtBlock}>
+          <SectionHeader label="认知的债务" meta="COGNITIVE DEBT" />
+
+          <Serif size={14} style={styles.debtIntro}>
+            市面上的 AI，都在比谁更快替你给出答案。你越贪图这种捷径，越在不知不觉中欠下一笔
+            <RNText style={styles.bodyBold}>“认知债务”</RNText>
+            ——被代劳的每一个判断，都是大脑本该变强、却被你跳过的一次机会。
+          </Serif>
+
+          <Serif size={14} style={styles.debtPara}>
+            财知反其道而行。它从不替你思考，只把问题一次次还给你——每一次信号都是大脑变强的机会，每一轮追问都是一次
+            <RNText style={styles.bodyBold}>思考的乐趣</RNText>
+            ，一段只属于你的创作。
+          </Serif>
+
+          <View style={styles.pullQuoteWrap}>
+            <View style={styles.pullRule} />
+            <Serif size={16} italic style={styles.pullQuote}>
+              别人用 AI 代替思考，{"\n"}
+              你用财知练习思考。
             </Serif>
             <View style={styles.pullRule} />
           </View>
@@ -135,7 +161,8 @@ export default function ColophonScreen() {
             </Serif>
             <View style={styles.pullRule} />
             <Serif size={13} style={styles.compoundCloseBody}>
-              一年之后，你不只是赚到了钱 —— 你建立了一套不会被市场情绪裹挟的判断系统。这套系统会跟着你的下一笔投资、下一个十年，持续复利。
+              一年之后，你不只是赚到了钱 ——
+              你建立了一套不会被市场情绪裹挟的判断系统。这套系统会跟着你的下一笔投资、下一个十年，持续复利。
             </Serif>
           </View>
         </View>
@@ -236,6 +263,24 @@ const styles = StyleSheet.create({
     color: theme.color.ink2,
     lineHeight: 26,
     fontSize: 15,
+  },
+
+  // 认知债务 section
+  debtBlock: {
+    paddingTop: theme.spacing.xl,
+    paddingBottom: theme.spacing.lg,
+  },
+  debtIntro: {
+    color: theme.color.ink2,
+    lineHeight: 24,
+    fontSize: 14,
+    marginTop: theme.spacing.sm,
+  },
+  debtPara: {
+    color: theme.color.ink2,
+    lineHeight: 24,
+    fontSize: 14,
+    marginTop: theme.spacing.base,
   },
 
   // 复利认知 section

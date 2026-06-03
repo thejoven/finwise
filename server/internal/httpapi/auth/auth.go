@@ -3,8 +3,8 @@
 // 两种入口:
 //
 //  1. Bearer — accept either:
-//       (a) DEV_BEARER_TOKEN (单用户 fallback, 用于 mastra/web-admin/curl, 落到 DEV_USER_ID), 或
-//       (b) sessions 表里的 token (注册/登录后客户端拿到的 opaque random token), 落到 sessions.user_id.
+//     (a) DEV_BEARER_TOKEN (单用户 fallback, 用于 mastra/web-admin/curl, 落到 DEV_USER_ID), 或
+//     (b) sessions 表里的 token (注册/登录后客户端拿到的 opaque random token), 落到 sessions.user_id.
 //     先匹配 dev token, 不中再走 SessionLookup. 这样旧调用方零改动, 新用户走多用户路径.
 //
 //  2. InternalSecret — X-Internal-Token, 给 Mastra worker 用. 可选 loopback-only.
@@ -52,9 +52,9 @@ type BearerConfig struct {
 
 // Bearer 是统一 Bearer 中间件 — 取代旧的 DevBearer.
 // 选第一个匹配:
-//   1) 如果 DevBearerToken 非空且相等, 设 DevUserID, 放行.
-//   2) 否则若 Sessions != nil, 尝试 SessionLookup; 命中就设那个 user_id.
-//   3) 都不中, 401.
+//  1. 如果 DevBearerToken 非空且相等, 设 DevUserID, 放行.
+//  2. 否则若 Sessions != nil, 尝试 SessionLookup; 命中就设那个 user_id.
+//  3. 都不中, 401.
 func Bearer(cfg BearerConfig) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		raw := c.GetHeader("Authorization")
@@ -109,6 +109,46 @@ func isSessionMiss(err error) bool {
 // errSessionNotFound 是 auth 包内部的占位, 让 account.Service.LookupSession 可以 wrap 它.
 // 如果未来要拆包, 这是契约.
 var errSessionNotFound = errors.New("session not found")
+
+// AdminLookup 是 RequireAdmin 查 user → is_admin 的依赖. account.Service 实现.
+// 解耦目的同 SessionLookup: auth 包不引 account.
+type AdminLookup interface {
+	IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error)
+}
+
+// RequireAdmin 必须挂在 Bearer 之后 (依赖 Bearer 已写入 contextKeyUserID).
+// 读 UserID, 查 is_admin, 非管理员 → 403.
+//
+// DevUserID 直接视为管理员 (不查库) — dev token 落到 DevUserID, web-admin/mastra/curl
+// 现状都靠它, 这样既保后门又不依赖 dev 占位行的 is_admin 状态.
+func RequireAdmin(lookup AdminLookup, devUserID uuid.UUID) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		uid, ok := UserID(c)
+		if !ok {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthenticated"})
+			return
+		}
+		// dev token 后门: 直接放行, 不查库.
+		if devUserID != uuid.Nil && uid == devUserID {
+			c.Next()
+			return
+		}
+		if lookup == nil {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin required"})
+			return
+		}
+		isAdmin, err := lookup.IsAdmin(c.Request.Context(), uid)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "admin check failed"})
+			return
+		}
+		if !isAdmin {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "admin required"})
+			return
+		}
+		c.Next()
+	}
+}
 
 // InternalSecretConfig configures the internal-only auth middleware.
 type InternalSecretConfig struct {

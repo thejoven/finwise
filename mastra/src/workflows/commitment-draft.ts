@@ -17,7 +17,7 @@
 
 import { runNarrator } from "../agents/narrator.js";
 import type { CommitmentActionT } from "../agents/narrator.js";
-import { getRefinementSession, postCommitmentDraft } from "../tools/flashfi-api.js";
+import { getRefinementSession, postCommitmentDraft } from "../tools/wiseflow-api.js";
 import { config } from "../config/env.js";
 
 const DEFAULT_POSITION_PCT = 5;
@@ -119,6 +119,8 @@ export async function runCommitmentDraft(input: CommitmentDraftInput): Promise<C
       duration_months_hint: durationMonths,
       exit_condition_hints: exitConditionHints,
       position_pct_hint: DEFAULT_POSITION_PCT,
+      project_name: view.project_name,
+      project_guidance: view.project_guidance,
     });
   } catch (err) {
     return { evaluation_id: input.evaluation_id, ok: false, error: `narrator: ${errMsg(err)}` };

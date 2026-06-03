@@ -8,6 +8,13 @@
 import { z } from "zod";
 import { api } from "./client";
 
+export const RelatedAsset = z.object({
+  ticker: z.string(),
+  rationale: z.string(),
+  order: z.string(),
+});
+export type RelatedAsset = z.infer<typeof RelatedAsset>;
+
 export const SignalView = z.object({
   id: z.string().uuid(),
   project_id: z.string().uuid().nullable().optional(),
@@ -16,6 +23,8 @@ export const SignalView = z.object({
   inference_status: z.enum(["pending", "done", "failed"]),
   inference_summary: z.string().nullable().optional(),
   inference_tags: z.array(z.string()).optional(),
+  // Analyst 推演出的相关标的 (降噪后). "信号" tab 按它筛选 + 展示.
+  related_assets: z.array(RelatedAsset).optional(),
 });
 export type SignalView = z.infer<typeof SignalView>;
 
@@ -58,6 +67,8 @@ export interface ListInput {
   limit?: number;
   before?: string; // RFC3339
   q?: string; // 子串匹配 raw_text / inference_summary, server ILIKE
+  project_id?: string | null; // 按分类过滤; null/省略 = 全部
+  has_targets?: boolean; // true → 只返回降噪后推演出相关标的的信号
 }
 
 export async function listSignals(input: ListInput = {}): Promise<SignalList> {
@@ -65,6 +76,8 @@ export async function listSignals(input: ListInput = {}): Promise<SignalList> {
   if (input.limit != null) searchParams.limit = String(input.limit);
   if (input.before) searchParams.before = input.before;
   if (input.q && input.q.trim().length > 0) searchParams.q = input.q.trim();
+  if (input.project_id) searchParams.project_id = input.project_id;
+  if (input.has_targets) searchParams.has_targets = "true";
   const json = await api.get("v1/signals", { searchParams }).json();
   return SignalList.parse(json);
 }

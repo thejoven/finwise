@@ -10,13 +10,13 @@
 ```
 平台行为 → 用 RN/Expo 默认实现 (iOS 上 bounce 滚动、modal 滑入等)
 视觉外观 → 自绘 (按钮、卡片、列表项, 用项目自己的设计语言)
-反馈反应 → 严格按 Flashfi Engine 哲学定义
+反馈反应 → 严格按 财富密码 哲学定义
 ```
 
 简单记:
 
 - **iOS 教什么**, 你听 iOS 的(行为)
-- **Flashfi Engine 教什么**, 你听 Flashfi Engine 的(视觉、反馈)
+- **财富密码 教什么**, 你听 财富密码 的(视觉、反馈)
 
 ---
 
@@ -139,7 +139,7 @@ Alert.alert('确认', '放弃这张草稿?', [...]);
 
 ### 2.4 ❌ 不用 ActivityIndicator
 
-完全不显示 loading, 或用打字机效果。见 `05-flashfi-restraint.md`。
+完全不显示 loading, 或用打字机效果。见 `05-wiseflow-restraint.md`。
 
 ### 2.5 ❌ 不用第三方 Toast 库
 
@@ -305,7 +305,7 @@ const shadow = Platform.select({
 });
 ```
 
-但 Flashfi Engine 几乎不用阴影, 这个陷阱出现频率低。
+但 财富密码 几乎不用阴影, 这个陷阱出现频率低。
 
 ### 陷阱 3 · iOS 的 borderColor 不渲染半像素
 

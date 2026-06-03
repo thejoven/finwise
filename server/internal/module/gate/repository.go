@@ -3,10 +3,11 @@
 // 评估主体是确定性 Go 规则引擎. 只有 G2 反共识需要 LLM (M6.5 引入 Mastra).
 //
 // 数据流:
-//   refinement.completed → 内部 consumer 触发 Service.Evaluate(refinementID)
-//   → 串行跑 G1, G2, G3, G4
-//   → 任一门失败立即 ArchiveSilently (写 gate.archived event, 但不在 client 可见 subject 发)
-//   → 全过 PassAndPromote (写 gate.evaluated + gate.passed, M7 narrator 会消费 gate.passed)
+//
+//	refinement.completed → 内部 consumer 触发 Service.Evaluate(refinementID)
+//	→ 串行跑 G1, G2, G3, G4
+//	→ 任一门失败立即 ArchiveSilently (写 gate.archived event, 但不在 client 可见 subject 发)
+//	→ 全过 PassAndPromote (写 gate.evaluated + gate.passed, M7 narrator 会消费 gate.passed)
 package gate
 
 import (
@@ -19,8 +20,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
 )
 
 var (
@@ -65,7 +66,7 @@ type InsertInput struct {
 //   - events.gate.archived  (仅 !Passed 时写, causation = gate.evaluated)
 //   - gate_evaluations row
 //   - outbox: gate.evaluated 总发; gate.archived 仅失败时发 (subject 客户端不订阅);
-//             gate.passed 仅通过时发 (M7 narrator 消费)
+//     gate.passed 仅通过时发 (M7 narrator 消费)
 func (r *Repository) Insert(ctx context.Context, in InsertInput) (*Evaluation, error) {
 	now := time.Now().UTC()
 	evalID := uuid.New()
@@ -256,20 +257,68 @@ func (r *Repository) GetByRefinementID(ctx context.Context, userID, refinementID
 	return &ev, nil
 }
 
-func (r *Repository) ListByPool(ctx context.Context, userID uuid.UUID, pool domain.ArchivePool, limit int) ([]Evaluation, error) {
+func (r *Repository) ListByPool(ctx context.Context, userID uuid.UUID, pool domain.ArchivePool, limit int, projectID *uuid.UUID) ([]Evaluation, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	const q = `
-		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
-		FROM gate_evaluations
-		WHERE user_id = $1 AND archived_pool = $2
-		ORDER BY evaluated_at DESC
-		LIMIT $3
-	`
-	rows, err := r.pool.Query(ctx, q, userID, string(pool), limit)
+	// 过滤分类时 JOIN 回 signals (project_id 真相只挂在 signals 上). projectID==nil
+	// 时不 JOIN, 查询与原来等价.
+	q := `
+		SELECT ge.id, ge.user_id, ge.refinement_id, ge.gates_detail, ge.passed, ge.failed_gate, ge.archived_pool, ge.evaluated_at
+		FROM gate_evaluations ge`
+	where := " WHERE ge.user_id = $1 AND ge.archived_pool = $2"
+	args := []any{userID, string(pool)}
+	if projectID != nil {
+		q += " JOIN refinement_sessions rs ON rs.id = ge.refinement_id JOIN signals s ON s.id = rs.primary_signal_id"
+		args = append(args, *projectID)
+		where += fmt.Sprintf(" AND s.project_id = $%d", len(args))
+	}
+	args = append(args, limit)
+	q += where + fmt.Sprintf(" ORDER BY ge.evaluated_at DESC LIMIT $%d", len(args))
+
+	rows, err := r.pool.Query(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("list by pool: %w", err)
+	}
+	defer rows.Close()
+	out := make([]Evaluation, 0, limit)
+	for rows.Next() {
+		var (
+			ev    Evaluation
+			gates json.RawMessage
+			p     *string
+		)
+		if err := rows.Scan(&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &p, &ev.EvaluatedAt); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+		if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+			return nil, fmt.Errorf("unmarshal: %w", err)
+		}
+		if p != nil {
+			ap := domain.ArchivePool(*p)
+			ev.ArchivedPool = &ap
+		}
+		out = append(out, ev)
+	}
+	return out, rows.Err()
+}
+
+// ListAll 返回该用户全部评估 (新→旧), 含 passed (archived_pool=NULL, 不在任何 pool).
+// web-admin "分析师评审" 页统一列表用 — pool 列表看不到 passed 的.
+func (r *Repository) ListAll(ctx context.Context, userID uuid.UUID, limit int) ([]Evaluation, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 100
+	}
+	const q = `
+		SELECT ge.id, ge.user_id, ge.refinement_id, ge.gates_detail, ge.passed, ge.failed_gate, ge.archived_pool, ge.evaluated_at
+		FROM gate_evaluations ge
+		WHERE ge.user_id = $1
+		ORDER BY ge.evaluated_at DESC
+		LIMIT $2
+	`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list all: %w", err)
 	}
 	defer rows.Close()
 	out := make([]Evaluation, 0, limit)

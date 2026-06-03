@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { flashfi } from "@/lib/api";
+import { wiseflow } from "@/lib/api";
 import { Loading, ErrorBox } from "@/components/QueryState";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, ClipboardCheck, Inbox, Briefcase, History } from "lucide-react";
@@ -45,23 +45,23 @@ function CountCard({
 export function DashboardPage() {
   const signals = useQuery({
     queryKey: ["signals"],
-    queryFn: flashfi.signals.list,
+    queryFn: () => wiseflow.signals.list(),
   });
   const commitments = useQuery({
     queryKey: ["commitments-active"],
-    queryFn: flashfi.commitments.active,
+    queryFn: wiseflow.commitments.active,
   });
   const holdings = useQuery({
     queryKey: ["holdings-active"],
-    queryFn: flashfi.holdings.active,
+    queryFn: wiseflow.holdings.active,
   });
   const retrospects = useQuery({
     queryKey: ["retrospects"],
-    queryFn: flashfi.retrospects.list,
+    queryFn: wiseflow.retrospects.list,
   });
   const health = useQuery({
     queryKey: ["dashboard-health"],
-    queryFn: flashfi.health,
+    queryFn: wiseflow.health,
     refetchInterval: 10_000,
   });
 
@@ -69,7 +69,7 @@ export function DashboardPage() {
     <div>
       <PageHeader
         title="概览"
-        description="flashfi 后台. 数据走 /v1/* 端点, 实时透传 Postgres + NATS 状态."
+        description="wiseflow 后台. 数据走 /v1/* 端点, 实时透传 Postgres + NATS 状态."
         actions={
           health.data?.status === "ok" ? (
             <Badge variant="success">backend healthy</Badge>

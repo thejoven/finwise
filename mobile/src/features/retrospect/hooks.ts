@@ -14,29 +14,33 @@ import {
   type RetrospectDimT,
 } from "@/core/api/retrospect";
 import { uuidV4 } from "@/core/uuid";
+import { byIdQuery } from "@/core/api/query";
+import { useActiveProject } from "@/features/project/store";
 
 const RETROSPECT_KEY = (id: string) => ["retrospect", id] as const;
 const RETROSPECTS_KEY = ["retrospects"] as const;
 
 export function useRetrospect(id: string | undefined) {
-  return useQuery({
-    queryKey: id ? RETROSPECT_KEY(id) : ["retrospect", "none"],
-    queryFn: () => getRetrospect(id!),
-    enabled: !!id,
-  });
+  return useQuery(byIdQuery(["retrospect"], id, getRetrospect));
 }
 
 export function useRetrospectList() {
+  // 按当前激活分类过滤 (key 带 activeId). 兜底列表 key ["retrospects"] 仍被
+  // mutation 的 invalidate 前缀匹配命中, 不受影响.
+  const activeId = useActiveProject((s) => s.activeId);
   return useQuery({
-    queryKey: RETROSPECTS_KEY,
-    queryFn: listRetrospects,
+    queryKey: [...RETROSPECTS_KEY, activeId],
+    queryFn: () => listRetrospects(activeId),
   });
 }
 
 export function useStartRetrospect() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: async (input: { commitment_id: string; trigger?: "expired" | "closed" | "manual" }) => {
+    mutationFn: async (input: {
+      commitment_id: string;
+      trigger?: "expired" | "closed" | "manual";
+    }) => {
       return startRetrospect(input);
     },
     onSuccess: async (retro) => {

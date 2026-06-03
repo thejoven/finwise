@@ -26,6 +26,7 @@ import type {
 
 import { InputTrigger } from "./InputTrigger";
 import { TextInputModal } from "./TextInputModal";
+import { optionStyles } from "./optionStyles";
 
 interface Props {
   question: PendingQuestionPayload;
@@ -447,16 +448,16 @@ function OptionRow({
     <View>
       <TapEffect
         onPress={onPress}
-        style={[styles.option, selected && styles.optionSelected]}
+        style={[optionStyles.option, selected && optionStyles.optionSelected]}
         pressedStyle={styles.optionPressed}
       >
-        <View style={styles.optionMarker}>
+        <View style={optionStyles.optionMarker}>
           {marker === "dot" ? (
-            <View style={[styles.dot, selected && styles.dotSelected]} />
+            <View style={[optionStyles.dot, selected && optionStyles.dotSelected]} />
           ) : marker === "square" ? (
-            <View style={[styles.square, selected && styles.squareSelected]} />
+            <View style={[optionStyles.square, selected && optionStyles.squareSelected]} />
           ) : (
-            <Mono size={11} style={[styles.rank, selected && styles.rankSelected]}>
+            <Mono size={11} style={[optionStyles.rank, selected && optionStyles.rankSelected]}>
               {rank ?? indexLabel(index)}
             </Mono>
           )}
@@ -466,7 +467,7 @@ function OptionRow({
           italic={isUserInput}
           style={[
             styles.optionText,
-            selected && styles.optionTextSelected,
+            selected && optionStyles.optionTextSelected,
             isUserInput && styles.userInputLabel,
           ]}
         >
@@ -543,64 +544,13 @@ const styles = StyleSheet.create({
   options: {
     gap: theme.spacing.sm,
   },
-  option: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: theme.color.rule,
-    backgroundColor: theme.color.paper2,
-    gap: theme.spacing.md,
-  },
-  optionSelected: {
-    borderColor: theme.color.ink,
-    borderWidth: 1,
-    backgroundColor: theme.color.paper3,
-  },
   optionPressed: {
     backgroundColor: theme.color.paperPressed,
-  },
-  optionMarker: {
-    width: 24,
-    alignItems: "center",
-    paddingTop: 4,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    borderWidth: 1.5,
-    borderColor: theme.color.muted,
-  },
-  dotSelected: {
-    backgroundColor: theme.color.ink,
-    borderColor: theme.color.ink,
-  },
-  square: {
-    width: 10,
-    height: 10,
-    borderWidth: 1.5,
-    borderColor: theme.color.muted,
-  },
-  squareSelected: {
-    backgroundColor: theme.color.ink,
-    borderColor: theme.color.ink,
-  },
-  rank: {
-    color: theme.color.muted,
-  },
-  rankSelected: {
-    color: theme.color.ink,
-    fontWeight: "600",
   },
   optionText: {
     flex: 1,
     color: theme.color.ink2,
     lineHeight: 22,
-  },
-  optionTextSelected: {
-    color: theme.color.ink,
   },
   openWrap: {
     gap: theme.spacing.md,

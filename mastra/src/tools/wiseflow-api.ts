@@ -1,5 +1,5 @@
 /**
- * flashfi-api — HTTP client for the Go server's /v1/internal/* surface.
+ * wiseflow-api — HTTP client for the Go server's /v1/internal/* surface.
  * Used by the workflow to write inferences back.
  *
  * 重试策略 (M2 critical fix):
@@ -15,14 +15,14 @@ import type { Question, PriorRound } from "../agents/socratic.js";
 import type { Thesis } from "../agents/narrator.js";
 import type { SearchResult } from "./exa-search.js";
 
-export class FlashfiApiError extends Error {
+export class WiseFlowApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly body: string,
   ) {
     super(message);
-    this.name = "FlashfiApiError";
+    this.name = "WiseFlowApiError";
   }
 }
 
@@ -37,7 +37,7 @@ const MAX_HTTP_ATTEMPTS = 3;
 const HTTP_TIMEOUT_MS = 10_000;
 
 export async function postInference(args: PostInferenceArgs): Promise<void> {
-  const url = `${config.flashfiApiUrl}/v1/internal/inferences`;
+  const url = `${config.wiseflowApiUrl}/v1/internal/inferences`;
   const body = JSON.stringify({
     signal_id: args.signal_id,
     user_id: args.user_id,
@@ -78,7 +78,7 @@ async function postOnce(url: string, body: string): Promise<void> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new FlashfiApiError(
+      throw new WiseFlowApiError(
         `POST /v1/internal/inferences failed: ${res.status}`,
         res.status,
         text,
@@ -90,7 +90,7 @@ async function postOnce(url: string, body: string): Promise<void> {
 }
 
 function shouldRetry(err: unknown): boolean {
-  if (err instanceof FlashfiApiError) return err.status >= 500;
+  if (err instanceof WiseFlowApiError) return err.status >= 500;
   // AbortError / network error / DNS / connection refused → retry.
   return true;
 }
@@ -115,8 +115,10 @@ export interface PostRefinementQuestionArgs {
 }
 
 /** 把 Socratic 出好的题目 POST 回 Go server, 让 server 缓存 + 客户端可见. */
-export async function postRefinementQuestion(args: PostRefinementQuestionArgs): Promise<void> {
-  const url = `${config.flashfiApiUrl}/v1/internal/refinement/sessions/${args.session_id}/question`;
+export async function postRefinementQuestion(
+  args: PostRefinementQuestionArgs,
+): Promise<void> {
+  const url = `${config.wiseflowApiUrl}/v1/internal/refinement/sessions/${args.session_id}/question`;
   const body = JSON.stringify({
     user_id: args.user_id,
     round: args.round,
@@ -138,6 +140,9 @@ export interface SessionView {
   primary_asset?: string;
   primary_signal_raw_text?: string;
   primary_signal_summary?: string;
+  /** 分类上下文 (经 signal.project_id JOIN projects). 注入 socratic/narrator/attention prompt. */
+  project_name?: string;
+  project_guidance?: string;
   status: "active" | "completed" | "abandoned";
   rounds_done: number;
   decision?: string;
@@ -158,8 +163,11 @@ export interface SessionView {
   pending_question?: { round: number; payload: unknown };
 }
 
-export async function getRefinementSession(args: { session_id: string; user_id: string }): Promise<SessionView> {
-  const url = `${config.flashfiApiUrl}/v1/internal/refinement/sessions/${args.session_id}?user_id=${encodeURIComponent(args.user_id)}`;
+export async function getRefinementSession(args: {
+  session_id: string;
+  user_id: string;
+}): Promise<SessionView> {
+  const url = `${config.wiseflowApiUrl}/v1/internal/refinement/sessions/${args.session_id}?user_id=${encodeURIComponent(args.user_id)}`;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), HTTP_TIMEOUT_MS);
   try {
@@ -169,7 +177,11 @@ export async function getRefinementSession(args: { session_id: string; user_id: 
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new FlashfiApiError(`GET refinement session failed: ${res.status}`, res.status, text);
+      throw new WiseFlowApiError(
+        `GET refinement session failed: ${res.status}`,
+        res.status,
+        text,
+      );
     }
     return (await res.json()) as SessionView;
   } finally {
@@ -190,8 +202,10 @@ export interface PostCommitmentDraftResult {
   commitment_id: string;
 }
 
-export async function postCommitmentDraft(args: PostCommitmentDraftArgs): Promise<PostCommitmentDraftResult> {
-  const url = `${config.flashfiApiUrl}/v1/internal/commitments/draft`;
+export async function postCommitmentDraft(
+  args: PostCommitmentDraftArgs,
+): Promise<PostCommitmentDraftResult> {
+  const url = `${config.wiseflowApiUrl}/v1/internal/commitments/draft`;
   const body = JSON.stringify({
     user_id: args.user_id,
     evaluation_id: args.evaluation_id,
@@ -230,7 +244,11 @@ async function postOnceReturning<T>(url: string, body: string): Promise<T> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new FlashfiApiError(`POST ${url} failed: ${res.status}`, res.status, text);
+      throw new WiseFlowApiError(
+        `POST ${url} failed: ${res.status}`,
+        res.status,
+        text,
+      );
     }
     return (await res.json()) as T;
   } finally {
@@ -279,7 +297,7 @@ export interface PostResearchArgs {
 }
 
 export async function postResearch(args: PostResearchArgs): Promise<void> {
-  const url = `${config.flashfiApiUrl}/v1/internal/research`;
+  const url = `${config.wiseflowApiUrl}/v1/internal/research`;
   const body = JSON.stringify({
     user_id: args.user_id,
     scope: args.scope,
@@ -308,6 +326,42 @@ export interface PostAttentionArgs {
 }
 
 export async function postAttention(args: PostAttentionArgs): Promise<void> {
-  const url = `${config.flashfiApiUrl}/v1/internal/attention`;
+  const url = `${config.wiseflowApiUrl}/v1/internal/attention`;
   await retryingPost(url, JSON.stringify(args));
+}
+
+// ─────────────────────────── Distillation (降噪页) ───────────────────────────
+
+/**
+ * Mastra post-refinement workflow 把降噪综述 / 收益标的信号写回. distiller 与
+ * beneficiary 各调一次, 只带自己那部分字段 (省略的 server 用 COALESCE 保留已有值).
+ *   - distilled_content : distiller 的降噪综述
+ *   - beneficiary        : 收益标的数组. [] = 沉默 (推演完无映射); 省略 = 这次不更新
+ *   - beneficiary_note   : 受益链整体框架句
+ *
+ * JSON.stringify 会丢掉 undefined 字段 → distiller 那次不带 beneficiary, server 端
+ * 收到的 beneficiary 即缺省 (nil), COALESCE 不动它.
+ */
+export interface PostDistillationArgs {
+  refinement_id: string;
+  user_id: string;
+  distilled_content?: string;
+  beneficiary?: unknown[];
+  beneficiary_note?: string;
+  model: string;
+}
+
+export async function postDistillation(
+  args: PostDistillationArgs,
+): Promise<void> {
+  const url = `${config.wiseflowApiUrl}/v1/internal/distillation`;
+  const body = JSON.stringify({
+    refinement_id: args.refinement_id,
+    user_id: args.user_id,
+    distilled_content: args.distilled_content,
+    beneficiary: args.beneficiary,
+    beneficiary_note: args.beneficiary_note,
+    model: args.model,
+  });
+  await retryingPost(url, body);
 }

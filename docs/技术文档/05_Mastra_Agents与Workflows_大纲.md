@@ -20,26 +20,22 @@
 ### § 1. Mastra 项目结构
 
 ```
-/mastra
-  /agents
-    socratic-interviewer.agent.ts     # 五轮追问
-    analyst.agent.ts                  # 推演 (两种模式)
-    narrator.agent.ts                 # 承诺书叙述
-    editor.agent.ts                   # 焦虑陪伴主笔按
-    diagnostician.agent.ts            # 复盘四问
+/mastra/src
+  /agents          # socratic / analyst / narrator / editor / diagnostician
+                   # + thickness / consensus / lens / category / schema (辅助判定 / 打标)
+  /skills
+    /analyst             # 推演 skill (instructions + examples + 严格输出)
+    /attention-analyst   # 五轮追问后的注意力诊断 skill (M11-bis)
   /workflows
-    signal-inference.workflow.ts      # 信号后台推演
-    gate-prep.workflow.ts             # 门评估数据准备
-    commitment-narration.workflow.ts  # 承诺书叙述生成
-  /tools
-    rag-search.tool.ts                # 调 Go 的 RAG 接口
-    go-client.ts                      # 通用 Go HTTP 客户端
-    embedding.tool.ts                 # OpenAI embedding
-  /prompts
-    *.prompt.md                       # 所有 prompt 用 markdown 单独管理
-  /tests
-    fixtures/                         # 历史信号样本
-    *.test.ts                         # Agent 输出验收测试
+    signal-inference.ts  # 信号后台推演
+    refinement-step.ts   # 五轮追问推进一步
+    attention-analyze.ts # 注意力诊断 (读完整 refinement → 四维打分)
+    commitment-draft.ts  # 承诺书草稿生成
+  /iii
+    worker.ts            # iii SDK worker: 注册 4 个 queue processor + 5 个 HTTP shim
+  /server                # Mastra HTTP :9091 同步入口 (thicknessJudge / consensus / editor / diagnostician)
+  /tools                 # wiseflow-api.ts (调 Go /v1/internal/*) + embedding
+  /llm  /memory  /config
 ```
 
 ### § 2. Agent 设计规范
@@ -88,11 +84,19 @@
 - 严格按四问顺序、可中途终止 (第 1 问失败直接结束)
 - 推荐模型:Claude Sonnet
 
-### § 4. 三个 Workflow 完整设计
+**§ 3.6 Attention Analyst (注意力诊断,M11-bis)**
+- 用途:一次五轮追问完成后,读完整记录,在 `focus / depth / breadth / execution` 四维各打 0–100
+- 产出:一句话 insight + 一条落到"下次具体动作"的 blindspot,写回 `POST /v1/internal/attention`
+- 以 skill 形式管理(`skills/attention-analyst/`:instructions + examples + 严格输出)
+- 触发:`refinement.completed` 事件 → iii 队列 `attention-analyze`
+
+### § 4. Workflow 完整设计
+
+异步 Workflow 现在都作为 **iii 队列的 processor** 运行(由 `src/iii/worker.ts` 注册);同步、要仪式感或要即时返回的 LLM 调用走 Mastra HTTP :9091 直连,**不经 iii**。实际 Workflow 集合:`signal-inference` / `refinement-step` / `attention-analyze` / `commitment-draft`。
 
 每个 Workflow 一节:
 
-**§ 4.1 Signal Inference Workflow** (异步,触发自 NATS)
+**§ 4.1 Signal Inference Workflow** (异步,iii 队列 `signal-inference`)
 - 5 个 step,可重试
 - 调用 Analyst Agent 两次(打标 + 推演)
 
@@ -119,12 +123,12 @@
 
 ### § 7. 流式响应实现
 
-哪些 Agent 流式、怎么从 Mastra 流到 Go 到 Flutter 的 SSE:
+哪些 Agent 流式、怎么从 Mastra 流到 Go 到 React Native 的 SSE:
 
 ```
 Mastra Agent (token stream)
   → Go gateway (SSE 转发)
-  → Flutter (SSE 解析)
+  → React Native (SSE 解析)
 ```
 
 中间不缓存,实时透传。

@@ -22,7 +22,9 @@ export function InboxCallouts() {
   const { data: commitment } = useActiveCommitment();
   const { data: retrospects } = useRetrospectList();
 
-  const pendingRetrospect = retrospects?.find((r) => r.state === "pending" || r.state === "in_progress");
+  const pendingRetrospect = retrospects?.find(
+    (r) => r.state === "pending" || r.state === "in_progress",
+  );
   const draftedCommitment = commitment?.status === "drafted" ? commitment : null;
 
   // 优先级: pending retrospect > drafted commitment > 无
@@ -60,7 +62,11 @@ interface CalloutProps {
 
 function Callout({ stamp, title, subtitle, onPress }: CalloutProps) {
   return (
-    <TapEffect style={styles.card} pressedStyle={{ backgroundColor: theme.color.paperPressed }} onPress={onPress}>
+    <TapEffect
+      style={styles.card}
+      pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+      onPress={onPress}
+    >
       <View style={styles.rule} />
       <Mono size={9} style={styles.stamp}>
         {stamp.toUpperCase()} · 一封信

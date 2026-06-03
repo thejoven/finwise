@@ -125,7 +125,7 @@ PDF 模板 `templates/commitment.html`:
 
 PDF 存 S3 / minio / 本地文件系统:
 
-- Phase 2 简化: 本地 `/var/flashfi/pdfs/{user_id}/{commitment_id}.pdf`
+- Phase 2 简化: 本地 `/var/wiseflow/pdfs/{user_id}/{commitment_id}.pdf`
 - Phase 4+ 接 S3
 
 用户能通过 `GET /v1/commitments/:id/pdf` 下载。

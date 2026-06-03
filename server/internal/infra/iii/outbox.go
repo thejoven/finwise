@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/infra/db"
-	"flashfi/server/internal/infra/metrics"
+	"wiseflow/server/internal/infra/db"
+	"wiseflow/server/internal/infra/metrics"
 )
 
 // OutboxWorker drains event_outbox to the iii engine over HTTP.

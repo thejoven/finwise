@@ -1,4 +1,4 @@
-# Flashfi Engine · Progress & Master Roadmap
+# 财富密码 · Progress & Master Roadmap
 
 > 这份是**操作面板** — 当前在哪一周, 下一步做什么, 风险在哪.
 > [GOAL.md](GOAL/GOAL.md) 是**宪法** (产品哲学 + 衡量标准), 这份不替代它.
@@ -17,7 +17,7 @@ W0  📍 ← 现在 · 全栈代码完成, 等"自己用"验收
 W1-W7   M1-M4 Phase 1         ✅  代码 + tsc + go vet 全绿
 W8      自己用一周            ⬜  3 端联调 → 7 天每天 1+ 录入
 W9-W11  M5 五轮追问           ✅  backend + Mastra Socratic + mobile
-W12-W13 M6 四道门             ✅  G1/G3/G4 启发式 · G2 接 Mastra ConsensusCheck
+W12-W13 M6 四道门             ✅  G1/G3/G4 启发式 · G2 接 Mastra ConsensusCheck (+ 共识指方向 unpriced_directions)
 W14-W15 M7 承诺书             ✅  Mastra Narrator + verbatim 校验 + mobile
 W16-W17 M8 签字 + 持仓        ✅  幂等 sign + holdings 状态机 + mobile
 W18     自己用一周            ⬜
@@ -47,7 +47,7 @@ W26     自己用一周            ⬜
 | netinfo + AppState | [network/netinfo.ts](../mobile/src/core/network/netinfo.ts) · [appstate.ts](../mobile/src/core/network/appstate.ts) | ✅ |
 | Sync Queue mutex + 3 attempts + backoff | [store.ts](../mobile/src/features/capture/store.ts) · [PendingFlush.tsx](../mobile/src/features/capture/PendingFlush.tsx) | ✅ |
 | 自适应轮询 + focusManager | [hooks.ts](../mobile/src/features/capture/hooks.ts) · [_layout.tsx](../mobile/app/_layout.tsx) | ✅ |
-| LLM 自动评分 + few-shot + HTTP 重试 | [analyst.ts](../mastra/src/agents/analyst.ts) · [flashfi-api.ts](../mastra/src/tools/flashfi-api.ts) · [eval/run.ts](../mastra/tests/manual-eval/run.ts) | ✅ tsc 通过 |
+| LLM 自动评分 + few-shot + HTTP 重试 | [analyst.ts](../mastra/src/agents/analyst.ts) · [wiseflow-api.ts](../mastra/src/tools/wiseflow-api.ts) · [eval/run.ts](../mastra/tests/manual-eval/run.ts) | ✅ tsc 通过 |
 | Backend 6 个 HTTP 集成测试 | [handler_test.go](../server/internal/module/signal/handler_test.go) | ✅ go vet 通过 |
 
 ### 设计已写
@@ -63,7 +63,7 @@ W26     自己用一周            ⬜
 | Module | Backend | Mastra | Mobile | 状态 |
 |---|---|---|---|---|
 | M5 refinement | [refinement/](../server/internal/module/refinement/) | [socratic.ts](../mastra/src/agents/socratic.ts) + [refinement-step.ts](../mastra/src/workflows/refinement-step.ts) | [app/refinement/[sessionId].tsx](../mobile/app/refinement/) | ✅ |
-| M6 gate engine | [gate/](../server/internal/module/gate/) (4 道门 + NATS consumer) | [consensus.ts](../mastra/src/agents/consensus.ts) (G2 真 LLM) | [archive tab](../mobile/app/(tabs)/archive.tsx) (4 池视图) | ✅ |
+| M6 gate engine | [gate/](../server/internal/module/gate/) (4 道门 + outbox PostPublish 内联评估) | [consensus.ts](../mastra/src/agents/consensus.ts) (G2 真 LLM) | [archive tab](../mobile/app/(tabs)/archive.tsx) (4 池视图) | ✅ |
 | M7 commitment | [commitment/](../server/internal/module/commitment/) | [narrator.ts](../mastra/src/agents/narrator.ts) + [commitment-draft.ts](../mastra/src/workflows/commitment-draft.ts) (verbatim 校验) | [app/commitment/[id].tsx](../mobile/app/commitment/) | ✅ |
 | M8 signing | (同 commitment 模块) sign / postpone / holdings | — | (同 commitment) sign 按钮 + 持仓状态 | ✅ |
 | M9 companion | [companion/](../server/internal/module/companion/) | [editor.ts](../mastra/src/agents/editor.ts) (verbatim quote) | [commitment 页](../mobile/app/commitment/[id].tsx) 内嵌焦虑卡 + POST /open | ✅ |
@@ -108,7 +108,7 @@ W26     自己用一周            ⬜
 1. **本地跑 mobile**: 你的 `expo start` 已在另一 terminal. 改动会 Fast Refresh,
    但首次 SQLite hydrate 需要重启 App (cmd+R in simulator).
 2. **联调 backend**: `./scripts/remote-sync.sh` 推到 192.168.1.205, 然后
-   `ssh root@192.168.1.205 'cd /opt/flashfi/server && DATABASE_URL=... go test ./...'`
+   `ssh root@192.168.1.205 'cd /opt/wiseflow/server && DATABASE_URL=... go test ./...'`
 3. **联调 mastra**: `cd mastra && ANTHROPIC_API_KEY=... npm run eval` 看 ≥7/10 通过
 4. **端到端**: 模拟器录一条信号 → 飞行模式 → 录第二条 → 关 App → 重开 → 看 SQLite 队列还在 → 开飞行模式 → 看是否自动同步
 
@@ -167,7 +167,7 @@ W8 末三问 (overview § 进入下一阶段的过关问题):
 |---|---|---|---|---|
 | 1 | **自己半年后失去兴趣** | 中 | 致命 | 每个 Phase 末"自己用一周"是续命阀. 不可跳过. |
 | 2 | **Narrator 字符级 verbatim 引用失守** | 高 | 高 | Phase 2 风险. 必须在 workflow 层做 substring 校验 + retry + nak 三层兜底. 见 [Phase 2 plan § Narrator](GOAL/phase-2-ritual/IMPLEMENTATION_PLAN.md) |
-| 3 | **Diagnostician 输出语义不稳定** | 高 | 高 | Phase 3 风险. M11 已知坑 #1, prompt 至少迭代 10-20 次. 失败 = Flashfi 退回 BI 报告. |
+| 3 | **Diagnostician 输出语义不稳定** | 高 | 高 | Phase 3 风险. M11 已知坑 #1, prompt 至少迭代 10-20 次. 失败 = 财富密码 退回 BI 报告. |
 | 4 | **行为指纹假阳性 → 焦虑卡反而制造焦虑** | 中 | 高 | Phase 3 风险. M9 完成后必须 10 天人工标注, 不达标 → 降低触发率而非调阈值. |
 | 5 | **训练重点写回闭环漏掉** | 中 | 高 | Phase 3 风险. M11.5 是哲学第 7 条物理实现. 跨 Phase 测试容易跳过. |
 | 6 | **SSE 离线恢复复杂度爆炸** | 中 | 中 | Phase 2 风险. M5 五轮中断恢复链路 4 个组件, 估时可能不够. 预留 buffer. |

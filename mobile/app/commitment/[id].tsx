@@ -19,11 +19,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, TextInput, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 
 import {
   Display,
   DoubleRule,
+  Icon,
   Mono,
   Sans,
   SectionHeader,
@@ -31,14 +31,12 @@ import {
   TapEffect,
 } from "@/shared/components";
 import { theme } from "@/core/theme";
+import { formatIsoDate } from "@/shared/format";
 
-import {
-  useCommitment,
-  usePostponeCommitment,
-  useSignCommitment,
-} from "@/features/commitment";
+import { useCommitment, usePostponeCommitment, useSignCommitment } from "@/features/commitment";
 import { TypewriterText } from "@/features/refinement";
 import { useRecordOpen, type CompanionView } from "@/features/companion";
+import { ProjectBadge } from "@/features/project/ProjectBadge";
 
 type FinalDecisionChoice = "as_drafted" | "lower_position" | "longer_hold" | "user_input";
 
@@ -282,16 +280,19 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
     <View style={styles.body}>
       <Mono size={9} style={styles.stamp}>
         {signed
-          ? `已签字 · ${formatDate(commitment.signed_at ?? "")}`
+          ? `已签字 · ${formatIsoDate(commitment.signed_at ?? "")}`
           : postponed
             ? `已放置 · ${commitment.postpone_count}/3`
             : "草稿 · 等你签字"}
       </Mono>
 
+      <ProjectBadge projectId={commitment.project_id} />
+
       <Display size={26} style={styles.headline}>
         {t.asset_name}
         <Display size={26} italic>
-          {" "}({t.asset_ticker})
+          {" "}
+          ({t.asset_ticker})
         </Display>
       </Display>
       <Mono size={11} style={styles.meta}>
@@ -309,7 +310,9 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
       <View style={styles.list}>
         {t.exit_conditions.map((c, i) => (
           <View key={i} style={styles.listItem}>
-            <Mono size={11} style={styles.listMarker}>{roman(i + 1)}.</Mono>
+            <Mono size={11} style={styles.listMarker}>
+              {roman(i + 1)}.
+            </Mono>
             <Serif size={14} style={styles.listText}>
               {c}
             </Serif>
@@ -321,7 +324,9 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
       <View style={styles.reasons}>
         {t.reasons_for_future_self.map((r, i) => (
           <View key={i} style={styles.reasonItem}>
-            <Mono size={10} style={styles.reasonMarker}>§ {i + 1}</Mono>
+            <Mono size={10} style={styles.reasonMarker}>
+              § {i + 1}
+            </Mono>
             <Serif size={14} italic style={styles.reasonText}>
               {r}
             </Serif>
@@ -332,7 +337,10 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
       {signed ? (
         <View style={styles.signedBanner}>
           <DoubleRule />
-          <SectionHeader label="持仓中" meta={`签字日 ${formatDate(commitment.signed_at ?? "")}`} />
+          <SectionHeader
+            label="持仓中"
+            meta={`签字日 ${formatIsoDate(commitment.signed_at ?? "")}`}
+          />
           <Serif size={13} italic style={styles.muted}>
             这份承诺已经归档. 退出条件已经被复制到持仓状态机, 它会安静地巡检. 你不用做什么.
           </Serif>
@@ -369,7 +377,7 @@ function Header() {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
-        <ChevronLeft size={18} color={theme.color.ink} strokeWidth={1.5} />
+        <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
@@ -396,15 +404,6 @@ function actionLabel(a: string): string {
 function roman(n: number): string {
   const r = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
   return r[n - 1] ?? String(n);
-}
-
-function formatDate(iso: string): string {
-  if (!iso) return "";
-  try {
-    return new Date(iso).toISOString().slice(0, 10);
-  } catch {
-    return iso.slice(0, 10);
-  }
 }
 
 const styles = StyleSheet.create({

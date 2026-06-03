@@ -34,7 +34,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Display, Sans } from "@/shared/components";
-import { theme } from "@/core/theme";
+import { theme, useThemeColors } from "@/core/theme";
 
 export interface SplashCoverProps {
   /** 动画完整结束后回调. 上层用它把组件从树中卸载. */
@@ -43,6 +43,8 @@ export interface SplashCoverProps {
 
 export function SplashCover({ onFinish }: SplashCoverProps) {
   const insets = useSafeAreaInsets();
+  // Reanimated 的 Animated.View 不认 DynamicColorIOS 动态色, 根容器底色取 resolved hex.
+  const c = useThemeColors();
 
   const ruleScale = useSharedValue(0);
   const nameOpacity = useSharedValue(0);
@@ -92,7 +94,11 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
 
   return (
     <Animated.View
-      style={[styles.root, rootStyle, { paddingTop: insets.top, paddingBottom: insets.bottom }]}
+      style={[
+        styles.root,
+        rootStyle,
+        { paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: c.paper },
+      ]}
       pointerEvents="none"
     >
       <View style={styles.topMeta}>
@@ -149,7 +155,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: theme.color.paper,
+    // backgroundColor 改为内联 resolved hex (见上) — Reanimated 不认动态色.
     zIndex: 100,
     elevation: 100,
   },

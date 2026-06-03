@@ -6,7 +6,7 @@
 
 ## 上下文
 
-这是 Flashfi Engine 的地基模块。所有后续业务模块的数据都流过这里。
+这是 财富密码 的地基模块。所有后续业务模块的数据都流过这里。
 
 它不直接面向用户, 但它**定义了整个系统的数据真相**——
 events 表的 schema, 物化视图的派生规则, Go 服务的边界划分。
@@ -32,7 +32,7 @@ events 表的 schema, 物化视图的派生规则, Go 服务的边界划分。
 完成后, 项目目录里有:
 
 ```
-flashfi/
+wiseflow/
 ├── server/                           # Go 后端
 │   ├── cmd/
 │   │   └── api/main.go               # HTTP 入口
@@ -73,11 +73,11 @@ flashfi/
 ### Task 1.1 · 仓库初始化
 
 ```bash
-mkdir flashfi && cd flashfi
+mkdir wiseflow && cd wiseflow
 git init
 # 加 .gitignore (Go + Node + macOS)
 mkdir server && cd server
-go mod init github.com/<user>/flashfi/server
+go mod init github.com/<user>/wiseflow/server
 ```
 
 **已知坑**:
@@ -93,15 +93,15 @@ services:
   postgres:
     image: pgvector/pgvector:pg16
     environment:
-      POSTGRES_DB: flashfi
-      POSTGRES_USER: flashfi
+      POSTGRES_DB: wiseflow
+      POSTGRES_USER: wiseflow
       POSTGRES_PASSWORD: dev_password_change_me
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U flashfi"]
+      test: ["CMD-SHELL", "pg_isready -U wiseflow"]
       interval: 5s
 
   nats:
@@ -150,7 +150,7 @@ CREATE INDEX idx_events_thesis ON events (related_thesis) WHERE related_thesis I
 
 -- 关键: append-only 保护
 REVOKE UPDATE, DELETE ON events FROM PUBLIC;
-REVOKE UPDATE, DELETE ON events FROM flashfi;
+REVOKE UPDATE, DELETE ON events FROM wiseflow;
 ```
 
 **已知坑**:
@@ -312,7 +312,7 @@ lint:
 
 ### 项目结构
 - [ ] 目录结构和 § 任务列表预期一致
-- [ ] go.mod 用了 `flashfi` 而不是泛 module name
+- [ ] go.mod 用了 `wiseflow` 而不是泛 module name
 - [ ] .env.example 列出所有需要的变量
 
 ### 文档

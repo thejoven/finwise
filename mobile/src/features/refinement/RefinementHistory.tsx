@@ -14,11 +14,19 @@
 
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
-import { ChevronDown, ChevronUp } from "lucide-react-native";
 
-import { Display, DoubleRule, Mono, RichText, Sans, Serif, TapEffect } from "@/shared/components";
+import {
+  Display,
+  DoubleRule,
+  Icon,
+  Mono,
+  RichText,
+  Sans,
+  Serif,
+  TapEffect,
+} from "@/shared/components";
 import { theme } from "@/core/theme";
-import { formatLongDate } from "@/features/capture";
+import { formatDuration, formatLongDate } from "@/shared/format";
 import type { Diagnosis, QuestionOption, RoundView, UserAnswer } from "@/core/api/refinement";
 
 interface Props {
@@ -56,9 +64,9 @@ export function RefinementHistory({
           {headerMeta}
         </Serif>
         {expanded ? (
-          <ChevronUp size={14} color={theme.color.muted} strokeWidth={1.5} />
+          <Icon name="chevronUp" size={14} color={theme.color.muted} strokeWidth={1.5} />
         ) : (
-          <ChevronDown size={14} color={theme.color.muted} strokeWidth={1.5} />
+          <Icon name="chevronDown" size={14} color={theme.color.muted} strokeWidth={1.5} />
         )}
       </TapEffect>
 
@@ -102,7 +110,7 @@ function RoundBlock({ round }: { round: RoundView }) {
           ROUND {round.round} · {kindLabel(round.question_kind)}
         </Mono>
         <Mono size={9} style={styles.timeStamp}>
-          {formatTime(round.user_answer.time_ms)}
+          {formatDuration(round.user_answer.time_ms)}
         </Mono>
       </View>
 
@@ -261,19 +269,10 @@ function diagnosisBadgeStyle(k: Diagnosis["kind"]) {
   }
 }
 
-function formatTime(ms: number): string {
-  if (!ms || ms < 0) return "—";
-  const sec = Math.round(ms / 1000);
-  if (sec < 60) return `${sec}s`;
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  return `${m}m${String(s).padStart(2, "0")}s`;
-}
-
 function decisionLabel(decision?: string): string | undefined {
   if (!decision) return undefined;
   if (decision === "training_only") return "训练";
-  if (decision === "eligible_for_gate") return "进入四道门";
+  if (decision === "eligible_for_gate") return "进入分析师评审";
   return decision;
 }
 

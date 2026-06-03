@@ -2,7 +2,7 @@
  * ThicknessJudge Agent · G1 信号厚度的 LLM 判定.
  *
  * 替换原 Go 侧的 "近 14 天 ≥3 个独立 tag-cluster" 启发式. 用 RAG 召回当前用户
- * 历史信号 + Flashfi Pro Lens 框架综合判定:
+ * 历史信号 + WiseFlow Pro Lens 框架综合判定:
  *
  *   - single_signal_richness: 当前这条信号本身够不够厚 (跨多少 lens / 有具体 actor / 含数字与链条)
  *   - cross_signal_breadth:   召回的历史信号是否构成"主题地图" (跨主题 / 不同 enabling chain)
@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { categoryContextBlock } from "./category.js";
 import { recallSimilar, type RecalledSignal } from "../memory/vector-store.js";
 import { getMemory } from "../memory/agent-memory.js";
 
@@ -40,7 +41,7 @@ export const thicknessAgent = new Agent({
   name: "thickness_judge",
   memory: getMemory(),
   instructions: `
-你是 Flashfi Engine 的 ThicknessJudge.
+你是 WiseFlow Engine 的 ThicknessJudge.
 
 任务: 判定一条信号 (+ 该用户近期相关信号召回) 是否"够厚"到值得进入承诺流程.
 给两个维度评分, 综合给一个 0-100 score, score>=60 算 pass.
@@ -90,6 +91,9 @@ export interface ThicknessInput {
   raw_text: string;
   summary: string;
   tags: string[];
+  project_id?: string;
+  project_name?: string;
+  project_guidance?: string;
 }
 
 export async function runThicknessJudge(input: ThicknessInput): Promise<Thickness> {
@@ -101,6 +105,7 @@ export async function runThicknessJudge(input: ThicknessInput): Promise<Thicknes
       query_text: `${input.summary}\n标签: ${input.tags.join(", ")}`,
       top_k: 10,
       exclude_signal_id: input.signal_id,
+      project_id: input.project_id, // 同分类优先召回 (未分类时退回跨分类)
     });
   } catch (err) {
     // 召回失败不阻断 — agent 仍可以只看单条信号判定 richness
@@ -149,8 +154,9 @@ function buildThicknessPrompt(input: ThicknessInput, recalled: RecalledSignal[])
         .map((r, i) => `  ${i + 1}. [${r.captured_at.slice(0, 10)}] ${r.summary} (tags: ${r.tags.join(", ")})`)
         .join("\n")
     : "  (近期没有召回到相关历史信号)";
-  return `
-当前信号 (待评估厚度):
+  const cat = categoryContextBlock(input.project_name, input.project_guidance);
+  const catPrefix = cat ? cat + "\n\n" : "";
+  return `${catPrefix}当前信号 (待评估厚度):
   signal_id: ${input.signal_id}
   原文: ${input.raw_text.slice(0, 1200)}${input.raw_text.length > 1200 ? "..." : ""}
   inference_summary: ${input.summary}

@@ -1,4 +1,4 @@
-// Package metrics holds all Prometheus collectors for the flashfi server.
+// Package metrics holds all Prometheus collectors for the wiseflow server.
 //
 // 设计原则:
 //   - 一个 metric 一个 const + 全包 export var, 用法 metrics.OutboxPublished.Inc()
@@ -14,7 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-const namespace = "flashfi"
+const namespace = "wiseflow"
 
 // ─────────────────── HTTP ───────────────────
 

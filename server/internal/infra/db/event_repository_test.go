@@ -12,7 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"flashfi/server/internal/domain"
+	"wiseflow/server/internal/domain"
 )
 
 // Integration tests against a real Postgres.

@@ -6,12 +6,32 @@
 import { z } from "zod";
 import { api } from "./client";
 
+export const MarketOutcome = z.object({
+  label: z.string(),
+  /** 市场隐含概率, 0..1. */
+  probability: z.number(),
+});
+export type MarketOutcome = z.infer<typeof MarketOutcome>;
+
+export const MarketData = z.object({
+  outcomes: z.array(MarketOutcome),
+  /** 累计成交额 (USD). */
+  volumeUsd: z.number().optional(),
+  /** 市场截止时间, ISO-8601. */
+  endDate: z.string().optional(),
+});
+export type MarketData = z.infer<typeof MarketData>;
+
 export const ResearchResult = z.object({
   title: z.string(),
   url: z.string(),
   description: z.string(),
   age: z.string().optional(),
   domain: z.string().optional(),
+  /** 线索类型. 缺省视作 "web" (向后兼容旧数据). */
+  kind: z.enum(["web", "market"]).optional(),
+  /** 仅 kind==="market" 时存在: 结构化市场概率, 渲染概率条用. */
+  market: MarketData.optional(),
 });
 export type ResearchResult = z.infer<typeof ResearchResult>;
 

@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
+	"wiseflow/server/internal/domain"
 )
 
 var ErrInvalidInput = errors.New("invalid input")
@@ -76,6 +76,21 @@ func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (*Commitment, e
 
 func (s *Service) LoadActive(ctx context.Context, userID uuid.UUID) (*Commitment, error) {
 	return s.repo.LoadActive(ctx, userID)
+}
+
+// List 返回用户全部承诺 (新→旧). web-admin 列表用.
+func (s *Service) List(ctx context.Context, userID uuid.UUID, limit int) ([]Commitment, error) {
+	return s.repo.ListCommitments(ctx, userID, limit)
+}
+
+// GetByEvaluation 按 evaluation_id 查承诺 (信号链路用). 找不到返回 ErrNotFound.
+func (s *Service) GetByEvaluation(ctx context.Context, userID, evalID uuid.UUID) (*Commitment, error) {
+	return s.repo.GetByEvaluation(ctx, userID, evalID)
+}
+
+// ListHoldings 返回用户全部持仓 (新→旧, 带标的 ticker). web-admin 列表用.
+func (s *Service) ListHoldings(ctx context.Context, userID uuid.UUID, limit int) ([]HoldingListItem, error) {
+	return s.repo.ListHoldings(ctx, userID, limit)
 }
 
 // ───── Sign (M8) ─────

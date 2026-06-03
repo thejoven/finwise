@@ -5,14 +5,15 @@ import { router } from "expo-router";
 
 import { Display, Serif, Sans, TapEffect, DoubleRule } from "@/shared/components";
 import { theme } from "@/core/theme";
-import { useCaptureSignal } from "@/features/capture";
+import { CaptureCategoryPicker, useCaptureSignal } from "@/features/capture";
+import { useActiveProject } from "@/features/project";
 
 /**
  * B1 录入 — M4 实现.
  *
  * 流程:
  *   1) 打开 modal, TextInput 自动 focus
- *   2) 用户写一句话, 点 "记下"
+ *   2) 用户写一句话, 选一个分类 (必选, 默认带入当前 active 分类), 点 "记下"
  *   3) 立即写入本地 pending 队列 (UI 立刻看到), 后台 POST /v1/signals
  *   4) modal 关闭, 回 inbox; inbox 自动多出一条 "AI 推演中"
  *   5) POST 失败时, 条目留在 inbox 标 "未同步" (没有 toast, 没有 dialog)
@@ -25,16 +26,21 @@ import { useCaptureSignal } from "@/features/capture";
  */
 export default function CaptureModal() {
   const [text, setText] = useState("");
+  // 分类必选. 默认带入当前 active 分类 (没有则为 null, 用户须手选).
+  const [projectId, setProjectId] = useState<string | null>(
+    () => useActiveProject.getState().activeId,
+  );
   const { submit, isSubmitting } = useCaptureSignal();
 
-  const canSubmit = text.trim().length > 0 && !isSubmitting;
+  const canSubmit = text.trim().length > 0 && projectId !== null && !isSubmitting;
 
   async function handleSubmit() {
     if (!canSubmit) return;
     const draft = text.trim();
+    const category = projectId;
     setText("");
     // 不 await 网络结果 — pending 队列已经 upsert, UI 立刻关闭即可.
-    void submit(draft);
+    void submit(draft, category);
     router.back();
   }
 
@@ -51,7 +57,7 @@ export default function CaptureModal() {
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
             一次只记一件事。{"\n"}
-            没有标签, 没有分类, 不必精确。
+            选个分类放好, 字句不必精确。
           </Serif>
 
           <TextInput
@@ -66,6 +72,8 @@ export default function CaptureModal() {
             scrollEnabled
           />
         </View>
+
+        <CaptureCategoryPicker selectedId={projectId} onSelect={setProjectId} />
 
         <View style={styles.footer}>
           <TapEffect

@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ErrorBox, Loading } from "@/components/QueryState";
-import { flashfi } from "@/lib/api";
+import { wiseflow } from "@/lib/api";
 import { RefreshCw } from "lucide-react";
 
 interface MetricLine {
@@ -34,7 +34,7 @@ function parseMetrics(text: string): { help: Record<string, string>; lines: Metr
 export function MetricsPage() {
   const q = useQuery({
     queryKey: ["metrics"],
-    queryFn: flashfi.metrics,
+    queryFn: wiseflow.metrics,
     refetchInterval: 10_000,
   });
   const [filter, setFilter] = React.useState("");

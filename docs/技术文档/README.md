@@ -1,4 +1,4 @@
-# Flashfi Engine · 开发文档
+# 财富密码 · 开发文档
 
 > 一个把模糊的高价值信号,转化为少数高确定性承诺的 AI 产品。
 > 这份目录是构建过程中所有技术决策的入口。
@@ -42,12 +42,12 @@
 
 ### Agent Skills
 
-- **`/native_feel_skill/SKILL.md`** — 让 RN UI 在 iOS/Android 上像原生, 同时贯彻 Flashfi Engine 的克制哲学
+- **`/native_feel_skill/SKILL.md`** — 让 RN UI 在 iOS/Android 上像原生, 同时贯彻 财富密码 的克制哲学
   - `references/01-platform-philosophy.md` — RN 平台心智, 默认 vs 自绘
   - `references/02-ios-checklist.md` — iOS 详细 30 项清单 🟢
   - `references/03-android-checklist.md` — Android 大纲(Phase 2)
   - `references/04-cross-platform-design.md` — 跨平台报刊感设计
-  - `references/05-flashfi-restraint.md` — Flashfi Engine 专属克制 🟢
+  - `references/05-wiseflow-restraint.md` — 财富密码 专属克制 🟢
   - `references/06-haptic-grammar.md` — 触感反馈语法
   - `references/07-typography.md` — 字体加载与中文混排
   - `references/08-anti-patterns.md` — 反模式禁止清单 🟢
@@ -78,7 +78,7 @@
 绝大多数代码路径的终点是"归档"而不是"通知"。每次写一个 if 分支,默认走"沉默"那条。
 
 **原则 4 · 客户端事件 ID 是脊柱**
-所有用户行为带一个 `client_event_id` (UUID v7),贯穿 Flutter → Go → Mastra → 回写 Go 的全链路。这是唯一的幂等键。
+所有用户行为带一个 `client_event_id` (UUID v7),贯穿 React Native → Go → Mastra → 回写 Go 的全链路。这是唯一的幂等键。
 
 **原则 5 · 同步与异步边界以"用户是否在等"划分**
 用户在屏幕前等的事必须同步且低延迟。用户离开后才发生的事走异步队列。
@@ -102,7 +102,7 @@
 | ORM | Ent | 强类型, 事件溯源友好 |
 | 主数据库 | PostgreSQL + pgvector | 事件流 + 向量检索 |
 | 缓存 | Redis | 行为指纹、限流 |
-| 消息总线 | NATS JetStream | 事件分发 |
+| 异步编排引擎 | iii (HTTP outbox + 命名队列) | 事件分发 / 队列 / DLQ,替代 NATS JetStream |
 | LLM 框架 | Mastra (Node.js) | Agents & Workflows |
 | PDF 渲染 | chromedp (Chromium headless) | 承诺书归档 |
 
@@ -122,4 +122,4 @@
 
 ## 版本
 
-`v0.1` · 2026-05 · 初始大纲版本
+`v0.2` · 2026-05 · 初始大纲 + iii / 注意力诊断 / 项目模块 升级刷新

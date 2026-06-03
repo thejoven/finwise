@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flashfi Engine · 产品架构分析与完善建议</title>
+<title>财富密码 · 产品架构分析与完善建议</title>
 <style>
   :root {
     --bg: #f7f5f0;
@@ -551,7 +551,7 @@
 
   <!-- Cover -->
   <div class="cover">
-    <div class="brand">FLASHFI ENGINE · ARCHITECTURE REVIEW</div>
+    <div class="brand">WISEFLOW ENGINE · ARCHITECTURE REVIEW</div>
     <h1>产品架构分析与完善建议</h1>
     <p class="subtitle">把模糊的高价值信号, 转化为少数高确定性承诺的 AI 产品</p>
     <div class="quote">
@@ -616,7 +616,7 @@
   <h2 id="philosophy"><span class="num">2</span>产品哲学骨架</h2>
   <p class="lead">12 条反直觉原则, 是所有架构决策的判官</p>
 
-  <p>Flashfi 的所有反主流设计, 来自一条共同的世界观: <strong>真正高确定性的东西稀少且珍贵, 产品的所有设计, 都要尊重这件事的稀有性。</strong></p>
+  <p>财富密码 的所有反主流设计, 来自一条共同的世界观: <strong>真正高确定性的东西稀少且珍贵, 产品的所有设计, 都要尊重这件事的稀有性。</strong></p>
 
   <div class="compare">
     <div class="compare-row"><div class="left">每天给你 5 条机会</div><div class="vs">→</div><div class="right">一年主动找你 1–2 次</div></div>
@@ -746,7 +746,7 @@
         </div>
         <div class="topo-node" style="opacity:0.6;">
           <strong>原型 (HTML)</strong>
-          <div>flashfi-prototype-v4.html · 3 屏</div>
+          <div>wiseflow-prototype-v4.html · 3 屏</div>
           <div class="meta">仅给产品方/投资方看</div>
         </div>
       </div>
@@ -872,7 +872,7 @@
 
   <h3>④ M11.5 训练闭环</h3>
   <p>Diagnostician 复盘出"你这次最弱在推演力" → 写回 <code>user_training_state.focus_dim</code> → 下次 M5 五轮追问的 Socratic prompt 自动注入"重点测推演"。<br>
-  <strong>哲学映射</strong>: 哲学 #7 "把性格工程化" 的物理实现。这是 Flashfi 跟"BI 报告"的分水岭。</p>
+  <strong>哲学映射</strong>: 哲学 #7 "把性格工程化" 的物理实现。这是 财富密码 跟"BI 报告"的分水岭。</p>
 
   <h3>⑤ 沉默归档 4 池, 不是"建议你看看"</h3>
   <p>四道门任一失败 = 系统沉默, 信号进观察池/教训池/日历池/舍弃池, 不弹任何 toast/push。<br>
@@ -1002,7 +1002,7 @@
       <strong>What:</strong>
       <ul>
         <li>docker-compose.yml 两个 service 都加 <code>restart: unless-stopped</code></li>
-        <li>flashfi-api systemd unit 加 <code>After=docker.service</code> + <code>Requires=docker.service</code></li>
+        <li>wiseflow-api systemd unit 加 <code>After=docker.service</code> + <code>Requires=docker.service</code></li>
         <li>healthz 加深度: 不仅返回 ok, 还检查 postgres + nats 都可达</li>
       </ul>
     </div>
@@ -1097,7 +1097,7 @@
     <div class="risk-card">
       <div class="lvl">高 · 概率高</div>
       <div class="name">#3 Diagnostician 输出语义不稳定</div>
-      <div class="note">缓解: prompt 至少迭代 10-20 次。A1 fixtures 是迭代的工具。失败 = Flashfi 退回 BI 报告。</div>
+      <div class="note">缓解: prompt 至少迭代 10-20 次。A1 fixtures 是迭代的工具。失败 = 财富密码 退回 BI 报告。</div>
     </div>
     <div class="risk-card">
       <div class="lvl med">中 · 概率中</div>
@@ -1130,13 +1130,13 @@
   <div class="closing" id="closing">
     <h3>一句话总结</h3>
     <p><strong>代码层已完成, 真正的工作刚开始。</strong></p>
-    <p>Flashfi 的所有架构亮点 (events REVOKE / Mastra 与规则引擎分离 / verbatim 校验 / M11.5 闭环 / 沉默归档) 都是产品哲学的物理形态。它们不是工程优化, 是哲学的物理实现。</p>
+    <p>财富密码 的所有架构亮点 (events REVOKE / Mastra 与规则引擎分离 / verbatim 校验 / M11.5 闭环 / 沉默归档) 都是产品哲学的物理形态。它们不是工程优化, 是哲学的物理实现。</p>
     <p>下一步不是写更多代码, 是<strong>带着这套架构去用</strong>—— W8 自己用一周, 才能知道哲学是否在物理层立住了。</p>
     <p style="margin-top:24px; opacity:0.7; font-size:13px;">"终点不是 v1.0 落地。终点是你打开 iPhone, 它是你的第二大脑。<br>如果某天你不再想打开它了, 真正的失败已经发生 — 跟代码进度无关。"<br>—— PROGRESS.md § 7</p>
   </div>
 
   <div class="footer">
-    Flashfi Engine · Architecture Analysis · Generated 2026-05-26 ·
+    财富密码 · Architecture Analysis · Generated 2026-05-26 ·
     docs/architecture-analysis.html<br>
     本文档基于 docs/产品文档/ + docs/技术文档/ + docs/GOAL/ + docs/PROGRESS.md + docs/adr/ + 实际代码扫描产出
   </div>

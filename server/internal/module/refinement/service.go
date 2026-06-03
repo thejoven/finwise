@@ -8,12 +8,12 @@ import (
 
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
+	"wiseflow/server/internal/domain"
 )
 
 var (
-	ErrInvalidInput    = errors.New("invalid input")
-	ErrSignalNotOwned  = errors.New("primary_signal_id not owned by user")
+	ErrInvalidInput   = errors.New("invalid input")
+	ErrSignalNotOwned = errors.New("primary_signal_id not owned by user")
 )
 
 // SignalOwnerCheck — 检查 signal 是否属于 user.
@@ -112,6 +112,16 @@ func (s *Service) ReinferQuestion(ctx context.Context, userID, sessionID uuid.UU
 		return ErrNotStarted
 	}
 	return s.repo.EnqueueReinferQuestionOutbox(ctx, sessionID)
+}
+
+// ───── List ─────
+
+// List 返回用户全部追问会话 (新→旧), 给 web-admin "所有对话" 列表用. 不含 rounds.
+func (s *Service) List(ctx context.Context, userID uuid.UUID, limit int) ([]Session, error) {
+	if userID == uuid.Nil {
+		return nil, fmt.Errorf("%w: user_id required", ErrInvalidInput)
+	}
+	return s.repo.List(ctx, userID, limit)
 }
 
 // ───── Get ─────

@@ -1,8 +1,8 @@
 {
-  "name": "flashfi-mastra",
+  "name": "wiseflow-mastra",
   "version": "0.1.0",
   "private": true,
-  "description": "LLM orchestration for Flashfi Engine — Analyst Agent + iii SDK worker.",
+  "description": "LLM orchestration for WiseFlow Engine — Analyst Agent + iii SDK worker.",
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -25,7 +25,7 @@
     "@mastra/memory": "^0.10.4",
     "@mastra/pg": "^0.10.3",
     "ai": "^4.0.0",
-    "iii-sdk": "^0.16.0",
+    "iii-sdk": "^0.16.1",
     "undici": "^7.0.0",
     "zod": "^3.23.8"
   },

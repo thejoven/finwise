@@ -89,7 +89,7 @@
 
 ---
 
-## 五、Flashfi Engine 哲学 (8 项)
+## 五、财富密码 哲学 (8 项)
 
 - [ ] 50. 没有 FAB
 - [ ] 51. 没有 Drawer
@@ -139,4 +139,4 @@ grep -E "(react-native-toast|react-native-flash-message|react-native-paper|react
 > 这 60 项不是完美主义, 是产品哲学的物质形态。
 >
 > 上线前认真过完, 你就有底气说:
-> **"这是 Flashfi Engine, 不是又一个 RN APP。"**
+> **"这是 财富密码, 不是又一个 RN APP。"**

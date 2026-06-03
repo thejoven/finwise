@@ -16,8 +16,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/httpapi"
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/httpapi"
+	"wiseflow/server/internal/infra/db"
 )
 
 const (
@@ -58,7 +58,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		DevUserID:        devUserID,
 		InternalToken:    testInternalToken,
 		InternalLoopback: false,
-		RegisterModules: func(_, v1, internalV1 *gin.RouterGroup) {
+		RegisterModules: func(_, v1, internalV1, _ *gin.RouterGroup) {
 			handler.Register(v1, internalV1)
 		},
 	})
@@ -136,13 +136,13 @@ func (e *testEnv) draftCommitment(t *testing.T, evalID uuid.UUID) string {
 		"user_id":       e.devUserID.String(),
 		"evaluation_id": evalID.String(),
 		"thesis": map[string]any{
-			"asset_ticker":        "TEST",
-			"asset_name":          "Test Asset",
-			"action":              "buy",
-			"position_pct":        5.0,
-			"duration_months":     6,
-			"entry_method":        "买入并持有, 单次建仓",
-			"exit_conditions":     []string{"跌破 100 元", "持仓 6 个月到期"},
+			"asset_ticker":    "TEST",
+			"asset_name":      "Test Asset",
+			"action":          "buy",
+			"position_pct":    5.0,
+			"duration_months": 6,
+			"entry_method":    "买入并持有, 单次建仓",
+			"exit_conditions": []string{"跌破 100 元", "持仓 6 个月到期"},
 			"reasons_for_future_self": []string{
 				"这是给 6 个月后自己看的理由 1, 当时你这么说.",
 				"这是给 6 个月后自己看的理由 2, 当时你这么说.",

@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {
@@ -22,12 +23,15 @@ func NewHandler(svc *Service) *Handler {
 
 func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	pub := publicV1.Group("/commitments")
+	pub.GET("", h.list)
 	pub.GET("/active", h.active)
+	pub.GET("/by-evaluation/:evaluation_id", h.getByEvaluation)
 	pub.GET("/:id", h.get)
 	pub.POST("/:id/sign", h.sign)
 	pub.POST("/:id/postpone", h.postpone)
 
 	holdings := publicV1.Group("/holdings")
+	holdings.GET("", h.listHoldings)
 	holdings.GET("/active", h.activeHolding)
 	holdings.GET("/:id", h.getHolding)
 
@@ -37,19 +41,22 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 // ───── DTOs ─────
 
 type commitmentResponse struct {
-	ID            string         `json:"id"`
-	EvaluationID  string         `json:"evaluation_id"`
-	Status        string         `json:"status"`
-	Thesis        domain.Thesis  `json:"thesis"`
-	PDFPath       *string        `json:"pdf_path,omitempty"`
-	PostponeCount int            `json:"postpone_count"`
-	SignedAt      *string        `json:"signed_at,omitempty"`
-	DraftedAt     string         `json:"drafted_at"`
+	ID            string        `json:"id"`
+	EvaluationID  string        `json:"evaluation_id"`
+	ProjectID     *string       `json:"project_id,omitempty"`
+	Status        string        `json:"status"`
+	Thesis        domain.Thesis `json:"thesis"`
+	PDFPath       *string       `json:"pdf_path,omitempty"`
+	PostponeCount int           `json:"postpone_count"`
+	SignedAt      *string       `json:"signed_at,omitempty"`
+	DraftedAt     string        `json:"drafted_at"`
 }
 
 type holdingResponse struct {
-	ID             string          `json:"id"`
+	ID             string          `json:"id"` // == commitment_id (holdings.id 复用 commitment.id)
 	Status         string          `json:"status"`
+	Ticker         string          `json:"ticker,omitempty"` // 列表填充 (JOIN thesis); 单查为空
+	Action         string          `json:"action,omitempty"`
 	SignedAt       string          `json:"signed_at"`
 	ExitConditions []string        `json:"exit_conditions"`
 	ExpiresAt      string          `json:"expires_at"`
@@ -90,6 +97,55 @@ func (h *Handler) active(c *gin.Context) {
 	}
 	if commit == nil {
 		c.JSON(http.StatusNoContent, nil)
+		return
+	}
+	c.JSON(http.StatusOK, toCommitmentResponse(commit))
+}
+
+// list GET /v1/commitments — 用户全部承诺 (新→旧). web-admin 列表用.
+func (h *Handler) list(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	limit := 100
+	if s := c.Query("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	items, err := h.svc.List(c.Request.Context(), userID, limit)
+	if err != nil {
+		writeErr(c, err)
+		return
+	}
+	out := make([]commitmentResponse, len(items))
+	for i := range items {
+		out[i] = toCommitmentResponse(&items[i])
+	}
+	c.JSON(http.StatusOK, gin.H{"commitments": out, "total": len(out)})
+}
+
+// getByEvaluation GET /v1/commitments/by-evaluation/:evaluation_id — 信号链路用.
+func (h *Handler) getByEvaluation(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	evalID, err := uuid.Parse(c.Param("evaluation_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "evaluation_id not a uuid"})
+		return
+	}
+	commit, err := h.svc.GetByEvaluation(c.Request.Context(), userID, evalID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		writeErr(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, toCommitmentResponse(commit))
@@ -205,6 +261,34 @@ func (h *Handler) postpone(c *gin.Context) {
 	c.JSON(http.StatusOK, toCommitmentResponse(commit))
 }
 
+// listHoldings GET /v1/holdings — 用户全部持仓 (新→旧, 带标的). web-admin 列表用.
+func (h *Handler) listHoldings(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	limit := 100
+	if s := c.Query("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	items, err := h.svc.ListHoldings(c.Request.Context(), userID, limit)
+	if err != nil {
+		writeErr(c, err)
+		return
+	}
+	out := make([]holdingResponse, len(items))
+	for i := range items {
+		hr := toHoldingResponse(&items[i].Holding)
+		hr.Ticker = items[i].Ticker
+		hr.Action = items[i].Action
+		out[i] = hr
+	}
+	c.JSON(http.StatusOK, gin.H{"holdings": out, "total": len(out)})
+}
+
 func (h *Handler) activeHolding(c *gin.Context) {
 	userID, ok := auth.UserID(c)
 	if !ok {
@@ -286,6 +370,10 @@ func toCommitmentResponse(c *Commitment) commitmentResponse {
 		PDFPath:       c.PDFPath,
 		PostponeCount: c.PostponeCount,
 		DraftedAt:     c.DraftedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+	}
+	if c.ProjectID != nil {
+		s := c.ProjectID.String()
+		out.ProjectID = &s
 	}
 	if c.SignedAt != nil {
 		s := c.SignedAt.UTC().Format("2006-01-02T15:04:05Z07:00")

@@ -1,9 +1,26 @@
 {
-  "score": 85,
-  "narrative_summary": "NVDA 受益于 AI 训练需求持续增长及 hyperscaler 资本支出扩张，市场叙事高度集中且充分定价。",
+  "score": 80,
+  "narrative_summary": "late-stage 拥挤交易, 反身性已近 self-defeating 拐点, 一阶已被定价.",
   "evidence": [
-    "Hyperscaler (MSFT, GOOG, AMZN, META) 持续上调 2024-2025 年资本支出指引",
-    "AI 训练芯片需求强劲，Hopper/Blackwell 产品线供不应求",
-    "NVDA 是 AI 基础设施核心标的，主流卖方广泛覆盖且媒体高频报道"
+    "sell-side 全覆盖, 共识预期已打满",
+    "主流财经媒体连续数周头条",
+    "retail 讨论密度极高"
+  ],
+  "unpriced_directions": [
+    {
+      "angle": "往 AI 推理侧 / 边缘推理芯片看",
+      "why_unpriced": "市场叙事仍停在训练 scaling law, 推理侧 monetization 路径尚未被 sell-side 充分推演",
+      "lens": "二阶思考"
+    },
+    {
+      "angle": "往 NVDA 下游客户 capex 回报率拐点看",
+      "why_unpriced": "反身性走到中后段, 但 hyperscaler ROI 何时 self-defeating 未被定价",
+      "lens": "反身性反馈环"
+    },
+    {
+      "angle": "往同链被错杀的定制芯片 (ASIC) 方向看",
+      "why_unpriced": "NVDA 叙事拥挤时, 替代方案的价值重估被一阶叙事掩盖",
+      "lens": "多元思维栅格"
+    }
   ]
 }

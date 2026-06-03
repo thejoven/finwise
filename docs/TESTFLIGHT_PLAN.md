@@ -28,10 +28,10 @@
 ### 1.2 App Store Connect
 
 注册成功后在 <https://appstoreconnect.apple.com> 创建 App:
-- Bundle ID: `com.flashfi.app` (已在 app.json 配)
-- App Name: `Flashfi`
+- Bundle ID: `com.wiseflow.app` (已在 app.json 配)
+- App Name: `财富密码`
 - Primary Language: Simplified Chinese
-- SKU: 任意, 如 `flashfi-001`
+- SKU: 任意, 如 `wiseflow-001`
 - User Access: Full Access (单用户)
 
 ---
@@ -114,10 +114,10 @@ eas submit --profile production --platform ios --latest
 
 提交后 Apple 跑 review (内测 review 通常 1-24 小时, 比公开发布快). 通过后:
 
-1. App Store Connect → My Apps → Flashfi → TestFlight Tab
+1. App Store Connect → My Apps → 财富密码 → TestFlight Tab
 2. **Internal Testing** 组 (不是 External, 不需要 Beta App Review):
    - 加 App Store Connect User (至多 100 人, 但我们 ≤ 5)
-   - 每个 tester 装 TestFlight App, 用邀请邮箱登录, 看见 Flashfi
+   - 每个 tester 装 TestFlight App, 用邀请邮箱登录, 看见 财富密码
 3. **External Testing** 不要碰 — 那是公开测试, 违反 § 10
 
 ---
@@ -151,7 +151,7 @@ TestFlight App 跑在内测者手机上, 但 API 还在 `192.168.1.205` 内网 �
 做法:
 1. 租一台 1c2g VPS (国内阿里云轻量, 海外 Hetzner 都行, 月 $5-20)
 2. `docker-compose.yml` 改 ports 加 TLS 反代 (caddy / nginx)
-3. 后端 .env 切公网 DATABASE_URL / NATS_URL
+3. 后端 .env 切公网 DATABASE_URL / III_URL
 4. 加 CORS / rate limit 防被刷
 5. EXPO_PUBLIC_API_URL 改公网域名 → 重新 build → 重新 submit
 

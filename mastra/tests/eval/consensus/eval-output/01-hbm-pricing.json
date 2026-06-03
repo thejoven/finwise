@@ -1,9 +1,26 @@
 {
-  "score": 70,
-  "narrative_summary": "HBM 持续涨价已被市场充分预期，SK 海力士作为 HBM 龙头受益明确，但涨价逻辑已多次计价。",
+  "score": 80,
+  "narrative_summary": "mid-late 叙事, HBM 涨价已是行业共识, 反身性走到 self-reinforcing 中后段, sell-side 覆盖密集.",
   "evidence": [
-    "HBM 已是第三次涨价，市场对此已有充分预期和定价",
-    "SK 海力士 HBM 产能满载，卖方普遍看好但观点已不新鲜",
-    "AI 推理盒 BOM 承压反映涨价传导至下游，非新增叙事"
+    "HBM 连续三轮涨价, 主流券商深度覆盖已超 6 个月",
+    "AI 推理盒 BOM 重算 — 涨价已传导至下游成本端",
+    "SK Hynix 作为 HBM 龙头, 叙事已跨圈至主流财经"
+  ],
+  "unpriced_directions": [
+    {
+      "angle": "往 HBM 上游设备·材料看",
+      "why_unpriced": "市场停在一阶受益方 (SK Hynix), 但涨价持续时上游设备产能瓶颈才是二阶约束, sell-side 尚未密集覆盖",
+      "lens": "二阶思考"
+    },
+    {
+      "angle": "关注下游推理盒厂商的利润率压缩",
+      "why_unpriced": "叙事退潮后, 涨价受益方 vs 成本承压方的现金流分化会被重新定价, 目前市场只看了受益端",
+      "lens": "叙事退潮"
+    },
+    {
+      "angle": "往 HBM 同链被错杀的小型封测看",
+      "why_unpriced": "涨价叙事下资金集中龙头, 同链封测环节的 convexity (凸性) 被忽略, 一旦产能外溢它们弹性更大",
+      "lens": "凸性·optionality"
+    }
   ]
 }

@@ -44,6 +44,7 @@ type PublicUser struct {
 	DisplayName *string
 	AvatarURL   *string
 	Bio         *string
+	IsAdmin     bool
 	CreatedAt   time.Time
 }
 
@@ -54,6 +55,7 @@ func toPublic(u *User) *PublicUser {
 		DisplayName: u.DisplayName,
 		AvatarURL:   u.AvatarURL,
 		Bio:         u.Bio,
+		IsAdmin:     u.IsAdmin,
 		CreatedAt:   u.CreatedAt,
 	}
 }
@@ -252,6 +254,129 @@ func (s *Service) LookupSession(ctx context.Context, token string) (uuid.UUID, e
 		return uuid.Nil, err
 	}
 	return sess.UserID, nil
+}
+
+// ────── admin ──────
+
+// IsAdmin 暴露给 admin 中间件 — 通过 AdminChecker interface 调入.
+// 返回该 user 是否管理员. 用户不存在返回 (false, nil) — 当成"非管理员"处理,
+// 让中间件直接 403 而不是 500.
+func (s *Service) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
+	ok, err := s.repo.IsAdmin(ctx, userID)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return ok, nil
+}
+
+// AdminUserView 是 admin 用户列表的一行视图 — 不含 password_hash.
+type AdminUserView struct {
+	ID          uuid.UUID
+	Email       string
+	DisplayName *string
+	AvatarURL   *string
+	Bio         *string
+	IsAdmin     bool
+	SignalCount int
+	LastSeenAt  *time.Time
+	CreatedAt   time.Time
+}
+
+// ListUsers 返回全部用户 (含活动指标), 给 admin "接入用户" 页用.
+func (s *Service) ListUsers(ctx context.Context) ([]AdminUserView, error) {
+	rows, err := s.repo.ListUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]AdminUserView, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, AdminUserView{
+			ID:          r.ID,
+			Email:       r.Email,
+			DisplayName: r.DisplayName,
+			AvatarURL:   r.AvatarURL,
+			Bio:         r.Bio,
+			IsAdmin:     r.IsAdmin,
+			SignalCount: r.SignalCount,
+			LastSeenAt:  r.LastSeenAt,
+			CreatedAt:   r.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+// GetUser 是 admin 看任意用户详情 (区别于 self-scoped 的 GetMe). 找不到返回 ErrNotFound.
+func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*PublicUser, error) {
+	u, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return toPublic(u), nil
+}
+
+// SetAdmin 按邮箱授予/收回管理员. 找不到用户返回 ErrNotFound.
+// 给 admin "管理员管理" 接口和 grant-admin CLI 用.
+func (s *Service) SetAdmin(ctx context.Context, email string, isAdmin bool) (*PublicUser, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, fmt.Errorf("%w: email required", ErrInvalidInput)
+	}
+	u, err := s.repo.SetAdminByEmail(ctx, email, isAdmin)
+	if err != nil {
+		return nil, err
+	}
+	return toPublic(u), nil
+}
+
+// EnsureAdmin 是引导第一个管理员用的: 邮箱不存在就用给定密码创建, 然后置 is_admin=true.
+// 邮箱已存在则只翻 admin 标志 (不动密码 —— 不想覆盖人家自己设的). 返回 (用户, 是否新建).
+// 给 scripts/grant-admin.sh 背后的 CLI 用.
+func (s *Service) EnsureAdmin(ctx context.Context, email, password string) (*PublicUser, bool, error) {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return nil, false, fmt.Errorf("%w: email required", ErrInvalidInput)
+	}
+	if _, err := mail.ParseAddress(email); err != nil {
+		return nil, false, fmt.Errorf("%w: bad email", ErrInvalidInput)
+	}
+
+	existing, err := s.repo.FindByEmail(ctx, email)
+	switch {
+	case err == nil:
+		// 已存在 — 只授予 admin, 不动密码.
+		u, serr := s.repo.SetAdminByEmail(ctx, email, true)
+		if serr != nil {
+			return nil, false, serr
+		}
+		return toPublic(u), false, nil
+	case errors.Is(err, ErrNotFound):
+		// 不存在 — 用给定密码创建, 再授予 admin.
+		if l := len(password); l < MinPasswordLen || l > MaxPasswordLen {
+			return nil, false, fmt.Errorf("%w: 新建管理员需要密码, 长度 %d..%d", ErrInvalidInput, MinPasswordLen, MaxPasswordLen)
+		}
+		hash, herr := hashPassword(password)
+		if herr != nil {
+			return nil, false, fmt.Errorf("hash password: %w", herr)
+		}
+		if _, cerr := s.repo.CreateUser(ctx, CreateUserInput{
+			ID:           uuid.New(),
+			Email:        email,
+			PasswordHash: hash,
+		}); cerr != nil {
+			return nil, false, cerr
+		}
+		u, serr := s.repo.SetAdminByEmail(ctx, email, true)
+		if serr != nil {
+			return nil, false, serr
+		}
+		return toPublic(u), true, nil
+	default:
+		_ = existing
+		return nil, false, err
+	}
 }
 
 // EnsureDevUser 在 dev bearer 模式下保证 DEV_USER_ID 对应 users 表有行,

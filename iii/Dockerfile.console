@@ -2,13 +2,13 @@
 # 官方没出 docker 镜像 (only ships native binary), 这里自己拉.
 #
 # Build:
-#   docker build -t flashfi/iii-console:0.16.0 -f iii/Dockerfile.console iii/
+#   docker build -t wiseflow/iii-console:0.16.1 -f iii/Dockerfile.console iii/
 #
 # Run (本地直连本机 iii engine):
-#   docker run -p 3113:3113 flashfi/iii-console:0.16.0 \
+#   docker run -p 3113:3113 wiseflow/iii-console:0.16.1 \
 #     --host=0.0.0.0 --engine-host=host.docker.internal --engine-port=3111
 
-ARG VERSION=0.16.0
+ARG VERSION=0.16.1
 ARG TARGET=x86_64-unknown-linux-musl
 
 # Stage 1: fetch + extract binary from GitHub release.

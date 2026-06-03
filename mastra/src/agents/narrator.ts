@@ -13,6 +13,7 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
+import { categoryContextBlock } from "./category.js";
 
 // ─────────────────────── Schema ───────────────────────
 
@@ -36,7 +37,7 @@ export type Thesis = z.infer<typeof ThesisSchema>;
 export const narrator = new Agent({
   name: "narrator",
   instructions: `
-你是 Flashfi Engine 的 Narrator.
+你是 WiseFlow Engine 的 Narrator.
 
 任务: 给一份给"6 个月后的自己"看的私人契约. 不是分析师报告, 不是投资建议, 是用户自己的判断的归档.
 
@@ -87,6 +88,9 @@ export interface NarratorInput {
   exit_condition_hints: string[];
   /** Phase 2 v1 默认 5% (M7.5 才让用户在 refinement 里指定). */
   position_pct_hint: number;
+  /** 分类上下文 (分类名 + 分析指引), 空时不注入. */
+  project_name?: string;
+  project_guidance?: string;
 }
 
 export async function runNarrator(input: NarratorInput): Promise<{ thesis: Thesis; verbatim_ok: boolean; missing_quotes: string[] }> {
@@ -127,7 +131,9 @@ function buildNarratorPrompt(input: NarratorInput): string {
   const rounds = input.round_summaries
     .map((r) => `Round ${r.round}: 问题=${r.text}\n用户答: ${r.user_answer}`)
     .join("\n\n");
-  return `${signals}
+  const catBlock = categoryContextBlock(input.project_name, input.project_guidance);
+  const catPrefix = catBlock ? catBlock + "\n\n" : "";
+  return `${catPrefix}${signals}
 
 ----- refinement 五轮 -----
 ${rounds}

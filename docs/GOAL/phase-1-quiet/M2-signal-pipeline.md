@@ -9,7 +9,7 @@
 M1 把数据底座搭好了, M2 在它上面建第一条业务管道——
 **用户输入一条信号 → 立刻入库 → 异步推演 → 推演结果回写**。
 
-这是 Flashfi Engine "AI 在后台工作"的具体实现。
+这是 财富密码 "AI 在后台工作"的具体实现。
 
 整条管道**不打扰用户**, 但用户可以打开收件箱看到推演已完成的标记。
 
@@ -136,7 +136,7 @@ mastra/
 │   ├── workflows/
 │   │   └── signal-inference.ts # 推演 workflow
 │   ├── tools/
-│   │   └── flashfi-api.ts      # 调 Go 的 /v1/internal/*
+│   │   └── wiseflow-api.ts      # 调 Go 的 /v1/internal/*
 │   ├── consumers/
 │   │   └── nats.ts             # NATS 消费循环
 │   └── index.ts                # 入口
@@ -168,7 +168,7 @@ const InferenceSchema = z.object({
 export const analyst = new Agent({
   name: 'analyst',
   instructions: `
-你是 Flashfi Engine 的 Analyst。
+你是 财富密码 的 Analyst。
 
 你的任务是: 拿到一条用户的工作场景信号, 推演它在资本市场上对应的一阶/二阶/三阶受益方。
 
@@ -222,7 +222,7 @@ export const signalInferenceWorkflow = new Workflow({
     {
       id: 'persist',
       run: async ({ inputs, steps }) => {
-        await flashfiApi.postInference({
+        await wiseflowApi.postInference({
           user_id: inputs.user_id,
           source_event_id: inputs.event_id,
           inference: steps.analyze.output,

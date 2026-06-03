@@ -30,6 +30,13 @@ interface Fixture {
   rationale?: string;
 }
 
+interface RawConsensus {
+  score: number;
+  narrative_summary: string;
+  evidence: string[];
+  unpriced_directions?: { angle: string; why_unpriced: string; lens?: string }[];
+}
+
 interface CheckResult {
   name: string;
   passed: boolean;
@@ -51,7 +58,7 @@ async function main() {
   for (const f of files) {
     const fx = JSON.parse(readFileSync(join(FIXTURE_DIR, f), "utf8")) as Fixture;
     const start = Date.now();
-    let raw: { score: number; narrative_summary: string; evidence: string[] } | undefined;
+    let raw: RawConsensus | undefined;
     let err: string | undefined;
     try {
       raw = await runConsensusCheck({ asset: fx.asset, signal_text: fx.signal_text });
@@ -76,7 +83,7 @@ async function main() {
   if (passedCount < PASS_THRESHOLD) process.exit(2);
 }
 
-function score(fx: Fixture, raw: { score: number; narrative_summary: string; evidence: string[] } | undefined, err: string | undefined): CheckResult[] {
+function score(fx: Fixture, raw: RawConsensus | undefined, err: string | undefined): CheckResult[] {
   const out: CheckResult[] = [];
   if (!raw) {
     out.push({ name: "valid_json", passed: false, detail: err ?? "no output" });
@@ -98,13 +105,17 @@ function score(fx: Fixture, raw: { score: number; narrative_summary: string; evi
   const sumOk = raw.narrative_summary.length >= 1 && raw.narrative_summary.length <= 80;
   out.push({ name: "summary_length", passed: sumOk, detail: sumOk ? undefined : `length=${raw.narrative_summary.length}` });
 
-  const hay = (raw.narrative_summary + " " + raw.evidence.join(" "));
+  // 红线也覆盖指方向字段: angle / why_unpriced / lens 里同样不许出现荐股动作词.
+  const dirText = (raw.unpriced_directions ?? [])
+    .flatMap((d) => [d.angle, d.why_unpriced, d.lens ?? ""])
+    .join(" ");
+  const hay = (raw.narrative_summary + " " + raw.evidence.join(" ") + " " + dirText);
   const found = BANNED_WORDS.filter((w) => hay.includes(w));
   out.push({ name: "no_action_words", passed: found.length === 0, detail: found.length ? `found: ${found.join(",")}` : undefined });
   return out;
 }
 
-function printOne(name: string, raw: { score: number; narrative_summary: string; evidence: string[] } | undefined, err: string | undefined, checks: CheckResult[], passed: boolean, dur_ms: number) {
+function printOne(name: string, raw: RawConsensus | undefined, err: string | undefined, checks: CheckResult[], passed: boolean, dur_ms: number) {
   const flag = passed ? "✓" : "✗";
   console.log(`## ${flag} ${name}  (${dur_ms}ms)`);
   if (raw) console.log(`   score=${raw.score} · ${raw.narrative_summary}`);

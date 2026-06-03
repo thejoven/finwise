@@ -1,6 +1,6 @@
 # mastra/
 
-Flashfi Engine 的 LLM 编排. Node + Mastra + OpenAI-compatible SDK (默认接 DeepSeek) + iii engine (queue + HTTP triggers, Redis adapter).
+WiseFlow Engine 的 LLM 编排. Node + Mastra + OpenAI-compatible SDK (默认接 DeepSeek) + iii engine (queue + HTTP triggers, Redis adapter).
 
 ```
 src/
@@ -19,7 +19,7 @@ src/
 │   ├── refinement-step.ts     # M5 出下一题
 │   └── commitment-draft.ts    # M7 起草承诺书
 ├── tools/
-│   └── flashfi-api.ts        # POST /v1/internal/*
+│   └── wiseflow-api.ts        # POST /v1/internal/*
 ├── iii/
 │   └── worker.ts             # iii SDK worker: 4 queue processors + 5 HTTP shims
 ├── server/
@@ -40,7 +40,7 @@ tests/
 
 - Node 20 LTS
 - `LLM_API_KEY` (DeepSeek 默认) + `LLM_BASE_URL` (默认 `https://api.deepseek.com`)
-- 同一台机器跑 Postgres + Redis (docker compose) + iii engine (host systemd, `flashfi-iii.service`)
+- 同一台机器跑 Postgres + Redis (docker compose) + iii engine (host systemd, `wiseflow-iii.service`)
 
 ## 启动
 

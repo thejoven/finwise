@@ -17,7 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/infra/db"
 )
 
 var (
@@ -41,6 +41,7 @@ type Project struct {
 	Color      *string
 	Emoji      *string
 	SortOrder  int
+	Guidance   *string // 分析指引: 喂给该分类下的 LLM 推理. null/空 = 不注入.
 	ArchivedAt *time.Time
 	CreatedAt  time.Time
 	UpdatedAt  time.Time
@@ -52,6 +53,7 @@ type CreateInput struct {
 	Color     *string
 	Emoji     *string
 	SortOrder int
+	Guidance  *string
 }
 
 type UpdateInput struct {
@@ -61,13 +63,14 @@ type UpdateInput struct {
 	Color     *string // 显式 nil 不动; 空字符串 = 清空 → 由 service 转 nil 不行, 故用 *string + sentinel
 	Emoji     *string
 	SortOrder *int
+	Guidance  *string // nil = 不动; 非 nil (含 "") = 设为该值, 支持清空
 }
 
 // Create 写一行. unique (user_id, name) WHERE archived_at IS NULL 命中转 ErrDuplicateName.
 func (r *Repository) Create(ctx context.Context, in CreateInput) (*Project, error) {
 	const q = `
-		INSERT INTO projects (user_id, name, color, emoji, sort_order)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO projects (user_id, name, color, emoji, sort_order, guidance)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING id, created_at, updated_at
 	`
 	var p Project
@@ -76,8 +79,9 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (*Project, erro
 	p.Color = in.Color
 	p.Emoji = in.Emoji
 	p.SortOrder = in.SortOrder
+	p.Guidance = in.Guidance
 	err := r.pool.QueryRow(ctx, q,
-		in.UserID, in.Name, in.Color, in.Emoji, in.SortOrder,
+		in.UserID, in.Name, in.Color, in.Emoji, in.SortOrder, in.Guidance,
 	).Scan(&p.ID, &p.CreatedAt, &p.UpdatedAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -92,7 +96,7 @@ func (r *Repository) Create(ctx context.Context, in CreateInput) (*Project, erro
 // ListActive 拉某 user 的未归档分类, 按 sort_order + created_at 排序.
 func (r *Repository) ListActive(ctx context.Context, userID uuid.UUID) ([]Project, error) {
 	const q = `
-		SELECT id, user_id, name, color, emoji, sort_order, archived_at, created_at, updated_at
+		SELECT id, user_id, name, color, emoji, sort_order, guidance, archived_at, created_at, updated_at
 		FROM projects
 		WHERE user_id = $1 AND archived_at IS NULL
 		ORDER BY sort_order ASC, created_at ASC
@@ -107,7 +111,7 @@ func (r *Repository) ListActive(ctx context.Context, userID uuid.UUID) ([]Projec
 		var p Project
 		if err := rows.Scan(
 			&p.ID, &p.UserID, &p.Name, &p.Color, &p.Emoji,
-			&p.SortOrder, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
+			&p.SortOrder, &p.Guidance, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan project: %w", err)
 		}
@@ -119,14 +123,14 @@ func (r *Repository) ListActive(ctx context.Context, userID uuid.UUID) ([]Projec
 // Get 拿单个 project, 强制 user_id 匹配. 不区分归档 — 调用方按需判断.
 func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (*Project, error) {
 	const q = `
-		SELECT id, user_id, name, color, emoji, sort_order, archived_at, created_at, updated_at
+		SELECT id, user_id, name, color, emoji, sort_order, guidance, archived_at, created_at, updated_at
 		FROM projects
 		WHERE user_id = $1 AND id = $2
 	`
 	var p Project
 	err := r.pool.QueryRow(ctx, q, userID, id).Scan(
 		&p.ID, &p.UserID, &p.Name, &p.Color, &p.Emoji,
-		&p.SortOrder, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.SortOrder, &p.Guidance, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -145,17 +149,18 @@ func (r *Repository) Update(ctx context.Context, in UpdateInput) (*Project, erro
 			color      = CASE WHEN $4::text IS NOT NULL THEN $4 ELSE color END,
 			emoji      = CASE WHEN $5::text IS NOT NULL THEN $5 ELSE emoji END,
 			sort_order = COALESCE($6, sort_order),
+			guidance   = CASE WHEN $7::text IS NOT NULL THEN $7 ELSE guidance END,
 			updated_at = NOW()
 		WHERE user_id = $1 AND id = $2
-		RETURNING id, user_id, name, color, emoji, sort_order, archived_at, created_at, updated_at
+		RETURNING id, user_id, name, color, emoji, sort_order, guidance, archived_at, created_at, updated_at
 	`
 	var p Project
 	err := r.pool.QueryRow(ctx, q,
 		in.UserID, in.ID,
-		in.Name, in.Color, in.Emoji, in.SortOrder,
+		in.Name, in.Color, in.Emoji, in.SortOrder, in.Guidance,
 	).Scan(
 		&p.ID, &p.UserID, &p.Name, &p.Color, &p.Emoji,
-		&p.SortOrder, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
+		&p.SortOrder, &p.Guidance, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

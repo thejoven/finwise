@@ -25,13 +25,18 @@ export function useCompanion(commitmentId: string | undefined) {
 
 /** useRecordOpen — 进入承诺/持仓页时调一次, server 累加 open 次数 + 必要时回 companion. */
 export function useRecordOpen() {
-  const mutation = useMutation<OpenResponse, Error, { commitment_id: string; origin?: "tab" | "deeplink" | "trigger_card" }>({
-    mutationFn: async (input) => recordOpen({
-      client_event_id: uuidV4(),
-      commitment_id: input.commitment_id,
-      origin: input.origin ?? "tab",
-      opened_at: new Date().toISOString(),
-    }),
+  const mutation = useMutation<
+    OpenResponse,
+    Error,
+    { commitment_id: string; origin?: "tab" | "deeplink" | "trigger_card" }
+  >({
+    mutationFn: async (input) =>
+      recordOpen({
+        client_event_id: uuidV4(),
+        commitment_id: input.commitment_id,
+        origin: input.origin ?? "tab",
+        opened_at: new Date().toISOString(),
+      }),
   });
   return { open: mutation.mutateAsync, last: mutation.data };
 }

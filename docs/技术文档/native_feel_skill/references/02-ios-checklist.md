@@ -546,11 +546,11 @@ iOS 用户设置了大字号可能破坏 UI:
 Text.defaultProps = { ...Text.defaultProps, allowFontScaling: false };
 ```
 
-但 Flashfi Engine 应该尊重大字号(accessibility)。
+但 财富密码 应该尊重大字号(accessibility)。
 方案: 标题不缩放, 正文允许缩放 1.2 倍内:
 
 ```typescript
-<Display allowFontScaling={false}>Flashfi</Display>
+<Display allowFontScaling={false}>财富密码</Display>
 <Body maxFontSizeMultiplier={1.2}>正文...</Body>
 ```
 
@@ -616,7 +616,7 @@ iOS 系统级 hairline:
 
 ---
 
-## 八、Flashfi Engine 专属(2 项)
+## 八、财富密码 专属(2 项)
 
 ### 8.1 🟢 报刊感顶栏自绘, 不用 React Navigation Header
 
@@ -639,7 +639,7 @@ export function Masthead() {
         </TapEffect>
       </View>
       <Display size={38} italic style={styles.nameplate}>
-        Flashfi
+        财富密码
       </Display>
       <Text style={styles.subline}>
         Conviction Quarterly

@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {
@@ -22,10 +23,11 @@ func NewHandler(svc *Service) *Handler {
 // Register 把 account 路由挂到 router. 注意 register/login 是 unauth 的, 不能
 // 走 publicV1 (那个 group 强制 Bearer). 调用方传 anon group 进来.
 //
-//   anon       : /v1/auth/register, /v1/auth/login           (无需 Bearer)
-//   publicV1   : /v1/me, /v1/me/password, /v1/auth/logout    (需 Bearer)
-//   internalV1 : 暂未使用
-func (h *Handler) Register(anon, publicV1, internalV1 *gin.RouterGroup) {
+//	anon       : /v1/auth/register, /v1/auth/login                (无需 Bearer)
+//	publicV1   : /v1/me, /v1/me/password, /v1/auth/logout         (需 Bearer)
+//	internalV1 : 暂未使用
+//	adminV1    : /v1/admin/users, /v1/admin/users/:id            (需 Bearer + RequireAdmin)
+func (h *Handler) Register(anon, publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	authGrp := anon.Group("/auth")
 	authGrp.POST("/register", h.register)
 	authGrp.POST("/login", h.login)
@@ -36,6 +38,11 @@ func (h *Handler) Register(anon, publicV1, internalV1 *gin.RouterGroup) {
 	me.GET("", h.getMe)
 	me.PATCH("", h.updateMe)
 	me.POST("/password", h.changePassword)
+
+	users := adminV1.Group("/users")
+	users.GET("", h.adminListUsers)
+	users.GET("/:id", h.adminGetUser)
+	users.POST("/:id/admin", h.adminSetAdmin) // body: {is_admin: bool} — 授予/收回管理员
 }
 
 // ────── DTOs ──────
@@ -68,6 +75,7 @@ type userView struct {
 	DisplayName *string   `json:"display_name,omitempty"`
 	AvatarURL   *string   `json:"avatar_url,omitempty"`
 	Bio         *string   `json:"bio,omitempty"`
+	IsAdmin     bool      `json:"is_admin"`
 	CreatedAt   time.Time `json:"created_at"`
 }
 
@@ -88,6 +96,7 @@ func toUserView(u *PublicUser) userView {
 		DisplayName: u.DisplayName,
 		AvatarURL:   u.AvatarURL,
 		Bio:         u.Bio,
+		IsAdmin:     u.IsAdmin,
 		CreatedAt:   u.CreatedAt,
 	}
 }
@@ -197,6 +206,97 @@ func (h *Handler) changePassword(c *gin.Context) {
 		return
 	}
 	c.Status(http.StatusNoContent)
+}
+
+// ────── admin handlers ──────
+
+type adminUserView struct {
+	ID          string     `json:"id"`
+	Email       string     `json:"email"`
+	DisplayName *string    `json:"display_name,omitempty"`
+	AvatarURL   *string    `json:"avatar_url,omitempty"`
+	Bio         *string    `json:"bio,omitempty"`
+	IsAdmin     bool       `json:"is_admin"`
+	SignalCount int        `json:"signal_count"`
+	LastSeenAt  *time.Time `json:"last_seen_at,omitempty"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+func toAdminUserView(u AdminUserView) adminUserView {
+	return adminUserView{
+		ID:          u.ID.String(),
+		Email:       u.Email,
+		DisplayName: u.DisplayName,
+		AvatarURL:   u.AvatarURL,
+		Bio:         u.Bio,
+		IsAdmin:     u.IsAdmin,
+		SignalCount: u.SignalCount,
+		LastSeenAt:  u.LastSeenAt,
+		CreatedAt:   u.CreatedAt,
+	}
+}
+
+// adminListUsers GET /v1/admin/users — 全部用户 + 活动指标. 仅管理员可达.
+func (h *Handler) adminListUsers(c *gin.Context) {
+	users, err := h.svc.ListUsers(c.Request.Context())
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	out := make([]adminUserView, 0, len(users))
+	for _, u := range users {
+		out = append(out, toAdminUserView(u))
+	}
+	c.JSON(http.StatusOK, gin.H{"users": out, "total": len(out)})
+}
+
+// adminGetUser GET /v1/admin/users/:id — 单用户详情. 仅管理员可达.
+func (h *Handler) adminGetUser(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad user id"})
+		return
+	}
+	u, err := h.svc.GetUser(c.Request.Context(), id)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toUserView(u))
+}
+
+type adminSetAdminRequest struct {
+	IsAdmin *bool `json:"is_admin"`
+}
+
+// adminSetAdmin POST /v1/admin/users/:id/admin — 授予/收回管理员. 仅管理员可达.
+// 防自锁: 不允许管理员收回自己的 admin.
+func (h *Handler) adminSetAdmin(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad user id"})
+		return
+	}
+	var req adminSetAdminRequest
+	if err := c.ShouldBindJSON(&req); err != nil || req.IsAdmin == nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "body must be {\"is_admin\": true|false}"})
+		return
+	}
+	if caller, ok := auth.UserID(c); ok && caller == id && !*req.IsAdmin {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "不能收回自己的管理员权限"})
+		return
+	}
+	target, err := h.svc.GetUser(c.Request.Context(), id)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	u, err := h.svc.SetAdmin(c.Request.Context(), target.Email, *req.IsAdmin)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, toUserView(u))
 }
 
 func writeServiceError(c *gin.Context, err error) {

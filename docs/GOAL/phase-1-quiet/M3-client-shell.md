@@ -73,7 +73,7 @@ mobile/
 ```
 
 启动后:
-- 空白的"收件箱"页有 Masthead("Flashfi" + "Conviction Quarterly" + tagline)
+- 空白的"收件箱"页有 Masthead("财富密码" + "Conviction Quarterly" + tagline)
 - 底部 Tab 切换工作
 - 模态 capture 页能从底部滑入
 - ky 客户端能 ping 后端 /healthz
@@ -85,7 +85,7 @@ mobile/
 ### Task 3.1 · 初始化 Expo 项目
 
 ```bash
-cd flashfi   # 在 server/ 兄弟目录创建
+cd wiseflow   # 在 server/ 兄弟目录创建
 npx create-expo-app@latest mobile --template default-typescript
 cd mobile
 ```
@@ -368,7 +368,7 @@ npx expo start
 
 检查:
 - 字体加载完才显示 UI(SplashScreen 工作)
-- Masthead 大字 "Flashfi" 是 Playfair Display italic
+- Masthead 大字 "财富密码" 是 Playfair Display italic
 - 副线 "Conviction Quarterly" 显示正确
 - Tab 切换流畅, 标签字号 9pt 大写
 - 模态 capture 从底部滑入

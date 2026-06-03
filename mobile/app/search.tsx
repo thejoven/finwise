@@ -1,18 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  StyleSheet,
-  TextInput,
-  View,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { FlatList, StyleSheet, TextInput, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, X } from "lucide-react-native";
 
-import { Display, DoubleRule, Mono, Serif, TapEffect } from "@/shared/components";
+import {
+  Display,
+  DoubleRule,
+  Icon,
+  KeyboardForm,
+  ModalTopBar,
+  Serif,
+  TapEffect,
+} from "@/shared/components";
 import { SignalRow, type MergedSignal } from "@/features/capture";
 import { listSignals } from "@/core/api/signals";
 import { readErrorMessage } from "@/core/api/account";
@@ -66,94 +64,70 @@ export default function SearchScreen() {
   }, [query.error]);
 
   return (
-    <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={styles.flex}
-      >
-        <View style={styles.topBar}>
-          <TapEffect style={styles.backBtn} onPress={() => router.back()}>
-            <ChevronLeft size={22} color={theme.color.ink} strokeWidth={1.5} />
-          </TapEffect>
-          <Mono size={10} style={styles.topMeta}>
-            搜索 · SEARCH
-          </Mono>
-          <View style={styles.backBtn} />
-        </View>
+    <KeyboardForm>
+      <ModalTopBar label="搜索 · SEARCH" />
 
-        <View style={styles.header}>
-          <Display size={24} italic style={styles.title}>
-            搜索观察记录.
-          </Display>
-          <DoubleRule />
-        </View>
+      <View style={styles.header}>
+        <Display size={24} italic style={styles.title}>
+          搜索观察记录.
+        </Display>
+        <DoubleRule />
+      </View>
 
-        <View style={styles.searchRow}>
-          <TextInput
-            value={raw}
-            onChangeText={setRaw}
-            placeholder="输入关键词…"
-            placeholderTextColor={theme.color.muted2}
-            autoFocus
-            autoCapitalize="none"
-            autoCorrect={false}
-            returnKeyType="search"
-            style={styles.input}
-          />
-          {raw.length > 0 ? (
-            <TapEffect onPress={() => setRaw("")} style={styles.clearBtn}>
-              <X size={16} color={theme.color.muted2} strokeWidth={1.5} />
-            </TapEffect>
-          ) : null}
-        </View>
-
-        <FlatList<MergedSignal>
-          data={items}
-          keyExtractor={(s) => s.id}
-          renderItem={({ item }) => <SignalRow signal={item} />}
-          ItemSeparatorComponent={Separator}
-          keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              {debounced.length === 0 ? (
-                <Serif size={13} italic style={styles.emptyText}>
-                  在原文或推演摘要里搜索关键词。
-                </Serif>
-              ) : query.isFetching ? (
-                <Serif size={13} italic style={styles.emptyText}>
-                  搜索中…
-                </Serif>
-              ) : errorMsg ? (
-                <Serif size={13} italic style={styles.emptyError}>
-                  {errorMsg}
-                </Serif>
-              ) : (
-                <Serif size={13} italic style={styles.emptyText}>
-                  没有匹配 "{debounced}"。
-                </Serif>
-              )}
-            </View>
-          }
+      <View style={styles.searchRow}>
+        <TextInput
+          value={raw}
+          onChangeText={setRaw}
+          placeholder="输入关键词…"
+          placeholderTextColor={theme.color.muted2}
+          autoFocus
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="search"
+          style={styles.input}
         />
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        {raw.length > 0 ? (
+          <TapEffect onPress={() => setRaw("")} style={styles.clearBtn}>
+            <Icon name="close" size={16} color={theme.color.muted2} strokeWidth={1.5} />
+          </TapEffect>
+        ) : null}
+      </View>
+
+      <FlatList<MergedSignal>
+        data={items}
+        keyExtractor={(s) => s.id}
+        renderItem={({ item }) => <SignalRow signal={item} />}
+        ItemSeparatorComponent={Separator}
+        keyboardShouldPersistTaps="handled"
+        ListEmptyComponent={
+          <View style={styles.empty}>
+            {debounced.length === 0 ? (
+              <Serif size={13} italic style={styles.emptyText}>
+                在原文或推演摘要里搜索关键词。
+              </Serif>
+            ) : query.isFetching ? (
+              <Serif size={13} italic style={styles.emptyText}>
+                搜索中…
+              </Serif>
+            ) : errorMsg ? (
+              <Serif size={13} italic style={styles.emptyError}>
+                {errorMsg}
+              </Serif>
+            ) : (
+              <Serif size={13} italic style={styles.emptyText}>
+                没有匹配 "{debounced}"。
+              </Serif>
+            )}
+          </View>
+        }
+      />
+    </KeyboardForm>
   );
 }
 
 const Separator = () => <View style={styles.sep} />;
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.color.paper },
-  flex: { flex: 1 },
-  topBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: theme.spacing.base,
-    paddingVertical: theme.spacing.sm,
-  },
-  backBtn: { width: 32, height: 32, alignItems: "center", justifyContent: "center" },
-  topMeta: { color: theme.color.muted, letterSpacing: 2, textTransform: "uppercase" },
   header: { paddingHorizontal: theme.spacing.lg, paddingTop: theme.spacing.sm },
   title: { marginBottom: theme.spacing.sm },
   searchRow: {

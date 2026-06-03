@@ -42,7 +42,9 @@ function toRow(r: DBRow): PendingSignalRow {
 
 export async function listAll(): Promise<PendingSignalRow[]> {
   const db = await getDB();
-  const rows = await db.getAllAsync<DBRow>(`SELECT * FROM pending_signals ORDER BY captured_at DESC`);
+  const rows = await db.getAllAsync<DBRow>(
+    `SELECT * FROM pending_signals ORDER BY captured_at DESC`,
+  );
   return rows.map(toRow);
 }
 
@@ -77,15 +79,23 @@ export async function upsertSyncing(input: {
        updated_at    = excluded.updated_at`,
     [input.id, input.raw_text, input.captured_at, projectID, now, now],
   );
-  const row = await db.getFirstAsync<DBRow>(`SELECT * FROM pending_signals WHERE id = ?`, [input.id]);
+  const row = await db.getFirstAsync<DBRow>(`SELECT * FROM pending_signals WHERE id = ?`, [
+    input.id,
+  ]);
   if (!row) throw new Error(`upsertSyncing: row not found after insert: ${input.id}`);
   return toRow(row);
 }
 
-export async function markFailed(id: string, error: string, maxAttempts: number): Promise<PendingSignalRow | null> {
+export async function markFailed(
+  id: string,
+  error: string,
+  maxAttempts: number,
+): Promise<PendingSignalRow | null> {
   const db = await getDB();
   const now = Date.now();
-  const existing = await db.getFirstAsync<DBRow>(`SELECT * FROM pending_signals WHERE id = ?`, [id]);
+  const existing = await db.getFirstAsync<DBRow>(`SELECT * FROM pending_signals WHERE id = ?`, [
+    id,
+  ]);
   if (!existing) return null;
 
   const attempts = existing.attempts + 1;

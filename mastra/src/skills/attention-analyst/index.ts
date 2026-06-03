@@ -22,6 +22,7 @@ import { z } from "zod";
 
 import { config } from "../../config/env.js";
 import { defaultModel } from "../../llm/model.js";
+import { categoryContextBlock } from "../../agents/category.js";
 
 // ──────────────────── schema ────────────────────
 
@@ -75,6 +76,8 @@ export const attentionAnalyst = new Agent({
 export interface AttentionInput {
   signalSummary: string;
   signalTags: string[];
+  projectName?: string;
+  projectGuidance?: string;
   rounds: Array<{
     round: number;
     kind: string;
@@ -120,7 +123,9 @@ function buildPrompt(input: AttentionInput): string {
     })
     .join("\n");
 
+  const cat = categoryContextBlock(input.projectName, input.projectGuidance);
   return [
+    ...(cat ? [cat, ""] : []),
     `信号 (本次追问基于这条信号):`,
     `  summary: ${input.signalSummary}`,
     `  tags: ${input.signalTags.join(", ") || "(无)"}`,

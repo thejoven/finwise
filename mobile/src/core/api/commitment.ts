@@ -26,6 +26,7 @@ export const CommitmentStatus = z.enum(["drafted", "signed", "postponed", "aband
 export const Commitment = z.object({
   id: z.string().uuid(),
   evaluation_id: z.string().uuid(),
+  project_id: z.string().uuid().nullable().optional(), // 分类标签 (服务端经 JOIN 推导)
   status: CommitmentStatus,
   thesis: Thesis,
   pdf_path: z.string().nullable().optional(),
@@ -70,10 +71,15 @@ export async function getActiveCommitment(): Promise<Commitment | null> {
   return Commitment.parse(await res.json());
 }
 
-export async function signCommitment(input: { id: string; signing_client_id: string }): Promise<SignResponse> {
-  const json = await api.post(`v1/commitments/${input.id}/sign`, {
-    json: { signing_client_id: input.signing_client_id },
-  }).json();
+export async function signCommitment(input: {
+  id: string;
+  signing_client_id: string;
+}): Promise<SignResponse> {
+  const json = await api
+    .post(`v1/commitments/${input.id}/sign`, {
+      json: { signing_client_id: input.signing_client_id },
+    })
+    .json();
   return SignResponse.parse(json);
 }
 
@@ -82,9 +88,11 @@ export async function postponeCommitment(input: {
   client_event_id: string;
   reason?: string;
 }): Promise<Commitment> {
-  const json = await api.post(`v1/commitments/${input.id}/postpone`, {
-    json: { client_event_id: input.client_event_id, reason: input.reason },
-  }).json();
+  const json = await api
+    .post(`v1/commitments/${input.id}/postpone`, {
+      json: { client_event_id: input.client_event_id, reason: input.reason },
+    })
+    .json();
   return Commitment.parse(json);
 }
 

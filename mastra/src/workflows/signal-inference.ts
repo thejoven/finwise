@@ -14,13 +14,14 @@
  */
 
 import { runAnalyst } from "../agents/analyst.js";
-import { postInference, postResearch } from "../tools/flashfi-api.js";
+import { postInference, postResearch } from "../tools/wiseflow-api.js";
 import { webSearch, type SearchResult } from "../tools/exa-search.js";
+import { searchPredictionMarkets } from "../tools/polymarket.js";
 import type { SignalCaptured } from "../agents/schema.js";
 import { config } from "../config/env.js";
 import { indexSignal } from "../memory/vector-store.js";
 
-const SEARCH_MODEL = "exa-search-v1";
+const RESEARCH_MODEL = "exa+polymarket-v1";
 
 export interface RunResult {
   signal_id: string;
@@ -42,10 +43,13 @@ export async function runSignalInference(
     return [] as SearchResult[];
   });
 
-  // Step 2: analyze (含 grounding)
+  // Step 2: analyze (含 grounding + 分类指引)
   let inference;
   try {
-    inference = await runAnalyst(input.raw_text, research);
+    inference = await runAnalyst(input.raw_text, research, {
+      name: input.project_name,
+      guidance: input.project_guidance,
+    });
   } catch (err) {
     return {
       signal_id: input.signal_id,
@@ -80,6 +84,7 @@ export async function runSignalInference(
     summary: inference.one_line_summary,
     tags: inference.tags ?? [],
     captured_at: new Date().toISOString(),
+    project_id: input.project_id ?? undefined, // null/未分类 → 不写入 metadata
   }).catch((err) => {
     logWarn("index signal to vector store failed (continuing)", {
       signal_id: input.signal_id,
@@ -103,10 +108,18 @@ export async function runSignalInference(
 async function researchSignal(input: SignalCaptured): Promise<SearchResult[]> {
   const query = (input.raw_text ?? "").trim();
   if (!query) return [];
-  const results = await webSearch(query, { count: 5, freshness: "month", type: "auto" });
+
+  // Exa 新闻 + Polymarket 市场概率并发跑. 两者都是增强材料, 各自失败静默不阻断.
+  const [webResults, marketResults] = await Promise.all([
+    webSearch(query, { count: 8, freshness: "month", type: "auto" }),
+    searchPredictionMarkets(input.raw_text).catch(() => [] as SearchResult[]),
+  ]);
+  // market 排在前面: 它是差异化价值, 且要在 Analyst prompt 的 .slice 里优先保留.
+  const results = [...marketResults, ...webResults];
   if (results.length === 0) return results;
 
-  // 落库不阻塞主流程 — 写失败只 log
+  // 合并成"一条" signal-scope 记录落库 — mobile LearningTimeline 只取首条 signal-scope,
+  // Exa + Polymarket 必须同记录, 否则只显示其一. 客户端按每条 result 的 kind 区分渲染.
   try {
     await postResearch({
       user_id: input.user_id,
@@ -114,7 +127,7 @@ async function researchSignal(input: SignalCaptured): Promise<SearchResult[]> {
       signal_id: input.signal_id,
       query,
       results,
-      model: SEARCH_MODEL,
+      model: RESEARCH_MODEL,
     });
   } catch (err) {
     logWarn("postResearch failed (signal scope)", {

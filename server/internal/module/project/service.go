@@ -26,6 +26,7 @@ type CreateCommand struct {
 	Color     *string
 	Emoji     *string
 	SortOrder int
+	Guidance  *string
 }
 
 func (c *CreateCommand) Validate() error {
@@ -57,6 +58,16 @@ func (c *CreateCommand) Validate() error {
 			c.Emoji = &v
 		}
 	}
+	if c.Guidance != nil {
+		v := strings.TrimSpace(*c.Guidance)
+		if v == "" {
+			c.Guidance = nil
+		} else if utf8.RuneCountInString(v) > 2000 {
+			return fmt.Errorf("%w: guidance exceeds 2000 chars", ErrInvalidInput)
+		} else {
+			c.Guidance = &v
+		}
+	}
 	return nil
 }
 
@@ -70,6 +81,7 @@ func (s *Service) Create(ctx context.Context, cmd CreateCommand) (*Project, erro
 		Color:     cmd.Color,
 		Emoji:     cmd.Emoji,
 		SortOrder: cmd.SortOrder,
+		Guidance:  cmd.Guidance,
 	})
 }
 
@@ -88,6 +100,7 @@ type UpdateCommand struct {
 	Color     *string
 	Emoji     *string
 	SortOrder *int
+	Guidance  *string
 }
 
 func (c *UpdateCommand) Validate() error {
@@ -123,6 +136,13 @@ func (c *UpdateCommand) Validate() error {
 			c.Emoji = &v
 		}
 	}
+	if c.Guidance != nil {
+		v := strings.TrimSpace(*c.Guidance)
+		if utf8.RuneCountInString(v) > 2000 {
+			return fmt.Errorf("%w: guidance exceeds 2000 chars", ErrInvalidInput)
+		}
+		c.Guidance = &v // 保留 "" 以支持清空 guidance
+	}
 	return nil
 }
 
@@ -137,6 +157,7 @@ func (s *Service) Update(ctx context.Context, cmd UpdateCommand) (*Project, erro
 		Color:     cmd.Color,
 		Emoji:     cmd.Emoji,
 		SortOrder: cmd.SortOrder,
+		Guidance:  cmd.Guidance,
 	})
 }
 

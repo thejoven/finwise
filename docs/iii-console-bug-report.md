@@ -1,3 +1,7 @@
+> **✅ 已在 iii 0.16.1 修复 (2026-05-29)** — 上游 PR [#1710](https://github.com/iii-hq/iii/pull/1710)
+> "fix(console): worker detail crash when worker has no functions array" 正是本报告描述的崩溃.
+> 我们已把 engine / console / iii-sdk 升到 0.16.1, 此 draft 无需再提交. 保留作存档.
+
 # Draft: GitHub issue for iii-hq/iii
 
 > Submit at https://github.com/iii-hq/iii/issues/new
@@ -91,7 +95,7 @@ $ curl -s http://localhost:3111/_console/triggers | jq '[.[] | select(.worker_na
 0
 ```
 
-The 9 triggers returned by `_console/triggers` are all for the external SDK worker (`flashfi-mastra`). The 4 built-in workers that have functions but no triggers (`configuration`, `iii-engine-functions`, `iii-telemetry`, `iii-worker-manager`) appear nowhere in the triggers response.
+The 9 triggers returned by `_console/triggers` are all for the external SDK worker (`wiseflow-mastra`). The 4 built-in workers that have functions but no triggers (`configuration`, `iii-engine-functions`, `iii-telemetry`, `iii-worker-manager`) appear nowhere in the triggers response.
 
 Almost certainly the SPA does something like:
 
@@ -117,4 +121,4 @@ The in-process workers that ship with the engine (`configuration`, `iii-engine-f
 
 Don't click the in-process workers in the list. The DLQ, queue stats, functions, OTel, and external-worker detail pages all work fine. We've documented this in our team SERVER.md.
 
-Happy to test a fix against our deployment — `flashfi-mastra` is a real-world external Node SDK worker with 4 queue subscriptions + 5 HTTP triggers, so it covers the non-broken render path.
+Happy to test a fix against our deployment — `wiseflow-mastra` is a real-world external Node SDK worker with 4 queue subscriptions + 5 HTTP triggers, so it covers the non-broken render path.

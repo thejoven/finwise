@@ -45,7 +45,7 @@ export const config = {
 
   iiiUrl: optional("III_URL", "ws://localhost:49134")!,
 
-  flashfiApiUrl: optional("FLASHFI_API_URL", "http://localhost:8080")!,
+  wiseflowApiUrl: optional("WISEFLOW_API_URL", "http://localhost:8080")!,
   internalToken: required("INTERNAL_TOKEN"),
 
   // 默认 deepseek-chat (公开模型). 用户想用 v4-pro 或其他, 改 ANALYST_MODEL env.
@@ -71,6 +71,16 @@ export const config = {
     timeoutMs: optionalNumber("EXA_SEARCH_TIMEOUT_MS", 8000),
   },
 
+  // Polymarket 预测市场检索 — 给信号找"市场对类似事件的实时概率共识", 喂 Analyst 的 consensus_check.
+  // 公开 gamma API, 无需 key. 没网络/被墙/超时时静默 no-op (返回空), 不影响主流程.
+  // 想关掉: POLYMARKET_ENABLED=false. 想走代理: 改 POLYMARKET_SEARCH_URL.
+  // Docs: https://docs.polymarket.com · Endpoint: GET /public-search?q=<kw>&events_status=active
+  polymarket: {
+    enabled: optional("POLYMARKET_ENABLED", "true") !== "false",
+    searchUrl: optional("POLYMARKET_SEARCH_URL", "https://gamma-api.polymarket.com/public-search")!,
+    timeoutMs: optionalNumber("POLYMARKET_TIMEOUT_MS", 8000),
+  },
+
   // Embeddings (thicknessJudge / RAG 用). 默认走阿里通义灵积 text-embedding-v3 (OpenAI compat).
   // 国内访问稳, 1024 维, 价格低. 想换 jina / openai 改这三个 env 即可.
   embeddings: {
@@ -81,7 +91,7 @@ export const config = {
 
   // pgvector store (复用 .205 已有 postgres, 走 mastra schema 隔离).
   vectorStore: {
-    connectionString: optional("MASTRA_PG_URL") ?? optional("DATABASE_URL", "postgres://flashfi:flashfi@localhost:5432/flashfi")!,
+    connectionString: optional("MASTRA_PG_URL") ?? optional("DATABASE_URL", "postgres://wiseflow:wiseflow@localhost:5432/wiseflow")!,
     schemaName: optional("MASTRA_PG_SCHEMA", "mastra")!,
     signalIndex: optional("MASTRA_SIGNAL_INDEX", "signal_summaries")!,
   },

@@ -1,5 +1,5 @@
 /**
- * Flashfi Pro Lens · 真实研究流程框架.
+ * WiseFlow Pro Lens · 真实研究流程框架.
  *
  * 把分散在 socratic / consensus / diagnostician 三个 agent 里
  * 那些"凭直觉"的角度词, 统一锚定到被验证过的研究框架上:
@@ -179,7 +179,7 @@ narrative_summary / evidence / 复盘文案 / inference rationale / one_line_sum
 
 /** 给 LLM prompt 用的纯文本块. 公共基底, 5 个 agent (socratic / consensus / diagnostician / thickness / lens) 都拼一次. */
 export const LENS_LIBRARY_BLOCK = `
-## Flashfi Pro Lens · 真实研究流程框架
+## WiseFlow Pro Lens · 真实研究流程框架
 
 任何一条信号必须至少**经过下面 10 个 lens 中的 3-4 个**才算被推演过. 不是名词背诵,
 是出题 / 评分 / 诊断时**真实使用**的认知工具.

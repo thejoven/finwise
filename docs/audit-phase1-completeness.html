@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Flashfi Engine · Phase 1 完成度审计</title>
+<title>财富密码 · Phase 1 完成度审计</title>
 <style>
   :root {
     --ink: #1a1a1a;
@@ -283,7 +283,7 @@
 
   <!-- ===================== MASTHEAD ===================== -->
   <header class="masthead">
-    <div class="sub">Flashfi Engine · Internal Audit</div>
+    <div class="sub">财富密码 · Internal Audit</div>
     <h1>Phase 1 完成度</h1>
     <div class="tag">APP 端 · 后端 · LLM 端 · 真正未完成项汇总</div>
     <div class="meta">
@@ -572,7 +572,7 @@
         <td><span class="sev medium">Medium</span></td>
         <td class="title">HTTP 工具无重试 / circuit breaker</td>
         <td>
-          <div class="where">mastra/src/tools/flashfi-api.ts (postInference 单次 fetch)</div>
+          <div class="where">mastra/src/tools/wiseflow-api.ts (postInference 单次 fetch)</div>
           <div class="why">Go 临时 5xx → 整个 workflow 失败 → NATS nak 重投 → <strong>Analyst 重跑 (再付一次 token 钱)</strong>. M2 spec Task 2.5 隐含 "persist 独立重试" 的设计意图. 当前实现把 LLM 调用也一起重跑了.</div>
         </td>
       </tr>
@@ -628,7 +628,7 @@
         <td><span class="sev ok">OK ✓</span></td>
         <td class="title">已正确实现的部分</td>
         <td>
-          <div class="why">Analyst Agent (Claude Sonnet 4.5) + Flashfi 专属 prompt; InferenceSchema 在 generate() 时通过 <code>output: zodSchema</code> 强制约束 + 一次 retry; NATS JetStream consumer durable + manualAck + ackExplicit + deliverNew + maxDeliver(3) + ackWait 60s; signal-inference workflow analyze → persist; flashfi-api 内部 token header; 10 条 fixture (HBM / Mac Studio / DeepSeek / 电力 / 出口 / 咖啡 / GLP-1 / 航运 / 噪音 / 日本人才) 覆盖一/二/三阶 + 弱信号; env 强校验 (ANTHROPIC_API_KEY · NATS_URL · FLASHFI_API_URL · INTERNAL_TOKEN); 没有任何 Phase 2 agent 误埋.</div>
+          <div class="why">Analyst Agent (Claude Sonnet 4.5) + 财富密码 专属 prompt; InferenceSchema 在 generate() 时通过 <code>output: zodSchema</code> 强制约束 + 一次 retry; NATS JetStream consumer durable + manualAck + ackExplicit + deliverNew + maxDeliver(3) + ackWait 60s; signal-inference workflow analyze → persist; wiseflow-api 内部 token header; 10 条 fixture (HBM / Mac Studio / DeepSeek / 电力 / 出口 / 咖啡 / GLP-1 / 航运 / 噪音 / 日本人才) 覆盖一/二/三阶 + 弱信号; env 强校验 (ANTHROPIC_API_KEY · NATS_URL · WISEFLOW_API_URL · INTERNAL_TOKEN); 没有任何 Phase 2 agent 误埋.</div>
         </td>
       </tr>
     </tbody>
@@ -649,7 +649,7 @@
     <li><strong>[LLM · High]</strong> Analyst prompt 加 3-5 个 few-shot 示例 (good 一阶 → 二阶推链, bad 瞎编示例). <em>≈ 0.5 天</em></li>
     <li><strong>[Backend · High]</strong> 给 signal handler + service + outbox 写至少 6 个测试 (capture happy, capture dup, list pagination, get not found, RecordInference happy, internal auth 401). <em>≈ 1 天</em></li>
     <li><strong>[Backend · Medium]</strong> Outbox 配置改 env 驱动 (<code>OUTBOX_POLL_MS</code> / <code>OUTBOX_BATCH</code> / <code>OUTBOX_MAX_ATTEMPTS</code>). <em>≈ 0.5 天</em></li>
-    <li><strong>[LLM · Medium]</strong> flashfi-api postInference 加 3 次重试 + 指数退避 (单独重试 HTTP, 不重跑 Analyst). <em>≈ 0.5 天</em></li>
+    <li><strong>[LLM · Medium]</strong> wiseflow-api postInference 加 3 次重试 + 指数退避 (单独重试 HTTP, 不重跑 Analyst). <em>≈ 0.5 天</em></li>
     <li><strong>[Mastra · Low]</strong> 删 <code>@ai-sdk/openai</code> 依赖. <em>≈ 5 分钟</em></li>
   </ol>
 
@@ -674,7 +674,7 @@
   </ul>
 
   <div class="footnote">
-    本审计基于 /Users/clh-openclaw/Project/0002-flashfi 仓库 main 分支当前状态生成 · 评分以 Phase 1 路线图 (docs/GOAL/phase-1-quiet/) 为基准 · 不预判 Phase 2/3 完成度
+    本审计基于 /Users/clh-openclaw/Project/0002-wiseflow 仓库 main 分支当前状态生成 · 评分以 Phase 1 路线图 (docs/GOAL/phase-1-quiet/) 为基准 · 不预判 Phase 2/3 完成度
   </div>
 
 </div>

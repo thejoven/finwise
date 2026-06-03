@@ -17,11 +17,11 @@ import { useCallback, useMemo } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
 
 import {
   Display,
   DoubleRule,
+  Icon,
   Mono,
   Sans,
   SectionHeader,
@@ -29,6 +29,7 @@ import {
   TapEffect,
 } from "@/shared/components";
 import { theme } from "@/core/theme";
+import { formatClock } from "@/shared/format";
 
 import { useNotifications, type Notification } from "./store";
 
@@ -62,7 +63,7 @@ export function NotificationsScreen() {
     <SafeAreaView edges={["top", "bottom"]} style={styles.root}>
       <View style={styles.header}>
         <TapEffect style={styles.backBtn} onPress={() => router.back()} disableEffect>
-          <ChevronLeft size={18} color={theme.color.ink} strokeWidth={1.5} />
+          <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
           <Serif size={13}>返回</Serif>
         </TapEffect>
         <Sans size={9} weight="600" style={styles.headerStamp}>
@@ -135,7 +136,7 @@ function NotificationRow({ item, onPress }: { item: Notification; onPress: () =>
           {item.stamp}
         </Mono>
         <Mono size={9} style={styles.time}>
-          {formatTime(item.createdAt)}
+          {formatClock(item.createdAt)}
         </Mono>
       </View>
       <Display size={15} style={styles.title} numberOfLines={2}>
@@ -196,11 +197,6 @@ function startOfDay(ms: number): number {
   const d = new Date(ms);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
-}
-
-function formatTime(ms: number): string {
-  const d = new Date(ms);
-  return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 }
 
 // ──────────────────── styles ────────────────────

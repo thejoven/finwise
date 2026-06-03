@@ -8,18 +8,19 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
-	"flashfi/server/internal/infra/mastra"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
+	"wiseflow/server/internal/infra/mastra"
 )
 
-// Service 跑四道门. 入口是 Evaluate(refinementID).
+// Service 跑四位分析师审核 (原"四道门"). 入口是 Evaluate(refinementID).
 type Service struct {
 	repo   *Repository
 	pool   *db.Pool // 直接查 events / signals / refinement_sessions, 跨模块只读
@@ -34,7 +35,39 @@ func NewService(repo *Repository, pool *db.Pool, mc *mastra.Client, logger *zap.
 	return &Service{repo: repo, pool: pool, mastra: mc, logger: logger}
 }
 
-// Evaluate 串行跑 G1, G2, G3, G4. 任一门失败立刻沉默归档.
+// OwnsRefinement 校验 refinementID 属于 userID. 给"用户手动触发评估"的 public
+// 端点 (降噪页"进入四道门") 做 ownership 关. 只读 refinement_sessions, 不评估.
+func (s *Service) OwnsRefinement(ctx context.Context, userID, refinementID uuid.UUID) (bool, error) {
+	const q = `SELECT 1 FROM refinement_sessions WHERE id = $1 AND user_id = $2`
+	var one int
+	if err := s.pool.QueryRow(ctx, q, refinementID, userID).Scan(&one); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("check refinement ownership: %w", err)
+	}
+	return true, nil
+}
+
+// EvaluateDetached 后台跑四道门评估并记日志. 调用方需先 OwnsRefinement 校验.
+// 不阻塞 HTTP 响应 — 评估含 4 次 LLM 往返, 客户端不该干等 (沉默优于发声, 降噪页
+// 不显示 loading). Evaluate 对 refinement_id 幂等, 重复触发不会重复跑 LLM.
+func (s *Service) EvaluateDetached(refinementID uuid.UUID) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+		defer cancel()
+		start := time.Now()
+		if _, err := s.Evaluate(ctx, refinementID); err != nil {
+			s.logger.Warn("gate manual evaluate failed",
+				zap.String("refinement_id", refinementID.String()), zap.Error(err))
+			return
+		}
+		s.logger.Info("gate manual evaluated",
+			zap.String("refinement_id", refinementID.String()), zap.Duration("dur", time.Since(start)))
+	}()
+}
+
+// Evaluate 跑四位分析师 (佐证 / 共识 / 时机 / 能力圈). 任一位没通过立刻沉默归档.
 // 若已 evaluate 过 (idempotent on refinement_id), 直接返回已有的.
 func (s *Service) Evaluate(ctx context.Context, refinementID uuid.UUID) (*Evaluation, error) {
 	// 0) 装载 refinement context: user_id, primary_signal, rounds
@@ -43,21 +76,35 @@ func (s *Service) Evaluate(ctx context.Context, refinementID uuid.UUID) (*Evalua
 		return nil, err
 	}
 
-	// 1) G1 信号厚度
-	g1Pass, g1Count, g1Detail := s.evaluateG1Thickness(ctx, rc)
-
-	// 2) G2 反共识 — Mastra ConsensusCheck (fallback: stub)
-	g2Pass, g2Score, g2Detail := s.evaluateG2Consensus(ctx, rc)
-
-	// 3) G3 窗口期
-	g3Pass, g3Months, g3Detail := s.evaluateG3Window(rc)
-
-	// 4) G4 在不在能力圈
-	g4Pass, g4Sub, g4Detail := s.evaluateG4Edge(rc)
+	// 四位分析师并行审核. 每位只读 rc, 彼此独立; 串行会把 4 次 LLM 往返延迟叠加,
+	// 并行后墙钟 ≈ 最慢的一位 (各函数内部各自管理超时).
+	//   佐证分析师 (G1) · 共识分析师 (G2) · 时机分析师 (G3) · 能力圈分析师 (G4)
+	var (
+		g1Pass   bool
+		g1Count  int
+		g1Detail string
+		g2Pass   bool
+		g2Score  int
+		g2Detail string
+		g2Dirs   []domain.UnpricedDirection
+		g3Pass   bool
+		g3Months float64
+		g3Detail string
+		g4Pass   bool
+		g4Sub    domain.GateG4Sub
+		g4Detail string
+	)
+	var wg sync.WaitGroup
+	wg.Add(4)
+	go func() { defer wg.Done(); g1Pass, g1Count, g1Detail = s.evaluateG1Thickness(ctx, rc) }()
+	go func() { defer wg.Done(); g2Pass, g2Score, g2Detail, g2Dirs = s.evaluateG2Consensus(ctx, rc) }()
+	go func() { defer wg.Done(); g3Pass, g3Months, g3Detail = s.evaluateG3Window(ctx, rc) }()
+	go func() { defer wg.Done(); g4Pass, g4Sub, g4Detail = s.evaluateG4Edge(ctx, rc) }()
+	wg.Wait()
 
 	gates := domain.GateDetail{
 		G1Thickness:     domain.GateG1{Pass: g1Pass, Count: g1Count, Detail: stringPtr(g1Detail)},
-		G2AntiConsensus: domain.GateG2{Pass: g2Pass, Score: g2Score, Detail: stringPtr(g2Detail)},
+		G2AntiConsensus: domain.GateG2{Pass: g2Pass, Score: g2Score, Detail: stringPtr(g2Detail), UnpricedDirections: g2Dirs},
 		G3Window:        domain.GateG3{Pass: g3Pass, Months: g3Months, Detail: stringPtr(g3Detail)},
 		G4Edge:          domain.GateG4{Pass: g4Pass, Sub: g4Sub, Detail: stringPtr(g4Detail)},
 	}
@@ -85,28 +132,34 @@ func (s *Service) Evaluate(ctx context.Context, refinementID uuid.UUID) (*Evalua
 // ───── refinement context ─────
 
 type refinementContext struct {
-	UserID                 uuid.UUID
-	RefinementID           uuid.UUID
-	PrimarySignalID        uuid.UUID
-	PrimaryAsset           *string
-	PrimarySignalRawText   string
-	PrimarySignalSummary   string
-	PrimarySignalTags      []string
-	Rounds                 []domain.RefinementAnsweredPayload
+	UserID               uuid.UUID
+	RefinementID         uuid.UUID
+	PrimarySignalID      uuid.UUID
+	PrimaryAsset         *string
+	PrimarySignalRawText string
+	PrimarySignalSummary string
+	PrimarySignalTags    []string
+	ProjectID            *uuid.UUID // 信号所属分类; nil = 未分类. 用于 G1 同分类优先召回
+	ProjectName          string     // 分类名 (经 signal.project_id JOIN projects); "" = 未分类
+	ProjectGuidance      string     // 分类的分析指引; "" = 无
+	Rounds               []domain.RefinementAnsweredPayload
 }
 
 func (s *Service) loadRefinement(ctx context.Context, refinementID uuid.UUID) (*refinementContext, error) {
 	const q = `
 		SELECT rs.user_id, rs.primary_signal_id, rs.primary_asset,
-		       s.raw_text, COALESCE(s.inference_summary, ''), COALESCE(s.inference_tags, ARRAY[]::TEXT[])
+		       s.raw_text, COALESCE(s.inference_summary, ''), COALESCE(s.inference_tags, ARRAY[]::TEXT[]),
+		       s.project_id, COALESCE(p.name, ''), COALESCE(p.guidance, '')
 		FROM refinement_sessions rs
 		JOIN signals s ON s.id = rs.primary_signal_id
+		LEFT JOIN projects p ON p.id = s.project_id
 		WHERE rs.id = $1
 	`
 	rc := &refinementContext{RefinementID: refinementID}
 	if err := s.pool.QueryRow(ctx, q, refinementID).Scan(
 		&rc.UserID, &rc.PrimarySignalID, &rc.PrimaryAsset,
 		&rc.PrimarySignalRawText, &rc.PrimarySignalSummary, &rc.PrimarySignalTags,
+		&rc.ProjectID, &rc.ProjectName, &rc.ProjectGuidance,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("refinement %s not found", refinementID)
@@ -142,7 +195,7 @@ func (s *Service) loadRefinement(ctx context.Context, refinementID uuid.UUID) (*
 	return rc, nil
 }
 
-// ───── G1 · 信号厚度 ─────
+// ───── G1 · 佐证分析师 (ThicknessJudge) ─────
 
 // G1: 优先调 Mastra ThicknessJudge (LLM + RAG 综合判定 single_signal_richness +
 // cross_signal_breadth). LLM 给的 reasoning 写进 detail / human_reason.
@@ -152,12 +205,19 @@ func (s *Service) evaluateG1Thickness(ctx context.Context, rc *refinementContext
 	if s.mastra != nil && s.mastra.IsConfigured() {
 		callCtx, cancel := context.WithTimeout(ctx, 12*time.Second)
 		defer cancel()
+		projectID := ""
+		if rc.ProjectID != nil {
+			projectID = rc.ProjectID.String()
+		}
 		resp, err := s.mastra.ThicknessCheck(callCtx, mastra.ThicknessRequest{
-			UserID:   rc.UserID.String(),
-			SignalID: rc.PrimarySignalID.String(),
-			RawText:  rc.PrimarySignalRawText,
-			Summary:  rc.PrimarySignalSummary,
-			Tags:     rc.PrimarySignalTags,
+			UserID:          rc.UserID.String(),
+			SignalID:        rc.PrimarySignalID.String(),
+			RawText:         rc.PrimarySignalRawText,
+			Summary:         rc.PrimarySignalSummary,
+			Tags:            rc.PrimarySignalTags,
+			ProjectID:       projectID,
+			ProjectName:     rc.ProjectName,
+			ProjectGuidance: rc.ProjectGuidance,
 		})
 		if err == nil {
 			// detail 只放 LLM reasoning (一句话, classifyFailure 会作为 human_reason 给用户看).
@@ -281,38 +341,33 @@ func makeSet(ss []string) map[string]struct{} {
 	return m
 }
 
-// ───── G2 · 反共识 (LLM via Mastra; fallback stub) ─────
+// ───── G2 · 共识分析师 (ConsensusCheck, LLM via Mastra; fallback stub) ─────
 //
 // 阈值: score < 70 → 通过 (leading view, 反共识); ≥ 70 → 失败 (已被定价).
 // Mastra 调失败 (URL 未配 / 超时 / Mastra 挂) → 返回 stub (60, pass), 不阻塞主流程.
-func (s *Service) evaluateG2Consensus(ctx context.Context, rc *refinementContext) (bool, int, string) {
+func (s *Service) evaluateG2Consensus(ctx context.Context, rc *refinementContext) (bool, int, string, []domain.UnpricedDirection) {
 	const consensusThreshold = 70
 
 	if !s.mastra.IsConfigured() {
-		return true, 60, "Mastra HTTP 未配置, fallback stub (60/pass)"
+		return true, 60, "Mastra HTTP 未配置, fallback stub (60/pass)", nil
 	}
 
-	asset := "?"
-	if rc.PrimaryAsset != nil && *rc.PrimaryAsset != "" {
-		asset = *rc.PrimaryAsset
-	}
-	signalText := rc.PrimarySignalRawText
-	if signalText == "" {
-		signalText = "(信号原文未取到)"
-	}
+	asset, signalText := assetAndSignalText(rc)
 
 	callCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	resp, err := s.mastra.ConsensusCheck(callCtx, mastra.ConsensusRequest{
-		Asset:      asset,
-		SignalText: signalText,
+		Asset:           asset,
+		SignalText:      signalText,
+		ProjectName:     rc.ProjectName,
+		ProjectGuidance: rc.ProjectGuidance,
 	})
 	if err != nil {
 		s.logger.Warn("gate g2 mastra failed, fallback stub",
 			zap.String("refinement_id", rc.RefinementID.String()),
 			zap.Error(err),
 		)
-		return true, 60, fmt.Sprintf("Mastra fallback (stub 60/pass): %v", err)
+		return true, 60, fmt.Sprintf("Mastra fallback (stub 60/pass): %v", err), nil
 	}
 
 	pass := resp.Score < consensusThreshold
@@ -322,26 +377,80 @@ func (s *Service) evaluateG2Consensus(ctx context.Context, rc *refinementContext
 	}
 	detail := fmt.Sprintf("Mastra score=%d (阈值 <%d). %s. summary: %s",
 		resp.Score, consensusThreshold, verdict, resp.NarrativeSummary)
-	return pass, resp.Score, detail
+	return pass, resp.Score, detail, toDomainDirections(resp.UnpricedDirections)
 }
 
-// ───── G3 · 窗口期 ─────
-
-// G3: 解析 refinement 第 5 轮的持仓时长 (月).
-// 新 schema (kind=commitment_setup): 从 user_answer.choice_ids 找 dur_1m / dur_3m / dur_6m / dur_12m / dur_24m / dur_36m.
-// 旧 schema (kind=open): 从 user_answer.open_text 正则抠 "X 个月" / "X mo".
-// 在 [1, 6] 月算合理窗口, 过 (Phase 2 product 约束: commitment 应在半年内).
-func (s *Service) evaluateG3Window(rc *refinementContext) (bool, float64, string) {
-	if len(rc.Rounds) < 5 {
-		return false, 0, "refinement 还没答完 5 轮, 无法判定窗口期"
+// toDomainDirections 把 mastra 客户端的 unpriced_directions 映射成 domain 类型 (指方向, 不荐股).
+// 空切片归一成 nil, 让 GateG2 的 omitempty 在 JSONB / NATS 里彻底省掉这个字段.
+func toDomainDirections(in []mastra.UnpricedDirection) []domain.UnpricedDirection {
+	if len(in) == 0 {
+		return nil
 	}
-	r5 := rc.Rounds[4]
+	out := make([]domain.UnpricedDirection, len(in))
+	for i, d := range in {
+		out[i] = domain.UnpricedDirection{Angle: d.Angle, WhyUnpriced: d.WhyUnpriced, Lens: d.Lens}
+	}
+	return out
+}
 
-	// 1) 新 schema · 从 choice_ids 找 dur_* id
+// ───── G3 · 时机分析师 (TimingAnalyst) ─────
+
+// G3: 优先调 Mastra TimingCheck — LLM 判催化剂时序 / 前瞻窗口是否成立, 把"用户声明的
+// 持仓月数"作为输入之一, 比写死的 [1, 6] 月区间更聪明 (年度催化剂的长窗口也能过,
+// 已经发生过的事件即使月数合规也不过). LLM 的 reasoning 写进 detail / human_reason.
+// Mastra 失败 / 未配置 → fallback 老规则 (解析持仓月数, 落在 [1, 6] 月算过).
+func (s *Service) evaluateG3Window(ctx context.Context, rc *refinementContext) (bool, float64, string) {
+	if len(rc.Rounds) < 5 {
+		return false, 0, "追问还没答完 5 轮, 时机分析师无法判定窗口"
+	}
+	statedMonths, source := parseStatedMonths(rc.Rounds[4])
+
+	// 1) 时机分析师 (Mastra) 优先
+	if s.mastra.IsConfigured() {
+		callCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		asset, signalText := assetAndSignalText(rc)
+		planText := ""
+		if rc.Rounds[4].Answer.OpenText != nil {
+			planText = *rc.Rounds[4].Answer.OpenText
+		}
+		resp, err := s.mastra.TimingCheck(callCtx, mastra.TimingRequest{
+			Asset:           asset,
+			SignalText:      signalText,
+			StatedMonths:    statedMonths,
+			PlanText:        planText,
+			ProjectName:     rc.ProjectName,
+			ProjectGuidance: rc.ProjectGuidance,
+		})
+		if err == nil {
+			months := resp.Months
+			if months <= 0 {
+				months = statedMonths
+			}
+			return resp.Pass, months, resp.Reasoning
+		}
+		s.logger.Warn("g3 timing mastra failed, fallback to month-range rule",
+			zap.String("refinement_id", rc.RefinementID.String()),
+			zap.Error(err),
+		)
+	}
+
+	// 2) Fallback: 老规则 — 解析持仓月数, [1, 6] 月算合理窗口 (Phase 2: commitment 应在半年内)
+	if statedMonths <= 0 {
+		return false, 0, "第 5 轮没解析出持仓时长 (期望 choice_ids 含 dur_*m, 或 open_text 含 'X 个月')"
+	}
+	pass := statedMonths >= 1 && statedMonths <= 6
+	if !pass {
+		return false, statedMonths, fmt.Sprintf("解析出 %.1f 月 (源: %s), 不在 [1, 6] 月窗口内", statedMonths, source)
+	}
+	return true, statedMonths, fmt.Sprintf("窗口 %.1f 月 (源: %s)", statedMonths, source)
+}
+
+// parseStatedMonths 从第 5 轮答案解析用户声明的持仓月数.
+// 新 schema: choice_ids 找 dur_1m/dur_3m/.../dur_36m; 旧数据 fallback: open_text 正则抠 "X 个月".
+func parseStatedMonths(r5 domain.RefinementAnsweredPayload) (float64, string) {
 	months := extractDurationFromChoiceIDs(r5.Answer.ChoiceIDs)
 	source := "r5.choice_ids"
-
-	// 2) 老数据 fallback · open_text 正则
 	if months <= 0 {
 		text := ""
 		if r5.Answer.OpenText != nil {
@@ -350,15 +459,7 @@ func (s *Service) evaluateG3Window(rc *refinementContext) (bool, float64, string
 		months = extractDurationMonths(text)
 		source = "r5.open_text 正则"
 	}
-
-	if months <= 0 {
-		return false, 0, "第 5 轮没解析出持仓时长 (期望 choice_ids 含 dur_*m, 或 open_text 含 'X 个月')"
-	}
-	pass := months >= 1 && months <= 6
-	if !pass {
-		return false, months, fmt.Sprintf("解析出 %.1f 月 (源: %s), 不在 [1, 6] 月窗口内", months, source)
-	}
-	return true, months, fmt.Sprintf("窗口 %.1f 月 (源: %s)", months, source)
+	return months, source
 }
 
 // commitment_setup r5 的 duration id 规范集. 与 mastra socratic prompt 保持一致.
@@ -394,32 +495,56 @@ func extractDurationMonths(text string) float64 {
 	return f
 }
 
-// ───── G4 · 能力圈 ─────
+// ───── G4 · 能力圈分析师 (CompetenceAnalyst) ─────
 
-// G4 子项 (Phase 2 plan § 3.2):
-//   - explain (M5 round 1 答对): correct 或 partial_miss → true
-//   - direct (refinement 元数据有 primary_signal): true
-//   - track_record (Phase 2 cold start 留 null → 不算 false, 不阻塞)
-//   - exit_known (round 5 open_text 至少给出 ≥1 个 exit_condition 关键词): true
+// G4 子项:
+//   - explain (能解释根因): 优先 Mastra LLM 判 (看第 1 轮答题 + 诊断); fallback 诊断 kind ∈ {correct, partial_miss}
+//   - exit_known (给得出可证伪退出条件): 优先 Mastra LLM 判 (看第 5 轮原话); fallback 退出关键词命中
+//   - direct (refinement 元数据有 primary_signal): 元数据, 不交给 LLM
+//   - track_record (Phase 2 cold start 留空): 看作 null, Phase 3 复盘后再纳入
 //
-// 通过判定: explain + direct + exit_known 都 true (track_record 不计).
-func (s *Service) evaluateG4Edge(rc *refinementContext) (bool, domain.GateG4Sub, string) {
-	sub := domain.GateG4Sub{}
+// 通过判定: explain ∧ direct ∧ exit_known (track_record 不计). LLM 给的 reasoning 写进 detail.
+func (s *Service) evaluateG4Edge(ctx context.Context, rc *refinementContext) (bool, domain.GateG4Sub, string) {
+	sub := domain.GateG4Sub{
+		Direct:      rc.PrimarySignalID != uuid.Nil,
+		TrackRecord: false, // 冷启动留空 (Phase 3 复盘后再纳入)
+	}
 
-	// explain
+	// 1) 能力圈分析师 (Mastra) 优先 — 判 explain / exit_known 两个认知项
+	if s.mastra.IsConfigured() && len(rc.Rounds) >= 1 {
+		callCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		asset, signalText := assetAndSignalText(rc)
+		exitText := ""
+		if len(rc.Rounds) >= 5 && rc.Rounds[4].Answer.OpenText != nil {
+			exitText = *rc.Rounds[4].Answer.OpenText
+		}
+		resp, err := s.mastra.CompetenceCheck(callCtx, mastra.CompetenceRequest{
+			Asset:           asset,
+			SignalText:      signalText,
+			Direct:          sub.Direct,
+			Round1Text:      renderRound1(rc.Rounds[0]),
+			ExitText:        exitText,
+			ProjectName:     rc.ProjectName,
+			ProjectGuidance: rc.ProjectGuidance,
+		})
+		if err == nil {
+			sub.Explain = resp.Explain
+			sub.ExitKnown = resp.ExitKnown
+			pass := sub.Explain && sub.Direct && sub.ExitKnown
+			return pass, sub, resp.Reasoning
+		}
+		s.logger.Warn("g4 competence mastra failed, fallback to keyword heuristic",
+			zap.String("refinement_id", rc.RefinementID.String()),
+			zap.Error(err),
+		)
+	}
+
+	// 2) Fallback: 老启发式 (诊断 kind + 退出关键词)
 	if len(rc.Rounds) >= 1 {
 		sub.Explain = rc.Rounds[0].Diagnosis.Kind == domain.DiagnosisCorrect ||
 			rc.Rounds[0].Diagnosis.Kind == domain.DiagnosisPartialMiss
 	}
-
-	// direct
-	sub.Direct = rc.PrimarySignalID != uuid.Nil
-
-	// track_record — cold start 不算 false. 看作 null (Phase 3 复盘后再纳入).
-	// Go bool 没 null, 我们留 false 但 detail 里说明.
-	sub.TrackRecord = false
-
-	// exit_known
 	if len(rc.Rounds) >= 5 {
 		text := ""
 		if rc.Rounds[4].Answer.OpenText != nil {
@@ -427,13 +552,39 @@ func (s *Service) evaluateG4Edge(rc *refinementContext) (bool, domain.GateG4Sub,
 		}
 		sub.ExitKnown = hasExitConditionKeywords(text)
 	}
-
-	// Phase 2 通过条件
 	pass := sub.Explain && sub.Direct && sub.ExitKnown
-
-	detail := fmt.Sprintf("explain=%v · direct=%v · track_record=null(冷启动) · exit_known=%v",
+	detail := fmt.Sprintf("能力圈分析师(规则兜底): 讲得清=%v · 亲历=%v · 知退=%v (track_record 冷启动留空)",
 		sub.Explain, sub.Direct, sub.ExitKnown)
 	return pass, sub, detail
+}
+
+// renderRound1 把第 1 轮的题 + 用户选择 + 系统诊断渲染成给能力圈分析师看的文本.
+func renderRound1(r1 domain.RefinementAnsweredPayload) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "问题: %s\n", r1.QuestionText)
+	idToText := make(map[string]string, len(r1.Options))
+	for _, o := range r1.Options {
+		idToText[o.ID] = o.Text
+	}
+	if len(r1.Answer.ChoiceIDs) > 0 {
+		picks := make([]string, 0, len(r1.Answer.ChoiceIDs))
+		for _, id := range r1.Answer.ChoiceIDs {
+			if t, ok := idToText[id]; ok {
+				picks = append(picks, t)
+			} else {
+				picks = append(picks, id)
+			}
+		}
+		fmt.Fprintf(&b, "用户选择: %s\n", strings.Join(picks, " / "))
+	}
+	if r1.Answer.OpenText != nil && *r1.Answer.OpenText != "" {
+		fmt.Fprintf(&b, "用户自填: %s\n", *r1.Answer.OpenText)
+	}
+	fmt.Fprintf(&b, "系统诊断: %s", r1.Diagnosis.Kind)
+	if r1.Diagnosis.Note != nil && *r1.Diagnosis.Note != "" {
+		fmt.Fprintf(&b, " (%s)", *r1.Diagnosis.Note)
+	}
+	return b.String()
 }
 
 var exitKeywords = []string{"跌", "破", "退出", "止损", "平仓", "stop", "exit", "如果", "条件", "触发", "下跌"}
@@ -458,37 +609,52 @@ func hasExitConditionKeywords(text string) bool {
 // ───── 池分配 ─────
 
 // classifyFailure 决定 (failedGate, pool, humanReason).
-// 任一门失败立即沉默归档, 池子按门号分:
-//   - G1 失败 → observation (信号还不够厚, 继续观察)
-//   - G2 失败 → discard (已经被市场充分定价)
-//   - G3 失败 → calendar (时机问题, 等)
-//   - G4 失败 → lesson (能力圈外, 这条记下来当教训)
+// 任一位分析师没通过就立即沉默归档. humanReason 优先用该分析师给出的一句话 (LLM reasoning),
+// 没有时退回固定文案. 池子按是哪位分析师拦下分:
+//   - 佐证分析师 (G1) 没过 → observation (证据还不够厚, 继续观察)
+//   - 共识分析师 (G2) 没过 → discard   (已经被市场充分定价)
+//   - 时机分析师 (G3) 没过 → calendar  (时机问题, 等窗口)
+//   - 能力圈分析师 (G4) 没过 → lesson  (能力圈外, 这条记下来当教训)
 func classifyFailure(gates domain.GateDetail) (*int, domain.ArchivePool, string) {
-	one := 1
-	two := 2
-	three := 3
-	four := 4
+	one, two, three, four := 1, 2, 3, 4
 	if !gates.G1Thickness.Pass {
-		reason := "目前看到的独立信号还不够厚. 这一条先放观察池里, 等更多角度的同一观察再来."
-		if gates.G1Thickness.Detail != nil && *gates.G1Thickness.Detail != "" {
-			// LLM reasoning 优先 (一句话直接面向用户).
-			reason = *gates.G1Thickness.Detail
-		}
-		return &one, domain.PoolObservation, reason
+		return &one, domain.PoolObservation,
+			detailOr(gates.G1Thickness.Detail, "佐证分析师: 目前看到的独立证据还不够厚. 这一条先放观察池, 等更多角度的同一观察再来.")
 	}
 	if !gates.G2AntiConsensus.Pass {
 		return &two, domain.PoolDiscard,
-			"这件事市场已经讨论得很热了. 你看见的不算 leading, 这一条不进承诺书."
+			detailOr(gates.G2AntiConsensus.Detail, "共识分析师: 这件事市场已经讨论得很热了. 你看见的不算 leading, 这一条不进承诺书.")
 	}
 	if !gates.G3Window.Pass {
 		return &three, domain.PoolCalendar,
-			"时机不在你的窗口里. 这一条先放日历池, 时间到了再回来看."
+			detailOr(gates.G3Window.Detail, "时机分析师: 时机不在你的窗口里. 这一条先放日历池, 时间到了再回来看.")
 	}
 	if !gates.G4Edge.Pass {
 		return &four, domain.PoolLesson,
-			"这一条超出你目前的能力圈半径. 不强求它, 它进 lesson 池, 等你下次到能解释它的位置."
+			detailOr(gates.G4Edge.Detail, "能力圈分析师: 这一条超出你目前的能力圈半径. 它进 lesson 池, 等你下次到能解释它的位置.")
 	}
 	return nil, "", ""
+}
+
+// detailOr 优先返回分析师给的一句话 reasoning (面向用户); 为空时退回固定文案.
+func detailOr(detail *string, fallback string) string {
+	if detail != nil && strings.TrimSpace(*detail) != "" {
+		return *detail
+	}
+	return fallback
+}
+
+// assetAndSignalText 给分析师 prompt 用的资产名 + 信号原文 (带兜底占位).
+func assetAndSignalText(rc *refinementContext) (string, string) {
+	asset := "?"
+	if rc.PrimaryAsset != nil && *rc.PrimaryAsset != "" {
+		asset = *rc.PrimaryAsset
+	}
+	signalText := rc.PrimarySignalRawText
+	if signalText == "" {
+		signalText = "(信号原文未取到)"
+	}
+	return asset, signalText
 }
 
 func stringPtr(s string) *string {

@@ -1,6 +1,6 @@
 import { StyleSheet, Text as RNText, View } from "react-native";
-import { BookOpen, Plus } from "lucide-react-native";
 
+import { Icon } from "./Icon";
 import { Display, Sans } from "./Text";
 import { TapEffect } from "./TapEffect";
 import { theme } from "@/core/theme";
@@ -58,7 +58,8 @@ export function Masthead({
             disableEffect={!onMenuPress}
             accessibilityLabel="卷首语 · 关于本刊"
           >
-            <BookOpen
+            <Icon
+              name="book"
               size={18}
               color={onMenuPress ? theme.color.ink : theme.color.muted2}
               strokeWidth={1.5}
@@ -74,7 +75,8 @@ export function Masthead({
             disableEffect={!onCapturePress}
             accessibilityLabel="记录新观察"
           >
-            <Plus
+            <Icon
+              name="plus"
               size={20}
               color={onCapturePress ? theme.color.ink : theme.color.muted2}
               strokeWidth={1.75}

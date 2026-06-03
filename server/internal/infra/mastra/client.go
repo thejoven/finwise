@@ -1,8 +1,10 @@
 // Package mastra is the Go HTTP client to the Mastra worker.
 //
-// 四个端点:
-//   - POST /consensus-check    (M6 G2)
-//   - POST /thickness-check    (M6 G1, 替代 cluster 启发式)
+// 端点 (四位分析师 + M9/M11):
+//   - POST /consensus-check    (共识分析师 · 原 G2 反共识)
+//   - POST /thickness-check    (佐证分析师 · 原 G1 信号厚度, 替代 cluster 启发式)
+//   - POST /timing-check       (时机分析师 · 原 G3 时间窗口, 替代 1-6 月写死规则)
+//   - POST /competence-check   (能力圈分析师 · 原 G4 能力圈, 替代关键词启发式)
 //   - POST /editor             (M9)
 //   - POST /diagnostician      (M11)
 //
@@ -22,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"flashfi/server/internal/infra/metrics"
+	"wiseflow/server/internal/infra/metrics"
 )
 
 var ErrNotConfigured = errors.New("mastra http url not set")
@@ -50,14 +52,24 @@ func (c *Client) IsConfigured() bool {
 // ───── ConsensusCheck (M6 G2) ─────
 
 type ConsensusRequest struct {
-	Asset      string `json:"asset"`
-	SignalText string `json:"signal_text"`
+	Asset           string `json:"asset"`
+	SignalText      string `json:"signal_text"`
+	ProjectName     string `json:"project_name,omitempty"`
+	ProjectGuidance string `json:"project_guidance,omitempty"`
+}
+
+// UnpricedDirection 镜像 Mastra consensus agent 的 unpriced_directions 项 (指方向, 不荐股).
+type UnpricedDirection struct {
+	Angle       string `json:"angle"`
+	WhyUnpriced string `json:"why_unpriced"`
+	Lens        string `json:"lens,omitempty"`
 }
 
 type ConsensusResponse struct {
-	Score            int      `json:"score"`
-	NarrativeSummary string   `json:"narrative_summary"`
-	Evidence         []string `json:"evidence"`
+	Score              int                 `json:"score"`
+	NarrativeSummary   string              `json:"narrative_summary"`
+	Evidence           []string            `json:"evidence"`
+	UnpricedDirections []UnpricedDirection `json:"unpriced_directions"`
 }
 
 func (c *Client) ConsensusCheck(ctx context.Context, req ConsensusRequest) (*ConsensusResponse, error) {
@@ -75,20 +87,23 @@ func (c *Client) ConsensusCheck(ctx context.Context, req ConsensusRequest) (*Con
 // ───── ThicknessCheck (M6 G1) ─────
 
 type ThicknessRequest struct {
-	UserID   string   `json:"user_id"`
-	SignalID string   `json:"signal_id"`
-	RawText  string   `json:"raw_text"`
-	Summary  string   `json:"summary"`
-	Tags     []string `json:"tags"`
+	UserID          string   `json:"user_id"`
+	SignalID        string   `json:"signal_id"`
+	RawText         string   `json:"raw_text"`
+	Summary         string   `json:"summary"`
+	Tags            []string `json:"tags"`
+	ProjectID       string   `json:"project_id,omitempty"`
+	ProjectName     string   `json:"project_name,omitempty"`
+	ProjectGuidance string   `json:"project_guidance,omitempty"`
 }
 
 type ThicknessResponse struct {
-	Pass                  bool     `json:"pass"`
-	Score                 int      `json:"score"`
-	SingleSignalRichness  int      `json:"single_signal_richness"`
-	CrossSignalBreadth    int      `json:"cross_signal_breadth"`
-	DimensionsCovered     []string `json:"dimensions_covered"`
-	Reasoning             string   `json:"reasoning"`
+	Pass                 bool     `json:"pass"`
+	Score                int      `json:"score"`
+	SingleSignalRichness int      `json:"single_signal_richness"`
+	CrossSignalBreadth   int      `json:"cross_signal_breadth"`
+	DimensionsCovered    []string `json:"dimensions_covered"`
+	Reasoning            string   `json:"reasoning"`
 }
 
 func (c *Client) ThicknessCheck(ctx context.Context, req ThicknessRequest) (*ThicknessResponse, error) {
@@ -98,6 +113,67 @@ func (c *Client) ThicknessCheck(ctx context.Context, req ThicknessRequest) (*Thi
 	}
 	var resp ThicknessResponse
 	if err := c.post(ctx, "/thickness-check", "thickness", req, &resp, 15*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ───── TimingCheck (时机分析师 · 原 G3 窗口) ─────
+
+type TimingRequest struct {
+	Asset           string  `json:"asset"`
+	SignalText      string  `json:"signal_text"`
+	StatedAction    string  `json:"stated_action,omitempty"`
+	StatedMonths    float64 `json:"stated_months,omitempty"`
+	PlanText        string  `json:"plan_text,omitempty"`
+	ProjectName     string  `json:"project_name,omitempty"`
+	ProjectGuidance string  `json:"project_guidance,omitempty"`
+}
+
+type TimingResponse struct {
+	Pass        bool    `json:"pass"`
+	Months      float64 `json:"months"`
+	WindowPhase string  `json:"window_phase"`
+	Reasoning   string  `json:"reasoning"`
+}
+
+func (c *Client) TimingCheck(ctx context.Context, req TimingRequest) (*TimingResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("timing", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp TimingResponse
+	if err := c.post(ctx, "/timing-check", "timing", req, &resp, 15*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ───── CompetenceCheck (能力圈分析师 · 原 G4 能力圈) ─────
+
+type CompetenceRequest struct {
+	Asset           string `json:"asset"`
+	SignalText      string `json:"signal_text"`
+	Direct          bool   `json:"direct"`
+	Round1Text      string `json:"round1_text"`
+	ExitText        string `json:"exit_text,omitempty"`
+	ProjectName     string `json:"project_name,omitempty"`
+	ProjectGuidance string `json:"project_guidance,omitempty"`
+}
+
+type CompetenceResponse struct {
+	Explain   bool   `json:"explain"`
+	ExitKnown bool   `json:"exit_known"`
+	Reasoning string `json:"reasoning"`
+}
+
+func (c *Client) CompetenceCheck(ctx context.Context, req CompetenceRequest) (*CompetenceResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("competence", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp CompetenceResponse
+	if err := c.post(ctx, "/competence-check", "competence", req, &resp, 15*time.Second); err != nil {
 		return nil, err
 	}
 	return &resp, nil
@@ -113,8 +189,8 @@ type EditorRequest struct {
 }
 
 type EditorResponse struct {
-	EditorText     string `json:"editor_text"`
-	QuotedSegment  string `json:"quoted_segment"`
+	EditorText    string `json:"editor_text"`
+	QuotedSegment string `json:"quoted_segment"`
 }
 
 func (c *Client) Editor(ctx context.Context, req EditorRequest) (*EditorResponse, error) {

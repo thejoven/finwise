@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 // Handler hosts the HTTP entry points for the signal module.
@@ -52,13 +52,14 @@ type captureResponse struct {
 }
 
 type signalView struct {
-	ID               string    `json:"id"`
-	ProjectID        *string   `json:"project_id,omitempty"`
-	RawText          string    `json:"raw_text"`
-	CapturedAt       time.Time `json:"captured_at"`
-	InferenceStatus  string    `json:"inference_status"`
-	InferenceSummary *string   `json:"inference_summary,omitempty"`
-	InferenceTags    []string  `json:"inference_tags,omitempty"`
+	ID               string                `json:"id"`
+	ProjectID        *string               `json:"project_id,omitempty"`
+	RawText          string                `json:"raw_text"`
+	CapturedAt       time.Time             `json:"captured_at"`
+	InferenceStatus  string                `json:"inference_status"`
+	InferenceSummary *string               `json:"inference_summary,omitempty"`
+	InferenceTags    []string              `json:"inference_tags,omitempty"`
+	RelatedAssets    []domain.RelatedAsset `json:"related_assets,omitempty"`
 }
 
 type listResponse struct {
@@ -157,11 +158,22 @@ func (h *Handler) list(c *gin.Context) {
 		}
 		before = &t
 	}
+	var projectID *uuid.UUID
+	if s := c.Query("project_id"); s != "" {
+		pid, err := uuid.Parse(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "project_id not a uuid"})
+			return
+		}
+		projectID = &pid
+	}
 
 	signals, hasMore, err := h.svc.List(c.Request.Context(), userID, ListFilter{
-		Before: before,
-		Limit:  limit,
-		Query:  c.Query("q"),
+		Before:     before,
+		Limit:      limit,
+		Query:      c.Query("q"),
+		ProjectID:  projectID,
+		HasTargets: c.Query("has_targets") == "true",
 	})
 	if err != nil {
 		writeServiceError(c, err)
@@ -229,9 +241,9 @@ func (h *Handler) reinfer(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusAccepted, gin.H{
-		"signal_id":         sig.ID.String(),
-		"inference_status":  string(sig.InferenceStatus),
-		"reinfer_enqueued":  true,
+		"signal_id":        sig.ID.String(),
+		"inference_status": string(sig.InferenceStatus),
+		"reinfer_enqueued": true,
 	})
 }
 
@@ -292,6 +304,7 @@ func toSignalView(s domain.Signal) signalView {
 		InferenceStatus:  string(s.InferenceStatus),
 		InferenceSummary: s.InferenceSummary,
 		InferenceTags:    s.InferenceTags,
+		RelatedAssets:    s.InferenceRelatedAssets,
 	}
 	if s.ProjectID != nil {
 		pid := s.ProjectID.String()

@@ -12,13 +12,18 @@ import {
   type ArchivePoolT,
   type GateEvaluation,
 } from "@/core/api/gate";
+import { useActiveProject } from "@/features/project/store";
+import { byIdQuery } from "@/core/api/query";
 
-const POOL_KEY = (pool: ArchivePoolT) => ["gate-pool", pool] as const;
+const POOL_KEY = (pool: ArchivePoolT, projectId: string | null) =>
+  ["gate-pool", pool, projectId] as const;
 
 export function useGatePool(pool: ArchivePoolT) {
+  // 跟 inbox 一致: 当前激活分类进 key, 切分类即重拉; null = 全部.
+  const activeId = useActiveProject((s) => s.activeId);
   return useQuery({
-    queryKey: POOL_KEY(pool),
-    queryFn: () => listGatePool(pool, 20),
+    queryKey: POOL_KEY(pool, activeId),
+    queryFn: () => listGatePool(pool, 20, activeId),
     staleTime: 30_000,
   });
 }
@@ -33,12 +38,8 @@ export function useGatePool(pool: ArchivePoolT) {
  * 5s 轮询直到拿到结果, 拿到后停 (staleTime 60s).
  */
 export function useGateByRefinement(refinementId: string | undefined) {
-  return useQuery<GateEvaluation | null>({
-    queryKey: refinementId
-      ? (["gate-by-refinement", refinementId] as const)
-      : ["gate-by-refinement", "none"],
-    queryFn: () => getGateByRefinement(refinementId!),
-    enabled: !!refinementId,
+  return useQuery({
+    ...byIdQuery(["gate-by-refinement"], refinementId, getGateByRefinement),
     staleTime: 60_000,
     refetchInterval: (query) => {
       if (query.state.data) return false; // 拿到了, 停轮询

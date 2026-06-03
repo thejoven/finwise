@@ -28,7 +28,13 @@ import { config } from "../../config/env.js";
 import { defaultModel } from "../../llm/model.js";
 import { InferenceSchema } from "../../agents/schema.js";
 import { JARGON_TRANSLATION_BLOCK } from "../../agents/lens.js";
+import { categoryContextBlock } from "../../agents/category.js";
 import type { SearchResult } from "../../tools/exa-search.js";
+
+export interface CategoryContext {
+  name?: string | null;
+  guidance?: string | null;
+}
 
 // ───────────────────── prompt assembly ─────────────────────
 
@@ -83,8 +89,12 @@ export const analyst = new Agent({
  * searchContext 可选: 来自 Exa.ai 的实时检索. 注入 prompt 后让 Analyst
  * 用真实新闻做 grounding (避免靠预训练记忆瞎编). 空时按原行为跑.
  */
-export async function runAnalyst(rawText: string, searchContext?: SearchResult[]) {
-  const userContent = buildAnalystPrompt(rawText, searchContext);
+export async function runAnalyst(
+  rawText: string,
+  searchContext?: SearchResult[],
+  category?: CategoryContext,
+) {
+  const userContent = buildAnalystPrompt(rawText, searchContext, category);
   const messages = [{ role: "user" as const, content: userContent }];
   let lastErr: unknown;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -103,25 +113,67 @@ export async function runAnalyst(rawText: string, searchContext?: SearchResult[]
   throw lastErr ?? new Error("analyst failed without an error");
 }
 
-function buildAnalystPrompt(rawText: string, searchContext?: SearchResult[]): string {
-  if (!searchContext || searchContext.length === 0) return rawText;
-  const block = searchContext
-    .slice(0, 5)
-    .map((r, i) => {
-      const age = r.age ? ` · ${r.age}` : "";
-      const domain = r.domain ? ` [${r.domain}]` : "";
-      return `[${i + 1}]${domain}${age} ${r.title}\n  ${r.description}\n  ${r.url}`;
-    })
-    .join("\n");
-  return [
-    "信号原文:",
-    rawText,
-    "",
-    "实时检索到的相关新闻 (Exa.ai, 仅作背景 grounding, 不要直接复述也不要引用编号):",
-    block,
-    "",
+function buildAnalystPrompt(
+  rawText: string,
+  searchContext?: SearchResult[],
+  category?: CategoryContext,
+): string {
+  const cat = categoryContextBlock(category?.name, category?.guidance);
+  const catPrefix = cat ? cat + "\n\n" : "";
+  if (!searchContext || searchContext.length === 0) return catPrefix + rawText;
+
+  // 按线索类型分流: 网页新闻 (Exa) 做背景 grounding; 预测市场 (Polymarket) 做 consensus 参照.
+  const webItems = searchContext.filter((r) => r.kind !== "market");
+  const marketItems = searchContext.filter((r) => r.kind === "market" && r.market);
+
+  const sections: string[] = ["信号原文:", rawText, ""];
+
+  if (webItems.length > 0) {
+    const block = webItems
+      .slice(0, 5)
+      .map((r, i) => {
+        const age = r.age ? ` · ${r.age}` : "";
+        const domain = r.domain ? ` [${r.domain}]` : "";
+        return `[${i + 1}]${domain}${age} ${r.title}\n  ${r.description}\n  ${r.url}`;
+      })
+      .join("\n");
+    sections.push(
+      "实时检索到的相关新闻 (Exa.ai, 仅作背景 grounding, 不要直接复述也不要引用编号):",
+      block,
+      "",
+    );
+  }
+
+  if (marketItems.length > 0) {
+    const block = marketItems
+      .slice(0, 5)
+      .map((r, i) => {
+        const outs = (r.market?.outcomes ?? [])
+          .map((o) => `${o.label} ${formatPct(o.probability)}`)
+          .join(" · ");
+        return `[${i + 1}] ${r.title} → ${outs}`;
+      })
+      .join("\n");
+    sections.push(
+      "Polymarket 预测市场的实时隐含概率 (这是真实的「市场共识」, 据此判断 consensus_check):",
+      block,
+      "",
+      "把上面的市场概率当作当前共识参照来定 consensus_check: 你的判断比市场更早/更激进 → leading; 与市场基本一致 → aligned; 慢于市场 → lagging. 没有相关市场时按你自己的理解判断.",
+      "",
+    );
+  }
+
+  sections.push(
     "用上面的真实材料校准你对信号的理解, 但严格按 schema 输出. 不要在 rationale 里出现 url / 来源名.",
-  ].join("\n");
+  );
+  return catPrefix + sections.join("\n");
+}
+
+/** 0.62 → "62%"; 极小概率折成 "<1%". 与 polymarket.ts 同语义, 这里本地一份避免工具耦合. */
+function formatPct(p: number): string {
+  if (!Number.isFinite(p) || p <= 0) return "0%";
+  if (p < 0.01) return "<1%";
+  return `${Math.round(p * 100)}%`;
 }
 
 export { InferenceSchema };

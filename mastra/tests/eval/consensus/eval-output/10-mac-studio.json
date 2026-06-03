@@ -1,9 +1,21 @@
 {
-  "score": 30,
-  "narrative_summary": "Apple 新品 Mac Studio 存储配置引发抢购，供应链带宽话题在极客圈内讨论。",
+  "score": 20,
+  "narrative_summary": "early-stage leading view, 反身性未启动, 赔率 > 概率.",
   "evidence": [
-    "Mac Studio 512G 版本在部分渠道出现抢购现象",
-    "用户讨论集中在存储带宽限制上",
-    "话题主要出现在数码/极客社群，未扩散至主流财经媒体"
+    "群内抢购 Mac Studio 512G 属小圈子行为",
+    "无主流卖方覆盖或财经媒体讨论",
+    "带宽吃紧尚未被验证为系统性瓶颈"
+  ],
+  "unpriced_directions": [
+    {
+      "angle": "往上游存储颗粒看",
+      "why_unpriced": "市场只看到终端抢货, 没追问 NAND 产能分配是否已结构性偏紧",
+      "lens": "根因还原"
+    },
+    {
+      "angle": "关注同链的接口芯片",
+      "why_unpriced": "带宽吃紧的真正瓶颈可能在 PCIe/控制器端, 而非存储本身",
+      "lens": "二阶思考"
+    }
   ]
 }

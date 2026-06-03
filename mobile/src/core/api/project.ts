@@ -14,6 +14,7 @@ export const ProjectView = z.object({
   color: z.string().nullable().optional(),
   emoji: z.string().nullable().optional(),
   sort_order: z.number().int(),
+  guidance: z.string().nullable().optional(), // 分析指引: 喂给该分类下的 LLM
   archived_at: z.string().nullable().optional(),
   created_at: z.string(),
 });
@@ -29,6 +30,7 @@ export interface CreateProjectInput {
   color?: string;
   emoji?: string;
   sort_order?: number;
+  guidance?: string;
 }
 
 export interface UpdateProjectInput {
@@ -36,6 +38,7 @@ export interface UpdateProjectInput {
   color?: string;
   emoji?: string;
   sort_order?: number;
+  guidance?: string;
 }
 
 export async function listProjects(): Promise<ProjectView[]> {

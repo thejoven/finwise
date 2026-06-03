@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {
@@ -25,6 +26,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	pub := publicV1.Group("/refinement/sessions")
 	pub.POST("", h.start)
+	pub.GET("", h.list)
 	pub.GET("/by-signal/:signalID", h.getBySignal)
 	pub.GET("/:id", h.get)
 	pub.POST("/:id/answers", h.answer)
@@ -43,17 +45,19 @@ type startRequest struct {
 }
 
 type sessionResponse struct {
-	ID                   string  `json:"id"`
-	PrimarySignalID      string  `json:"primary_signal_id"`
-	PrimaryAsset         *string `json:"primary_asset,omitempty"`
-	Status               string  `json:"status"`
-	RoundsDone           int     `json:"rounds_done"`
-	Decision             *string `json:"decision,omitempty"`
-	StartedAt            string  `json:"started_at"`
-	CompletedAt          string  `json:"completed_at,omitempty"`
+	ID              string  `json:"id"`
+	PrimarySignalID string  `json:"primary_signal_id"`
+	PrimaryAsset    *string `json:"primary_asset,omitempty"`
+	Status          string  `json:"status"`
+	RoundsDone      int     `json:"rounds_done"`
+	Decision        *string `json:"decision,omitempty"`
+	StartedAt       string  `json:"started_at"`
+	CompletedAt     string  `json:"completed_at,omitempty"`
 	// 仅 Get 接口返回 (Start 接口的 fields 是空)
 	PrimarySignalRawText string  `json:"primary_signal_raw_text,omitempty"`
 	PrimarySignalSummary *string `json:"primary_signal_summary,omitempty"`
+	ProjectName          *string `json:"project_name,omitempty"`
+	ProjectGuidance      *string `json:"project_guidance,omitempty"`
 }
 
 type sessionViewResponse struct {
@@ -141,6 +145,32 @@ func (h *Handler) start(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusAccepted, toSessionResponse(session))
+}
+
+// list GET /v1/refinement/sessions — 用户全部追问会话 (新→旧), 不含 rounds.
+// web-admin "所有对话" 列表用; 点某条再走 GET /:id 拉完整问答.
+func (h *Handler) list(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	limit := 50
+	if s := c.Query("limit"); s != "" {
+		if n, err := strconv.Atoi(s); err == nil {
+			limit = n
+		}
+	}
+	sessions, err := h.svc.List(c.Request.Context(), userID, limit)
+	if err != nil {
+		writeErr(c, err)
+		return
+	}
+	out := make([]sessionResponse, len(sessions))
+	for i := range sessions {
+		out[i] = toSessionResponse(&sessions[i])
+	}
+	c.JSON(http.StatusOK, gin.H{"sessions": out, "total": len(out)})
 }
 
 func (h *Handler) get(c *gin.Context) {
@@ -335,6 +365,8 @@ func toSessionResponse(s *Session) sessionResponse {
 		StartedAt:            s.StartedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		PrimarySignalRawText: s.PrimarySignalRawText,
 		PrimarySignalSummary: s.PrimarySignalSummary,
+		ProjectName:          s.ProjectName,
+		ProjectGuidance:      s.ProjectGuidance,
 	}
 	if s.CompletedAt != nil {
 		out.CompletedAt = s.CompletedAt.UTC().Format("2006-01-02T15:04:05Z07:00")

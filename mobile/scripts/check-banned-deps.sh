@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Fail if any banned RN dependency creeps into package.json.
-# Source of truth: docs/技术文档/native_feel_skill/references/05-flashfi-restraint.md § 9
+# Source of truth: docs/技术文档/native_feel_skill/references/05-wiseflow-restraint.md § 9
 # and docs/GOAL/AGENT_BRIEF.md § 2.4.
 #
 # Wired into npm: `npm run check:banned-deps`.
@@ -46,7 +46,7 @@ done
 if [ "$found" -gt 0 ]; then
   echo
   echo "$found banned dep(s) found in package.json."
-  echo "See docs/技术文档/native_feel_skill/references/05-flashfi-restraint.md § 9 for the reasoning."
+  echo "See docs/技术文档/native_feel_skill/references/05-wiseflow-restraint.md § 9 for the reasoning."
   exit 1
 fi
 

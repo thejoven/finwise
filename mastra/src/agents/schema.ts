@@ -39,6 +39,10 @@ export const SignalCapturedPayload = z.object({
   user_id: z.string().uuid(),
   raw_text: z.string().min(1),
   captured_at: z.string(), // ISO-8601 timestamp
+  // 分类上下文 (capture 时快照): analyst 据此"根据分类"推理. 可空.
+  project_id: z.string().uuid().optional().nullable(),
+  project_name: z.string().optional().nullable(),
+  project_guidance: z.string().optional().nullable(),
 });
 
 export type SignalCaptured = z.infer<typeof SignalCapturedPayload>;

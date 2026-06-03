@@ -1,5 +1,5 @@
-# iii engine config (v0.13.0 schema). 部署到 /opt/flashfi/iii/config.yaml 后由
-# systemd unit (iii/flashfi-iii.service) 拉起.
+# iii engine config (0.16.x schema, 已对 v0.16.1 校验; 0.16.0→0.16.1 无 schema 变更).
+# docker compose 把它 bind-mount 到容器内 /app/config.yaml (见 docker-compose.yml iii service).
 #
 # 端口:
 #   • 49134 — SDK worker WebSocket (engine 内置默认, 不再走 yaml)
@@ -13,7 +13,7 @@ workers:
   - name: iii-observability
     config:
       enabled: true
-      service_name: flashfi-iii
+      service_name: wiseflow-iii
       exporter: memory
       memory_max_spans: 10000
       metrics_enabled: true
@@ -35,7 +35,10 @@ workers:
         allowed_methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
 
   # 队列后端. queue_configs 里每个 key 是一条命名队列, retry/concurrency 独立.
-  # 5 条 NATS subject 通过 mastra 侧 HTTP shim 落到 4 条命名队列.
+  # 5 条 NATS subject 通过 mastra 侧 HTTP shim 落到 5 条命名队列.
+  # (refinement.completed 扇出到 attention-analyze + post-refinement 两条.)
+  # ⚠ iii 引擎只认 config 里声明过的队列: worker 注册 durable:subscriber 不会
+  #   自动建队列. 漏声明 → HTTP shim enqueue 时报 "Queue '<name>' not found".
   #
   # ⚠ v0.13.0 限制: iii-queue 的 Redis adapter "not yet implemented" — 启动时报
   # "Redis function queue consumer not yet implemented". 这里降级到 builtin
@@ -53,6 +56,10 @@ workers:
           concurrency: 2
           type: standard
         attention-analyze:
+          max_retries: 3
+          concurrency: 2
+          type: standard
+        post-refinement:
           max_retries: 3
           concurrency: 2
           type: standard

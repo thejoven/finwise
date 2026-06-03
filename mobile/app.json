@@ -1,25 +1,22 @@
 {
   "expo": {
     "name": "财知",
-    "slug": "flashfi",
+    "slug": "wiseflow",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "flashfi",
-    "userInterfaceStyle": "light",
+    "scheme": "wiseflow",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.flashfi.app",
+      "bundleIdentifier": "com.wiseflow.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.flashfi.app",
+      "package": "com.wiseflow.app",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }
@@ -31,7 +28,10 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#ffffff",
-          "resizeMode": "contain"
+          "resizeMode": "contain",
+          "dark": {
+            "backgroundColor": "#14110c"
+          }
         }
       ],
       "expo-sqlite",

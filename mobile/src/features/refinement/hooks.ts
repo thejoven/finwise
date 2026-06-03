@@ -22,7 +22,9 @@ import {
   listResearchBySignal,
   type ResearchListResponse,
 } from "@/core/api/research";
+import { getDistillation, proceedToGate } from "@/core/api/distillation";
 import { uuidV4 } from "@/core/uuid";
+import { byIdQuery } from "@/core/api/query";
 
 const REFINEMENT_KEY = (id: string) => ["refinement", id] as const;
 const POLL_WAITING_MS = 2_000;
@@ -56,9 +58,7 @@ export function useStartRefinement() {
  */
 export function useRefinementSession(id: string | undefined) {
   return useQuery({
-    queryKey: id ? REFINEMENT_KEY(id) : ["refinement", "none"],
-    queryFn: () => getRefinement(id!),
-    enabled: !!id,
+    ...byIdQuery(["refinement"], id, getRefinement),
     refetchInterval: (query) => {
       const data = query.state.data;
       if (!data) return POLL_WAITING_MS;
@@ -78,11 +78,7 @@ export function useRefinementSession(id: string | undefined) {
  */
 export function useRefinementBySignal(signalId: string | undefined) {
   return useQuery({
-    queryKey: signalId
-      ? (["refinement-by-signal", signalId] as const)
-      : ["refinement-by-signal", "none"],
-    queryFn: () => getRefinementBySignal(signalId!),
-    enabled: !!signalId,
+    ...byIdQuery(["refinement-by-signal"], signalId, getRefinementBySignal),
     staleTime: 60_000, // 1 分钟内不重拉 — 历史不太会变
   });
 }
@@ -97,9 +93,8 @@ export function useRefinementBySignal(signalId: string | undefined) {
  *   - active session 已 5 轮答完 (commitment_setup, round 5) → 不再 poll
  */
 export function useSessionResearch(sessionId: string | undefined, opts?: { stop?: boolean }) {
-  return useQuery<ResearchListResponse>({
-    queryKey: sessionId ? (["research", "session", sessionId] as const) : ["research", "session", "none"],
-    queryFn: () => listResearchBySession(sessionId!),
+  return useQuery({
+    ...byIdQuery(["research", "session"], sessionId, listResearchBySession),
     enabled: !!sessionId && !opts?.stop,
     refetchInterval: (query) => {
       if (opts?.stop) return false;
@@ -122,10 +117,8 @@ export function useSessionResearch(sessionId: string | undefined, opts?: { stop?
  * 不需要轮询 — 详情页是历史查看场景, staleTime 60s 兜底.
  */
 export function useSignalResearch(signalId: string | undefined) {
-  return useQuery<ResearchListResponse>({
-    queryKey: signalId ? (["research", "signal", signalId] as const) : ["research", "signal", "none"],
-    queryFn: () => listResearchBySignal(signalId!),
-    enabled: !!signalId,
+  return useQuery({
+    ...byIdQuery(["research", "signal"], signalId, listResearchBySignal),
     staleTime: 60_000,
   });
 }
@@ -155,6 +148,34 @@ export function useSubmitAnswer(sessionId: string | undefined) {
   );
 
   return { submit, isSubmitting: mutation.isPending };
+}
+
+/**
+ * 降噪页轮询 · 追问完成后 mastra post-refinement 异步写回.
+ *   - 还没生成 (null) 或降噪综述未到 → 2s 轮
+ *   - 降噪综述到了但金融信号还在推演 (beneficiary == null) → 3s 轮
+ *   - 都到位 (beneficiary 是 [] 或 [...]) → 停
+ * 不显示 spinner — 降噪页用 typewriter 等待 (符合产品哲学).
+ */
+export function useDistillation(refinementId: string | undefined) {
+  return useQuery({
+    ...byIdQuery(["distillation"], refinementId, getDistillation),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data || data.distilled_content == null) return 2_000;
+      if (data.beneficiary == null) return 3_000;
+      return false;
+    },
+    refetchOnMount: true,
+  });
+}
+
+/** 降噪页"进入四道门" — 手动触发四道门评估 ("前置于四道门"流程). */
+export function useProceedToGate() {
+  const mutation = useMutation({
+    mutationFn: (refinementId: string) => proceedToGate(refinementId),
+  });
+  return { proceed: mutation.mutateAsync, isProceeding: mutation.isPending };
 }
 
 export type { SessionResponse };

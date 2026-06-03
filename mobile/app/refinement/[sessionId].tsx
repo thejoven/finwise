@@ -30,9 +30,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react-native";
 
-import { DoubleRule, Mono, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
+import { DoubleRule, Icon, Mono, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 import { reinferQuestion } from "@/core/api/refinement";
 
@@ -275,10 +274,10 @@ export default function RefinementScreen() {
             <TapEffect
               style={styles.primaryButton}
               pressedStyle={{ backgroundColor: theme.color.ink2 }}
-              onPress={() => router.replace("/(tabs)/inbox")}
+              onPress={() => router.replace(`/refinement/distilled/${sessionId}`)}
             >
               <Sans size={11} weight="700" style={styles.primaryLabel}>
-                回到收件箱
+                看这条信号的降噪
               </Sans>
             </TapEffect>
           </View>
@@ -306,7 +305,7 @@ function Header({ sessionId, roundsDone, cluesTrigger }: HeaderProps) {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
-        <ChevronLeft size={18} color={theme.color.ink} strokeWidth={1.5} />
+        <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <View style={styles.headerCenter}>
@@ -326,12 +325,12 @@ function Header({ sessionId, roundsDone, cluesTrigger }: HeaderProps) {
 function Completed({ decision }: { decision?: string }) {
   return (
     <View style={styles.completedBlock}>
-      <SectionHeader label="完成" meta={decision === "training_only" ? "训练" : "可入四道门评估"} />
+      <SectionHeader label="完成" meta={decision === "training_only" ? "训练" : "可入分析师评审"} />
       <DoubleRule />
       <Serif size={15} style={styles.completedBody}>
         {decision === "training_only"
-          ? "这一次主要是训练. 你看见自己的几个盲点. 这条信号不进入四道门, 它会和你已有的观察一起被收着."
-          : "这一次的认知厚度看上去够了. 系统会安静地跑一遍四道门. 你不用做什么, 等下一个时刻它会自己回到收件箱里."}
+          ? "这一次主要是训练. 你看见自己的几个盲点. 接下来去降噪页, 看看把噪音滤掉之后, 这条信号还剩什么."
+          : "五轮答完了. 把噪音滤掉之后这条信号还剩什么, 在降噪页等你. 看完, 由你来决定要不要交给四位分析师 (佐证 · 共识 · 时机 · 能力圈) 各审一遍."}
       </Serif>
     </View>
   );

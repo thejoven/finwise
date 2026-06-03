@@ -33,16 +33,16 @@
         "autoIncrement": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.flashfi.example.com"
+        "EXPO_PUBLIC_API_URL": "https://api.wiseflow.example.com"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "FLASHFI_APPLE_ID",
-        "ascAppId": "FLASHFI_ASC_APP_ID",
-        "appleTeamId": "FLASHFI_APPLE_TEAM_ID"
+        "appleId": "WISEFLOW_APPLE_ID",
+        "ascAppId": "WISEFLOW_ASC_APP_ID",
+        "appleTeamId": "WISEFLOW_APPLE_TEAM_ID"
       }
     }
   }

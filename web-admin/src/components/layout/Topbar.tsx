@@ -2,11 +2,13 @@ import * as React from "react";
 import { LogOut, Server, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { flashfi, getApiBase } from "@/lib/api";
+import { wiseflow, getApiBase } from "@/lib/api";
 
 interface Props {
   onSignOut: () => void;
 }
+
+const THEME_KEY = "wiseflow.admin.theme";
 
 export function Topbar({ onSignOut }: Props) {
   const [dark, setDark] = React.useState(() =>
@@ -15,15 +17,18 @@ export function Topbar({ onSignOut }: Props) {
 
   const health = useQuery({
     queryKey: ["healthz"],
-    queryFn: flashfi.health,
+    queryFn: wiseflow.health,
     refetchInterval: 15_000,
     retry: 0,
   });
+
+  const me = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
 
   const toggleTheme = () => {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem(THEME_KEY, next ? "dark" : "light");
   };
 
   const status = health.isError
@@ -43,6 +48,14 @@ export function Topbar({ onSignOut }: Props) {
         </span>
       </div>
       <div className="flex items-center gap-2">
+        {me.data && (
+          <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
+            <span className="font-medium text-foreground">{me.data.email}</span>
+            <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+              管理员
+            </span>
+          </span>
+        )}
         <Button
           variant="ghost"
           size="icon"

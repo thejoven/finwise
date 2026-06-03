@@ -1,4 +1,4 @@
-module flashfi/server
+module wiseflow/server
 
 go 1.24
 

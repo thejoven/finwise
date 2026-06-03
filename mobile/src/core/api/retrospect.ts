@@ -37,7 +37,10 @@ export const RetrospectList = z.object({
 
 // ───── Calls ─────
 
-export async function startRetrospect(input: { commitment_id: string; trigger?: "expired" | "closed" | "manual" }): Promise<Retrospect> {
+export async function startRetrospect(input: {
+  commitment_id: string;
+  trigger?: "expired" | "closed" | "manual";
+}): Promise<Retrospect> {
   const json = await api.post("v1/retrospects", { json: input }).json();
   return Retrospect.parse(json);
 }
@@ -47,8 +50,10 @@ export async function getRetrospect(id: string): Promise<Retrospect> {
   return Retrospect.parse(json);
 }
 
-export async function listRetrospects(): Promise<Retrospect[]> {
-  const json = await api.get("v1/retrospects").json();
+export async function listRetrospects(projectId?: string | null): Promise<Retrospect[]> {
+  const searchParams: Record<string, string> = {};
+  if (projectId) searchParams.project_id = projectId;
+  const json = await api.get("v1/retrospects", { searchParams }).json();
   return RetrospectList.parse(json).retrospects;
 }
 

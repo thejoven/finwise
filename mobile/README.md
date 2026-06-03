@@ -1,6 +1,6 @@
 # mobile/
 
-Flashfi Engine 客户端 — Expo SDK 52 + React Native 0.76 + Expo Router 4 + TypeScript.
+WiseFlow Engine 客户端 — Expo SDK 52 + React Native 0.76 + Expo Router 4 + TypeScript.
 
 ```
 app/                      # Expo Router (文件路由)
@@ -58,7 +58,7 @@ npm start
 健康检查:
 
 ```bash
-# 1) Masthead 显示 "Flashfi" 大斜体
+# 1) Masthead 显示 "WiseFlow" 大斜体
 # 2) Tab 在底部, 收件箱 + 档案
 # 3) 没有任何 Loading spinner / Toast / 红点
 # 4) 字体加载完才显示 UI (SplashScreen 工作)

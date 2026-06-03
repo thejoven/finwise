@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/infra/db"
-	"flashfi/server/internal/infra/mastra"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/infra/db"
+	"wiseflow/server/internal/infra/mastra"
 )
 
 var ErrInvalidInput = errors.New("invalid input")
@@ -206,7 +206,7 @@ func (s *Service) loadCommitmentBrief(ctx context.Context, commitID uuid.UUID) (
 
 // questionTextForDim 简单映射用 — Mastra 不需要看到精确题目文案, 只要知道是哪个维度.
 // v2 客户端把 question_text 也持久化, 这里从 events 拉.
-// 与 mobile/src/features/retrospect/questions.ts 的题面保持同步 (Flashfi Pro Lens 词汇).
+// 与 mobile/src/features/retrospect/questions.ts 的题面保持同步 (WiseFlow Pro Lens 词汇).
 func questionTextForDim(no int, dim string) string {
 	switch dim {
 	case "perception":
@@ -223,7 +223,7 @@ func questionTextForDim(no int, dim string) string {
 
 // heuristicFocus 简单启发: 找 open_text 最短/空的那一题, 映射到 focus_dim.
 // v2 (Mastra Diagnostician) 跑真 LLM 替换.
-// 文案锚定 Flashfi Pro Lens — 不写抽象词, 不出现人名, 给到下一次可执行的动作.
+// 文案锚定 WiseFlow Pro Lens — 不写抽象词, 不出现人名, 给到下一次可执行的动作.
 func heuristicFocus(answers []AnswerEntry) (domain.FocusDim, string) {
 	var weakest *AnswerEntry
 	minLen := 999_999
@@ -268,8 +268,8 @@ func (s *Service) GetByCommitment(ctx context.Context, userID, commitID uuid.UUI
 	return s.repo.GetByCommitment(ctx, userID, commitID)
 }
 
-func (s *Service) List(ctx context.Context, userID uuid.UUID, limit int) ([]Retrospect, error) {
-	return s.repo.List(ctx, userID, limit)
+func (s *Service) List(ctx context.Context, userID uuid.UUID, limit int, projectID *uuid.UUID) ([]Retrospect, error) {
+	return s.repo.List(ctx, userID, limit, projectID)
 }
 
 func (s *Service) LatestTrainingFocus(ctx context.Context, userID uuid.UUID) (string, string, error) {

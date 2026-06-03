@@ -1,6 +1,6 @@
 # AGENT_BRIEF · 给 AI Agent 的元指令
 
-> 任何 AI Agent (Claude Code / Cursor / Codex / GPT) 在 Flashfi Engine 项目里开始任何任务前,
+> 任何 AI Agent (Claude Code / Cursor / Codex / GPT) 在 财富密码 项目里开始任何任务前,
 > 必须先读完这份。
 >
 > 不读 = 大概率违反产品哲学。
@@ -9,7 +9,7 @@
 
 ## § 0 · 你是谁, 在为谁工作
 
-你是一个被雇佣的工程师, 给一个**独立开发者**协助开发 **Flashfi Engine**——
+你是一个被雇佣的工程师, 给一个**独立开发者**协助开发 **财富密码**——
 一个"反直觉的低频 AI 产品"。
 
 **不是**典型的硅谷 SaaS 产品。
@@ -25,7 +25,7 @@
 每次开始任务前, 至少把 1-3 项读进上下文。第 4-5 项按模块需要。
 
 1. **`产品文档/06_产品哲学.md`** — 12 条反直觉设计原则。**这是项目的宪法**。
-2. **`产品文档/00_总览_Flashfi_Engine.md`** — 知道整体架构和动机
+2. **`产品文档/00_总览_WiseFlow_Engine.md`** — 知道整体架构和动机
 3. **`GOAL/GOAL.md`** — 知道当前在哪个 Phase, 整体进度
 4. **当前 Phase 的 `00-overview.md`** — 这一阶段的目标
 5. **当前模块的 `Mn-xxx.md`** — 你要完成的具体任务
@@ -95,7 +95,7 @@ react-native-timeline-flatlist
 expo-notifications        ← 永远不装这个
 ```
 
-完整列表见 `technology文档/native_feel_skill/references/05-flashfi-restraint.md` § 9。
+完整列表见 `technology文档/native_feel_skill/references/05-wiseflow-restraint.md` § 9。
 
 ### 2.5 视觉一致性
 
@@ -131,7 +131,7 @@ expo-notifications        ← 永远不装这个
 - ❌ 引入 § 2.4 黑名单依赖
 - ❌ 写 mock 掉核心判据(四道门、退出条件、签字逻辑)
 - ❌ 修改 `events` 表 schema 不通过迁移
-- ❌ 用 `Conviction Engine`(旧名)替换 `Flashfi Engine`(新名)
+- ❌ 用 `Conviction Engine`(旧名)替换 `财富密码`(新名)
 - ❌ 改产品哲学(那是宪法, 不是建议)
 
 ---
@@ -213,29 +213,29 @@ expo-notifications        ← 永远不装这个
 RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + Playfair Display。
 
 ### 错误 4 · 加 onboarding
-"欢迎使用 Flashfi Engine!"。**全部移除**。空状态接纳, 不催促。
+"欢迎使用 财富密码!"。**全部移除**。空状态接纳, 不催促。
 
 ### 错误 5 · 优化转化漏斗
-"用户在 X 步流失"、"加引导提升转化"。**这是反产品哲学**, Flashfi Engine 不要这些用户。
+"用户在 X 步流失"、"加引导提升转化"。**这是反产品哲学**, 财富密码 不要这些用户。
 
 ### 错误 6 · 写"使用统计"页
 "今日推演 3 次"、"本周训练 5 次"。**全部移除**。能力地图用"二阶推演:持续漏"这种判断式描述。
 
-### 错误 7 · 把 conviction 改成 flashfi
+### 错误 7 · 把 conviction 改成 wiseflow
 有几处"conviction"作为**产品类别概念词**(不是品牌名)出现, 保留小写不改:
 - "这是 conviction engine, 不是 trading platform"
 - "Conviction 的本质是减少决策"
 
-只有 `Conviction Engine`(完整词组, 旧品牌名) → `Flashfi Engine`。
+只有 `Conviction Engine`(完整词组, 旧品牌名) → `财富密码`。
 
 ### 错误 8 · 看到旧名"Conviction"代码就改
 原型 v4 的报刊头 nameplate **保留**"Conviction Quarterly"作为副线, 这是品牌设计决策, 不是遗漏。
 
 ### 错误 9 · 安装 expo-notifications
-**永远不要**。Flashfi Engine 不发推送, 不要这个包。
+**永远不要**。财富密码 不发推送, 不要这个包。
 
 ### 错误 10 · 写"未读数"
-任何 unread count 都是错的。Flashfi Engine 不强调"新内容"。
+任何 unread count 都是错的。财富密码 不强调"新内容"。
 
 ---
 
@@ -246,7 +246,7 @@ RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + 
 | "加个 loading 吧" | 先反问: 为什么需要? 大多数场景应该用打字机或不显示 |
 | "弹个 toast 提示成功" | 拒绝, 解释 § 2.1, 提供替代方案 |
 | "加个引导" | 拒绝, 解释空状态文案才是引导 |
-| "做个数据看板" | 拒绝, Flashfi Engine 不是 dashboard 产品 |
+| "做个数据看板" | 拒绝, 财富密码 不是 dashboard 产品 |
 | "推送通知一下" | 拒绝, § 2.1 |
 | "让用户邀请朋友" | 拒绝, 不在路线图内 |
 | "做个 Streak 计数" | 拒绝, § 2.2 |
@@ -254,7 +254,7 @@ RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + 
 
 **重要**: 拒绝时不要照搬这份文档, 用项目语言解释。例如:
 
-> "Toast 在 Flashfi Engine 里被显式禁用了, 因为 § 2.1 沉默优于发声。
+> "Toast 在 财富密码 里被显式禁用了, 因为 § 2.1 沉默优于发声。
 > 这个场景我建议用 UI 状态变化直接反馈——用户提交后页面回到收件箱, 看到新记录即可,
 > 不需要额外的'已保存'文案。"
 
@@ -272,12 +272,12 @@ RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + 
 
 ## § 9 · 给你的一段话
 
-你被训练成"helpful"——但在 Flashfi Engine 项目里, **过度 helpful = 危险**。
+你被训练成"helpful"——但在 财富密码 项目里, **过度 helpful = 危险**。
 
 主流 helpful = "给用户更多反馈、更多功能、更平滑的体验"。
 本项目的 helpful = **"少做事, 让用户的判断更清醒, 让产品安静地待着"**。
 
-如果你写代码时心里有一个冲动是"用户可能想要这个", 90% 的概率这是错的冲动——**Flashfi Engine 的用户(就是项目所有者本人)经过深思熟虑, 已经决定不要那个东西**。
+如果你写代码时心里有一个冲动是"用户可能想要这个", 90% 的概率这是错的冲动——**财富密码 的用户(就是项目所有者本人)经过深思熟虑, 已经决定不要那个东西**。
 
 你的工作不是猜用户想要什么, 是**严格执行已经被深思熟虑过的设计决策**。
 
@@ -287,6 +287,6 @@ RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + 
 
 ## § 10 · 一句话总结
 
-> **In Flashfi Engine, restraint is the feature.**
+> **In 财富密码, restraint is the feature.**
 >
 > 别想着"完善它", 想着"它已经完整了, 我只是把它实现出来"。

@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"flashfi/server/internal/infra/db"
+	"wiseflow/server/internal/infra/db"
 )
 
 var (
@@ -36,17 +36,36 @@ func NewRepository(pool *db.Pool) *Repository {
 type Scope string
 
 const (
-	ScopeSignal           Scope = "signal"
-	ScopeRefinementRound  Scope = "refinement_round"
+	ScopeSignal          Scope = "signal"
+	ScopeRefinementRound Scope = "refinement_round"
 )
 
-// Result 是 Brave/Tavily/... 返回的单条搜索条目, 对客户端透明.
+// Result 是单条研究线索, 对客户端透明 (落 JSONB, 原样 round-trip).
+//   - kind 缺省/"web": Exa 网页新闻线索 (Title/URL/Description/Age/Domain).
+//   - kind=="market":   Polymarket 预测市场线索, 额外带 Market 结构化概率.
+//
+// 加字段无需 migration — results 列是 JSONB, 只要 struct 带上字段就能存取.
 type Result struct {
-	Title       string `json:"title"`
-	URL         string `json:"url"`
-	Description string `json:"description"`
-	Age         string `json:"age,omitempty"`
-	Domain      string `json:"domain,omitempty"`
+	Title       string  `json:"title"`
+	URL         string  `json:"url"`
+	Description string  `json:"description"`
+	Age         string  `json:"age,omitempty"`
+	Domain      string  `json:"domain,omitempty"`
+	Kind        string  `json:"kind,omitempty"`
+	Market      *Market `json:"market,omitempty"`
+}
+
+// Market 是 kind=="market" 时的结构化预测市场数据 (Polymarket).
+type Market struct {
+	Outcomes  []MarketOutcome `json:"outcomes"`
+	VolumeUsd float64         `json:"volumeUsd,omitempty"`
+	EndDate   string          `json:"endDate,omitempty"`
+}
+
+// MarketOutcome 是单个结果的市场隐含概率 (Probability 为 0..1 小数).
+type MarketOutcome struct {
+	Label       string  `json:"label"`
+	Probability float64 `json:"probability"`
 }
 
 // Record 是表里一行 (含 metadata, 对外暴露).
@@ -190,9 +209,9 @@ func scanRecords(rows pgx.Rows) ([]Record, error) {
 	out := make([]Record, 0, 8)
 	for rows.Next() {
 		var (
-			rec      Record
-			scope    string
-			raw      []byte
+			rec   Record
+			scope string
+			raw   []byte
 		)
 		if err := rows.Scan(
 			&rec.ID, &rec.UserID, &scope, &rec.SignalID, &rec.RefinementID, &rec.Round,

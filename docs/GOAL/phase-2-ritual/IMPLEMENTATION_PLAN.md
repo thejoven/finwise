@@ -367,7 +367,7 @@ server/internal/module/<name>/
 
 - `RecordDraft(ctx, cmd DraftCommand) (*Commitment, error)` — 收 Narrator 回写, 写 commitment.drafted event + commitments insert (status=drafted)。Validate: thesis schema(exit_conditions 2..4, reasons_for_future_self 3..5)。
 - `Get(ctx, userID, id) (*Commitment, error)`
-- `RenderPDF(ctx, commitmentID) (path string, error)` — 在 Sign 之后才调; 调 PDF 子服务渲染, 落本地 `/var/flashfi/pdfs/<user_id>/<commitment_id>.pdf`(Phase 2), 更新 commitments.pdf_path。这个 step 是 sign 流程的内部一步, 不暴露给客户端。
+- `RenderPDF(ctx, commitmentID) (path string, error)` — 在 Sign 之后才调; 调 PDF 子服务渲染, 落本地 `/var/wiseflow/pdfs/<user_id>/<commitment_id>.pdf`(Phase 2), 更新 commitments.pdf_path。这个 step 是 sign 流程的内部一步, 不暴露给客户端。
 - `LoadActive(ctx, userID) (*Commitment, error)` — 查 status in (drafted, signed) 的当前唯一 commitment。
 
 #### Repository 方法
@@ -396,7 +396,7 @@ server/internal/module/<name>/
 
 - **chromedp 启动慢**: 冷启动单次渲染可能 3-5 秒; 第一次签字会卡。缓解: 程序启动时预热一个 chromedp 实例, 永久驻留。失败时 fallback 到 lazy 启动(并 log 警告)。**不**用 wkhtmltopdf — 见 ADR-005。
 - **PDF 字体未加载完成**: chromedp.WaitVisible("body") 不保证字体已就绪。改用 `chromedp.WaitReady("html", chromedp.ByQuery)` + JavaScript hook `document.fonts.ready.then(() => window.__fontsReady = true)`, 然后 chromedp 等 `window.__fontsReady === true`。
-- **PDF 路径鉴权**: pdf 文件落在 `/var/flashfi/pdfs/`, Gin 用 `c.File(path)` serve。**必须**先校验 userID 匹配 commitments.user_id, 否则不同用户可以下载彼此的 pdf。Phase 2 单用户不出问题, Phase 4+ 多用户必须有这一层。
+- **PDF 路径鉴权**: pdf 文件落在 `/var/wiseflow/pdfs/`, Gin 用 `c.File(path)` serve。**必须**先校验 userID 匹配 commitments.user_id, 否则不同用户可以下载彼此的 pdf。Phase 2 单用户不出问题, Phase 4+ 多用户必须有这一层。
 - **"理由块" 必须真引用历史 signal 原话**: Narrator agent 必须能拉到关联 signals 的 raw_text, 不能 LLM 编。实现: Mastra Narrator 工作流第一步先调 `/v1/internal/signals/by-refinement/:refinement_id` 拿到原文 list, 然后把原文作为 prompt context 喂给 Narrator, prompt 里强制要求 "reasons_for_future_self 字段必须从给定 raw_text 列表里挑出 3 段 verbatim quote, 不允许改写"。zod schema 在 Mastra 端做 verbatim 校验(用 substring match)。失败 → retry → 仍失败 → 不写草稿, 让 workflow nak。
 
 ### 3.4 M8 · signing 模块
@@ -462,7 +462,7 @@ server/internal/module/<name>/
 **Prompt 草稿** (instructions 字段; 写成 reusable string):
 
 ```
-你是 Flashfi Engine 的 Socratic.
+你是 财富密码 的 Socratic.
 
 任务: 给定一个用户的认知场景(一条或几条相关 signal + 已答过的轮次), 出一道**追问**, 让用户在选项里暴露自己的认知盲点。
 
@@ -551,7 +551,7 @@ runRefinementStep(input: {refinement_id, round, prior_rounds}):
 **Prompt 草稿**:
 
 ```
-你是 Flashfi Engine 的 Consensus Checker.
+你是 财富密码 的 Consensus Checker.
 
 任务: 给定一个资产 ticker 和一段背景信号描述, 给出主流市场目前对这个资产的"叙事热度"分数 0-100.
 
@@ -585,7 +585,7 @@ ConsensusSchema = z.object({
 **Prompt 草稿**:
 
 ```
-你是 Flashfi Engine 的 Narrator.
+你是 财富密码 的 Narrator.
 
 任务: 给一份给"6 个月后的自己"看的私人契约. 不是分析师报告, 不是投资建议, 是用户自己的判断的归档.
 
@@ -897,7 +897,7 @@ ThesisSchema = z.object({
 
 - **events 表 schema 已锁** (`docs/adr/0002-events-append-only.md`): 我们继续在同一张表 append, 不改 schema, 不加列。Phase 2 的新事件 type 只是在已有列(payload jsonb)里存新结构。**任何想给 events 加列的冲动都拒绝**——加 commitment_id 列? 不, 用 related_thesis (已存在的列) 装 commitment.id。
 - **signal.inference_status 枚举 (pending/done/failed)**: Phase 2 的 M6 门 1 厚度判定只看 inference_status = 'done' 的 signal。pending 的不算独立信号。
-- **JetStream stream 已存在 `FLASHFI_EVENTS`**: streamSubjects 已经包含 `refinement.>`, `gate.>`, `commitment.>`。Phase 2 不需要新建 stream, 只用 `ensureStream` 的兼容性 update 加新 subjects(如果 Phase 1 的 streamSubjects 列表里少了某个; 但目前已经全, 无需 update)。
+- **JetStream stream 已存在 `WISEFLOW_EVENTS`**: streamSubjects 已经包含 `refinement.>`, `gate.>`, `commitment.>`。Phase 2 不需要新建 stream, 只用 `ensureStream` 的兼容性 update 加新 subjects(如果 Phase 1 的 streamSubjects 列表里少了某个; 但目前已经全, 无需 update)。
 - **outbox 模式**: 所有新事件复用 Phase 1 的 outbox worker 路径。新事件只是新 type, payload 落 `event_outbox.payload`, worker 透明地 publish。
 - **DevBearer + InternalToken auth**: Phase 2 不引入新 auth。/v1/refinement, /v1/commitments, /v1/gate 全走 DevBearer。/v1/internal/refinement/* 走 InternalToken。
 - **Mastra consumer 模式 (`mastra/src/consumers/nats.ts`)**: Phase 2 复制这个 pattern 给 refinement-step / gate-narrow / narrator workflow 各一个 consumer。同一个 stream, 不同 durable name + 不同 SUBJECT。
@@ -943,7 +943,7 @@ Phase 1 末期 mobile 的 pending 队列还在内存 zustand (`mobile/src/featur
 | 4 | 加 onboarding | "欢迎开始你的 1 第一次追问!"; 第 1 题前的引导卡 | 直接展示第 1 题; 无欢迎语 |
 | 5 | 优化转化漏斗 | "73% 的人在第 3 题放弃, 加个鼓励"; postpone 时催促 | 不分析漏斗; postpone 文案克制("好。我会在明天同一时间再问你一次。") |
 | 6 | 写"使用统计"页 | 持仓页上方写"已坚持 89 天 · 你比 80% 的承诺者持续更久"; archive tab 显示"通过率 12%" | 持仓页只写客观信息(签字日期 + 已天数 + 退出条件); archive 不显示通过率 |
-| 7 | 把 conviction 改成 flashfi | Narrator agent 的 prompt 里把 "conviction 的本质" 错误改写 | "Conviction Engine"(完整词组) → "Flashfi Engine"; 小写 "conviction"(作为概念)保留 |
+| 7 | 把 conviction 改成 wiseflow | Narrator agent 的 prompt 里把 "conviction 的本质" 错误改写 | "Conviction Engine"(完整词组) → "财富密码"; 小写 "conviction"(作为概念)保留 |
 | 8 | 看到旧名"Conviction"代码就改 | 承诺书 PDF 页脚的 "Conviction Quarterly" 副线、Masthead 组件的副线 | 保留, 这是品牌设计决策 |
 | 9 | 安装 expo-notifications | M6 想给"四道门全过"发推送; M10 (Phase 3) 退出条件触发想发推送 | 永远不装。M6 的全过通过下次打开 APP 时 inbox 顶部展示, 不是 push |
 | 10 | 写"未读数" | inbox 顶部"新承诺书 1 份" 红点; archive tab 旁角标 | 没有未读数。已签字的承诺书没有"已读 / 未读"概念 |
@@ -966,7 +966,7 @@ Phase 1 末期 mobile 的 pending 队列还在内存 zustand (`mobile/src/featur
 **M7 承诺书 — 写成 sharing card**:
 - ❌ 加 "分享到微信/Twitter" 按钮
 - ❌ 加 "导出长图"
-- ❌ 加 watermark "Generated by Flashfi"
+- ❌ 加 watermark "Generated by 财富密码"
 - ❌ 加风险提示 "本内容不构成投资建议"
 - ❌ 加 "查看 AI 推演详情" 折叠面板
 - ✅ 承诺书只有 [先放着] + [签字] 两个按钮; PDF 没有水印; 没有任何免责声明; 不展示 "AI" 字眼

@@ -8,8 +8,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
-	"flashfi/server/internal/httpapi/auth"
+	"wiseflow/server/internal/domain"
+	"wiseflow/server/internal/httpapi/auth"
 )
 
 type Handler struct {
@@ -35,15 +35,15 @@ type startRequest struct {
 }
 
 type retrospectResponse struct {
-	ID                 string         `json:"id"`
-	CommitmentID       string         `json:"commitment_id"`
-	State              string         `json:"state"`
-	StartedAt          string         `json:"started_at"`
-	FinalizedAt        *string        `json:"finalized_at,omitempty"`
-	Answers            []AnswerEntry  `json:"answers"`
-	FocusDim           *string        `json:"focus_dim,omitempty"`
-	FocusText          *string        `json:"focus_text,omitempty"`
-	DiagnosticianModel *string        `json:"diagnostician_model,omitempty"`
+	ID                 string        `json:"id"`
+	CommitmentID       string        `json:"commitment_id"`
+	State              string        `json:"state"`
+	StartedAt          string        `json:"started_at"`
+	FinalizedAt        *string       `json:"finalized_at,omitempty"`
+	Answers            []AnswerEntry `json:"answers"`
+	FocusDim           *string       `json:"focus_dim,omitempty"`
+	FocusText          *string       `json:"focus_text,omitempty"`
+	DiagnosticianModel *string       `json:"diagnostician_model,omitempty"`
 }
 
 type answerRequest struct {
@@ -90,7 +90,16 @@ func (h *Handler) list(c *gin.Context) {
 			limit = n
 		}
 	}
-	items, err := h.svc.List(c.Request.Context(), userID, limit)
+	var projectID *uuid.UUID
+	if s := c.Query("project_id"); s != "" {
+		pid, err := uuid.Parse(s)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "project_id not a uuid"})
+			return
+		}
+		projectID = &pid
+	}
+	items, err := h.svc.List(c.Request.Context(), userID, limit, projectID)
 	if err != nil {
 		writeErr(c, err)
 		return

@@ -5,7 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="color-scheme" content="dark light" />
-    <title>Flashfi Admin</title>
+    <title>WiseFlow Admin</title>
+    <script>
+      // 在 React 挂载前应用保存的主题, 防止刷新时主题闪烁 (FOUC). 默认 dark.
+      try {
+        var t = localStorage.getItem("wiseflow.admin.theme");
+        if (t === "light") document.documentElement.classList.remove("dark");
+        else if (t === "dark") document.documentElement.classList.add("dark");
+      } catch (e) {}
+    </script>
   </head>
   <body class="min-h-screen bg-background text-foreground antialiased">
     <div id="root"></div>

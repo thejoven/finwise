@@ -1,28 +1,20 @@
 import { useCallback, useMemo, useState } from "react";
 import { RefreshControl, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { useAnimatedScrollHandler, useSharedValue } from "react-native-reanimated";
+import Animated from "react-native-reanimated";
 import { router } from "expo-router";
 
-import {
-  CollapsibleMasthead,
-  COLLAPSIBLE_MASTHEAD_EXPANDED,
-  SectionHeader,
-  Serif,
-} from "@/shared/components";
+import { CollapsibleMasthead, SectionHeader, Serif } from "@/shared/components";
 import {
   SignalRow,
   SilenceStamp,
-  chineseMonthDay,
-  chineseWeekday,
-  isSameLocalDay,
-  isoWeekOfYear,
   useInferenceDoneToast,
   useMergedSignals,
   type MergedSignal,
 } from "@/features/capture";
 import { InboxCallouts } from "@/features/inbox";
 import { theme } from "@/core/theme";
+import { chineseMonthDay, chineseWeekday, isSameLocalDay, isoWeekOfYear } from "@/shared/format";
+import { useCollapsibleScroll } from "@/shared/hooks";
 
 /**
  * A1 收件箱 (M4).
@@ -38,7 +30,7 @@ import { theme } from "@/core/theme";
  * 会被半透明 glass tab bar 盖住. Android 同理 (Material 56dp).
  */
 export default function InboxScreen() {
-  const insets = useSafeAreaInsets();
+  const { scrollY, onScroll, headerPad, bottomPad } = useCollapsibleScroll();
   const { data, refetch, isLoading } = useMergedSignals();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -55,13 +47,6 @@ export default function InboxScreen() {
   const monthDay = chineseMonthDay(today);
   const weekday = chineseWeekday(today);
 
-  const scrollY = useSharedValue(0);
-  const onScroll = useAnimatedScrollHandler({
-    onScroll: (event) => {
-      scrollY.value = event.contentOffset.y;
-    },
-  });
-
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -70,9 +55,6 @@ export default function InboxScreen() {
       setRefreshing(false);
     }
   }, [refetch]);
-
-  const headerPad = insets.top + COLLAPSIBLE_MASTHEAD_EXPANDED;
-  const bottomPad = insets.bottom + 64; // 给 NativeTabs glass bar 让出空间
 
   return (
     <View style={styles.root}>

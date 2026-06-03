@@ -3,11 +3,11 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react-native";
 
 import {
   Display,
   DoubleRule,
+  Icon,
   Mono,
   SectionHeader,
   Serif,
@@ -16,15 +16,21 @@ import {
 } from "@/shared/components";
 import { theme } from "@/core/theme";
 import { getSignal, reinferSignal } from "@/core/api/signals";
-import { formatLongDate, useRetryPending, usePendingSignals } from "@/features/capture";
+import { formatLongDate } from "@/shared/format";
+import { useRetryPending, usePendingSignals } from "@/features/capture";
 import {
+  BeneficiarySilence,
+  BeneficiaryTargetCard,
+  DistilledContent,
   LearningCard,
   RefinementHistory,
+  useDistillation,
   useRefinementBySignal,
   useSignalResearch,
   useStartRefinement,
 } from "@/features/refinement";
 import { GateFeedback, useGateByRefinement } from "@/features/archive";
+import { ProjectBadge } from "@/features/project/ProjectBadge";
 
 /**
  * 信号详情 — 从 inbox 列表点进来.
@@ -72,9 +78,13 @@ export default function SignalDetailScreen() {
   // 拉该信号对应的全部"相关线索" (Analyst 背景检索 + 各轮 Socratic 定向检索)
   const researchQuery = useSignalResearch(pendingItem ? undefined : id);
 
-  // 拉该信号 refinement 对应的四道门评估 (完成后异步触发, 可能 5-30s 才回填)
+  // 拉该信号 refinement 对应的分析师评审结果 (完成后异步触发, 可能 5-30s 才回填)
   const refinementCompleted = history?.status === "completed";
   const gateQuery = useGateByRefinement(refinementCompleted ? history?.id : undefined);
+
+  // 降噪页结果 (降噪综述 + 受益标的). 只有走完五轮追问 → 降噪页 的信号才有.
+  const distillationQuery = useDistillation(refinementCompleted ? history?.id : undefined);
+  const distillation = distillationQuery.data ?? null;
 
   const canRefine = !pendingItem && query.data?.inference_status === "done";
 
@@ -108,6 +118,10 @@ export default function SignalDetailScreen() {
   const inferenceStatus = pendingItem ? "pending" : query.data?.inference_status;
   const summary = query.data?.inference_summary ?? null;
   const tags = query.data?.inference_tags ?? [];
+  // Analyst 第一层推演出的相关标的 (金融分析).
+  const relatedAssets = query.data?.related_assets ?? [];
+  // 该信号所属分类: 本地 pending 或服务端返回的 project_id (未分类 → null)
+  const projectId = pendingItem?.project_id ?? query.data?.project_id ?? null;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -118,6 +132,8 @@ export default function SignalDetailScreen() {
             {formatLongDate(capturedAt)}
           </Mono>
         ) : null}
+
+        <ProjectBadge projectId={projectId} />
 
         {rawText ? (
           <Display size={22} style={styles.rawText}>
@@ -176,6 +192,8 @@ export default function SignalDetailScreen() {
           ) : null}
         </View>
 
+        <FinancialTargets assets={relatedAssets} />
+
         {pendingItem?.status === "failed" || pendingItem?.status === "exhausted" ? (
           <TapEffect
             style={styles.retryButton}
@@ -211,6 +229,39 @@ export default function SignalDetailScreen() {
           </View>
         ) : null}
 
+        {/* 降噪页结果: 降噪综述 + 受益标的 (走完五轮追问 → 降噪页 的信号才有) */}
+        {distillation && (distillation.distilled_content || distillation.beneficiary != null) ? (
+          <View style={styles.distillBlock}>
+            {distillation.distilled_content ? (
+              <View>
+                <SectionHeader label="降噪" meta="这条信号" />
+                <DoubleRule />
+                <DistilledContent content={distillation.distilled_content} />
+              </View>
+            ) : null}
+            {distillation.beneficiary != null ? (
+              <View style={styles.beneficiaryBlock}>
+                <SectionHeader label="收益标的" meta="金融推演" />
+                <DoubleRule />
+                {distillation.beneficiary.length > 0 ? (
+                  <View style={styles.beneficiaryList}>
+                    {distillation.beneficiary_note ? (
+                      <Serif size={14} italic style={styles.beneficiaryNote}>
+                        {distillation.beneficiary_note}
+                      </Serif>
+                    ) : null}
+                    {distillation.beneficiary.map((t, i) => (
+                      <BeneficiaryTargetCard key={`${t.symbol}-${i}`} target={t} />
+                    ))}
+                  </View>
+                ) : (
+                  <BeneficiarySilence note={distillation.beneficiary_note ?? null} />
+                )}
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {/*
           相关线索: 这条信号"回答过程中"系统检索的全部材料
           (Analyst 阶段 broad search + 各轮 Socratic lens-定向 search).
@@ -222,7 +273,7 @@ export default function SignalDetailScreen() {
         ) : null}
 
         {/*
-          四道门反馈 — 只在五轮追问已完成时显示.
+          分析师评审反馈 — 只在五轮追问已完成时显示.
           refinement 完成 → gate.Evaluate 异步触发; evaluation 可能晚 5-30s 才到.
           这期间 GateFeedback 内部自显 "等待评估" 占位.
         */}
@@ -231,6 +282,44 @@ export default function SignalDetailScreen() {
         ) : null}
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+const ORDER_LABEL: Record<string, string> = { first: "一阶", second: "二阶", third: "三阶" };
+
+/** 金融分析 — Analyst 第一层推演出的相关标的 (ticker + 一阶/二阶/三阶 + 理由). */
+function FinancialTargets({
+  assets,
+}: {
+  assets: { ticker: string; rationale: string; order: string }[];
+}) {
+  if (assets.length === 0) return null;
+  return (
+    <View style={styles.faBlock}>
+      <SectionHeader label="金融分析" meta="推演标的" />
+      <DoubleRule />
+      <View style={styles.faList}>
+        {assets.map((a, i) => (
+          <View key={`${a.ticker}-${i}`} style={styles.faItem}>
+            <View style={styles.faHead}>
+              <Mono size={12} style={styles.faTicker}>
+                {a.ticker}
+              </Mono>
+              {ORDER_LABEL[a.order] ? (
+                <Sans size={9} weight="700" style={styles.faOrder}>
+                  {ORDER_LABEL[a.order]}
+                </Sans>
+              ) : null}
+            </View>
+            {a.rationale ? (
+              <Serif size={13} style={styles.faRationale}>
+                {a.rationale}
+              </Serif>
+            ) : null}
+          </View>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -299,7 +388,7 @@ function Header() {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
-        <ChevronLeft size={18} color={theme.color.ink} strokeWidth={1.5} />
+        <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
@@ -437,5 +526,52 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: theme.spacing.lg,
+  },
+  faBlock: {
+    marginTop: theme.spacing.md,
+  },
+  faList: {
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  faItem: {
+    gap: 2,
+  },
+  faHead: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.sm,
+  },
+  faTicker: {
+    color: theme.color.ink,
+    letterSpacing: 0.5,
+  },
+  faOrder: {
+    color: theme.color.paper,
+    backgroundColor: theme.color.ink2,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    letterSpacing: 1,
+    overflow: "hidden",
+  },
+  faRationale: {
+    color: theme.color.ink2,
+    lineHeight: 19,
+  },
+  distillBlock: {
+    marginTop: theme.spacing.xl,
+    gap: theme.spacing.md,
+  },
+  beneficiaryBlock: {
+    marginTop: theme.spacing.lg,
+  },
+  beneficiaryList: {
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.md,
+  },
+  beneficiaryNote: {
+    color: theme.color.muted,
+    lineHeight: 22,
+    marginBottom: theme.spacing.xs,
   },
 });

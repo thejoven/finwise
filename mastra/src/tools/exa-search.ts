@@ -22,15 +22,42 @@
  */
 import { config } from "../config/env.js";
 
+/**
+ * 预测市场单个结果项 (Polymarket 等). kind==="market" 的 SearchResult 才带 market.
+ * outcomes 已按概率降序、截断到前几条; probability 是 0..1 小数.
+ */
+export interface MarketOutcome {
+  /** 结果标签, 例 "Yes" / "降25bp" / "↑ 115,000". */
+  label: string;
+  /** 市场隐含概率, 0..1. */
+  probability: number;
+}
+export interface MarketData {
+  outcomes: MarketOutcome[];
+  /** 累计成交额 (USD). */
+  volumeUsd?: number;
+  /** 市场截止时间, ISO-8601. */
+  endDate?: string;
+}
+
+/**
+ * SearchResult — provider-中性的"研究线索"形状 (Exa 新闻 + Polymarket 市场共用).
+ *   - kind 缺省/"web": 普通网页线索 (Exa). market 为空.
+ *   - kind==="market": 预测市场线索. market 带结构化概率, description 是其文字版兜底.
+ */
 export interface SearchResult {
   title: string;
   url: string;
-  /** 来自 Exa highlights[0]; 客户端展示用 2-3 句话片段. */
+  /** 来自 Exa highlights[0]; 客户端展示用 2-3 句话片段. market 类型时是概率的文字版. */
   description: string;
   /** 人类可读相对时间, 例 "2 天前". 没 publishedDate 时 undefined. */
   age?: string;
   /** 从 url 解出的 hostname (去掉 www.), 客户端展示用. */
   domain: string;
+  /** 线索类型判别符. 缺省视作 "web" (向后兼容旧落库数据). */
+  kind?: "web" | "market";
+  /** 仅 kind==="market" 时存在: 结构化市场概率, 供 mobile 渲染概率条 + Analyst 判断 consensus. */
+  market?: MarketData;
 }
 
 export interface WebSearchOptions {

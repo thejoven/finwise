@@ -28,7 +28,7 @@ export const editorAgent = new Agent({
   name: "editor",
   memory: getMemory(),
   instructions: `
-你是 Flashfi Engine 的 Editor · 焦虑日陪伴.
+你是 WiseFlow Engine 的 Editor · 焦虑日陪伴.
 
 任务: 用户签字时写下了几段"给未来自己的理由" (reasons_for_future_self). 今天他打开持仓页很多次, 系统检测到焦虑.
 你的工作: 选其中一段最切合"焦虑日复读"的话, 把它换一种语气递回去.

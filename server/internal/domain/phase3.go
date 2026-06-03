@@ -24,9 +24,9 @@ const (
 type CommitmentOpenOrigin string
 
 const (
-	OpenOriginDeeplink     CommitmentOpenOrigin = "deeplink"
-	OpenOriginTab          CommitmentOpenOrigin = "tab"
-	OpenOriginTriggerCard  CommitmentOpenOrigin = "trigger_card"
+	OpenOriginDeeplink    CommitmentOpenOrigin = "deeplink"
+	OpenOriginTab         CommitmentOpenOrigin = "tab"
+	OpenOriginTriggerCard CommitmentOpenOrigin = "trigger_card"
 )
 
 type CommitmentOpenedPayload struct {
@@ -50,9 +50,9 @@ type CompanionShownPayload struct {
 type CompanionExitStep string
 
 const (
-	ExitInsistStarted   CompanionExitStep = "started"
+	ExitInsistStarted    CompanionExitStep = "started"
 	ExitInsistQuestioned CompanionExitStep = "questioned"
-	ExitInsistConfirmed CompanionExitStep = "confirmed"
+	ExitInsistConfirmed  CompanionExitStep = "confirmed"
 )
 
 type CompanionExitInsistedPayload struct {
@@ -137,13 +137,13 @@ const (
 )
 
 type RetrospectAnsweredPayload struct {
-	RetrospectID uuid.UUID            `json:"retrospect_id"`
-	UserID       uuid.UUID            `json:"user_id"`
-	QuestionNo   int                  `json:"question_no"` // 1..4
-	QuestionDim  RetrospectDimension  `json:"question_dim"`
-	Choice       string               `json:"choice"`
-	OpenText     *string              `json:"open_text,omitempty"`
-	AnsweredAt   time.Time            `json:"answered_at"`
+	RetrospectID uuid.UUID           `json:"retrospect_id"`
+	UserID       uuid.UUID           `json:"user_id"`
+	QuestionNo   int                 `json:"question_no"` // 1..4
+	QuestionDim  RetrospectDimension `json:"question_dim"`
+	Choice       string              `json:"choice"`
+	OpenText     *string             `json:"open_text,omitempty"`
+	AnsweredAt   time.Time           `json:"answered_at"`
 }
 
 type FocusDim string

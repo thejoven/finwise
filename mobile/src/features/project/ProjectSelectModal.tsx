@@ -33,7 +33,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { ScrollView } from "react-native-gesture-handler";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronLeft, Pencil, Plus, X } from "lucide-react-native";
 
 import {
   archiveProject,
@@ -42,8 +41,8 @@ import {
   updateProject,
   type ProjectView,
 } from "@/core/api/project";
-import { theme } from "@/core/theme";
-import { Display, Mono, Sans, Serif, TapEffect } from "@/shared/components";
+import { theme, useThemeColors, projectSwatches } from "@/core/theme";
+import { Display, Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
 
 import { useActiveProject } from "./store";
 
@@ -53,18 +52,34 @@ interface Props {
   visible: boolean;
   editingId: string | null;
   onClose: () => void;
+  /**
+   * 可选: 打开时的初始视图. 传 "create" 直接进新建表单 (editingId 为空时生效);
+   * 默认 "list". editingId 非空时恒为 edit, 不受此影响.
+   */
+  initialStage?: "list" | "create";
+  /**
+   * 可选: 新建分类成功后回调新分类 id. 录入页用它把刚建好的分类选中并关回.
+   * 不传时维持原行为 (新建后停在 list, 该分类被设为全局 active).
+   */
+  onProjectCreated?: (id: string) => void;
 }
 
 const EMOJI_SUGGESTIONS = ["🧸", "🔋", "🏦", "💊", "🛢️", "🤖", "🌐", "📱", "🪙", "🍵"];
-const COLOR_SWATCHES = ["#a8201a", "#2e5e3a", "#1f4e79", "#7a4f01", "#5a2a82", "#2a2a2a"];
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
+export function ProjectSelectModal({
+  visible,
+  editingId,
+  onClose,
+  initialStage = "list",
+  onProjectCreated,
+}: Props) {
   const [stage, setStage] = useState<Stage>("list");
   const [draftName, setDraftName] = useState("");
   const [draftEmoji, setDraftEmoji] = useState<string | undefined>(undefined);
   const [draftColor, setDraftColor] = useState<string | undefined>(undefined);
+  const [draftGuidance, setDraftGuidance] = useState("");
 
   // 居中弹层的进出动画: progress 控背景遮罩 + 卡片整体透明度, cardScale 控"弹出"缩放.
   // Modal 的 visible 跟随本地 mounted —— 关闭时先放完退场动画, 再卸载 Modal.
@@ -75,7 +90,6 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
   const queryClient = useQueryClient();
   const activeId = useActiveProject((s) => s.activeId);
   const setActive = useActiveProject((s) => s.setActive);
-  const clearIfMatches = useActiveProject((s) => s.clearIfMatches);
 
   const { data: projects } = useQuery({
     queryKey: ["projects"],
@@ -94,15 +108,17 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
         setDraftName(p.name);
         setDraftEmoji(p.emoji ?? undefined);
         setDraftColor(p.color ?? undefined);
+        setDraftGuidance(p.guidance ?? "");
         return;
       }
     }
-    setStage("list");
+    setStage(initialStage);
     setDraftName("");
     setDraftEmoji(undefined);
     setDraftColor(undefined);
+    setDraftGuidance("");
     // items 在第一次空, useQuery 拉到后才能 find — 加 items 作为依赖
-  }, [visible, editingId, items]);
+  }, [visible, editingId, initialStage, items]);
 
   // 进出动画 driver: 打开时挂载并放入场动画; 关闭时放退场动画, 结束后再卸载.
   useEffect(() => {
@@ -125,9 +141,13 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
   const createMut = useMutation({
     mutationFn: createProject,
     onSuccess: async (p) => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      // 乐观写入缓存: 新分类立即出现在所有 chips/picker (含首页), 不依赖随后的 refetch
+      // —— 弱网 / refetch 失败时也能即时显示. 随后再后台对账服务端排序.
+      queryClient.setQueryData<ProjectView[]>(["projects"], (old) => (old ? [...old, p] : [p]));
       await setActive(p.id);
       setStage("list");
+      onProjectCreated?.(p.id);
+      void queryClient.invalidateQueries({ queryKey: ["projects"] });
     },
   });
 
@@ -143,8 +163,13 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
   const archiveMut = useMutation({
     mutationFn: archiveProject,
     onSuccess: async (_, id) => {
+      // 归档当前选中的分类时, 没有"全部"可退回 —— 落到下一个可用分类;
+      // 一个都不剩则置空, 由 useEnsureCategory 兜底自动建默认分类.
+      if (activeId === id) {
+        const remaining = items.filter((p) => p.id !== id && !p.archived_at);
+        await setActive(remaining[0]?.id ?? null);
+      }
       await queryClient.invalidateQueries({ queryKey: ["projects"] });
-      await clearIfMatches(id);
       setStage("list");
     },
   });
@@ -153,11 +178,22 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
     const name = draftName.trim();
     if (!name) return;
     if (stage === "create") {
-      createMut.mutate({ name, emoji: draftEmoji, color: draftColor });
+      createMut.mutate({
+        name,
+        emoji: draftEmoji,
+        color: draftColor,
+        guidance: draftGuidance.trim() || undefined,
+      });
     } else if (stage === "edit" && editingId) {
       updateMut.mutate({
         id: editingId,
-        input: { name, emoji: draftEmoji ?? "", color: draftColor ?? "" },
+        // guidance 传 trim 后的值 (含 "")—— 后端 "" 即清空指引.
+        input: {
+          name,
+          emoji: draftEmoji ?? "",
+          color: draftColor ?? "",
+          guidance: draftGuidance.trim(),
+        },
       });
     }
   };
@@ -171,6 +207,7 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
     setDraftName("");
     setDraftEmoji(undefined);
     setDraftColor(undefined);
+    setDraftGuidance("");
   };
 
   const enterEdit = (p: ProjectView) => {
@@ -178,6 +215,7 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
     setDraftName(p.name);
     setDraftEmoji(p.emoji ?? undefined);
     setDraftColor(p.color ?? undefined);
+    setDraftGuidance(p.guidance ?? "");
   };
 
   const busy = createMut.isPending || updateMut.isPending || archiveMut.isPending;
@@ -187,6 +225,9 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
     opacity: progress.value,
     transform: [{ scale: cardScale.value }],
   }));
+
+  // Reanimated 的 Animated.View 不认 DynamicColorIOS 动态色 → 卡片底色/阴影取 resolved hex.
+  const c = useThemeColors();
 
   return (
     <Modal
@@ -207,7 +248,9 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
           style={styles.centerWrap}
           pointerEvents="box-none"
         >
-          <Animated.View style={[styles.card, cardStyle]}>
+          <Animated.View
+            style={[styles.card, { backgroundColor: c.paper, shadowColor: c.ink }, cardStyle]}
+          >
             {/* Header */}
             <View style={styles.header}>
               {stage === "list" ? (
@@ -218,14 +261,14 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
                   style={styles.headerSide}
                   accessibilityLabel="返回"
                 >
-                  <ChevronLeft size={20} color={theme.color.ink} strokeWidth={1.75} />
+                  <Icon name="chevronLeft" size={20} color={theme.color.ink} strokeWidth={1.75} />
                 </TapEffect>
               )}
               <Display size={18} style={styles.headerTitle}>
                 {stage === "list" ? "分类" : stage === "create" ? "新建分类" : "编辑分类"}
               </Display>
               <TapEffect onPress={onClose} style={styles.headerSide} accessibilityLabel="关闭">
-                <X size={20} color={theme.color.ink} strokeWidth={1.75} />
+                <Icon name="close" size={20} color={theme.color.ink} strokeWidth={1.75} />
               </TapEffect>
             </View>
 
@@ -236,10 +279,6 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
                 activeId={activeId}
                 onPick={async (id) => {
                   await setActive(id);
-                  onClose();
-                }}
-                onPickAll={async () => {
-                  await setActive(null);
                   onClose();
                 }}
                 onEdit={enterEdit}
@@ -254,6 +293,8 @@ export function ProjectSelectModal({ visible, editingId, onClose }: Props) {
                 setEmoji={setDraftEmoji}
                 color={draftColor}
                 setColor={setDraftColor}
+                guidance={draftGuidance}
+                setGuidance={setDraftGuidance}
                 onSave={handleSave}
                 onArchive={stage === "edit" ? handleArchive : undefined}
                 busy={busy}
@@ -272,18 +313,16 @@ interface ListBodyProps {
   items: ProjectView[];
   activeId: string | null;
   onPick: (id: string) => void;
-  onPickAll: () => void;
   onEdit: (p: ProjectView) => void;
   onCreate: () => void;
 }
 
-function ListBody({ items, activeId, onPick, onPickAll, onEdit, onCreate }: ListBodyProps) {
+function ListBody({ items, activeId, onPick, onEdit, onCreate }: ListBodyProps) {
   return (
     <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
       <Mono size={9} style={styles.sectionStamp}>
         ◆ 切换分类
       </Mono>
-      <Row emoji={undefined} name="全部" active={activeId === null} onPress={onPickAll} />
       {items.map((p) => (
         <Row
           key={p.id}
@@ -296,7 +335,7 @@ function ListBody({ items, activeId, onPick, onPickAll, onEdit, onCreate }: List
         />
       ))}
       <TapEffect onPress={onCreate} style={styles.createRow}>
-        <Plus size={16} color={theme.color.ink2} strokeWidth={1.75} />
+        <Icon name="plus" size={16} color={theme.color.ink2} strokeWidth={1.75} />
         <Sans size={13} weight="500" style={styles.createLabel}>
           新建分类
         </Sans>
@@ -328,11 +367,11 @@ function Row({ emoji, name, color, active, onPress, onEdit }: RowProps) {
         <Serif size={15} style={styles.rowName}>
           {name}
         </Serif>
-        {active ? <Check size={16} color={theme.color.ink} strokeWidth={2} /> : null}
+        {active ? <Icon name="check" size={16} color={theme.color.ink} strokeWidth={2} /> : null}
       </TapEffect>
       {onEdit ? (
         <TapEffect onPress={onEdit} style={styles.rowEditBtn} accessibilityLabel="编辑">
-          <Pencil size={14} color={theme.color.muted} strokeWidth={1.5} />
+          <Icon name="pencil" size={14} color={theme.color.muted} strokeWidth={1.5} />
         </TapEffect>
       ) : null}
     </View>
@@ -349,6 +388,8 @@ interface EditBodyProps {
   setEmoji: (v: string | undefined) => void;
   color: string | undefined;
   setColor: (v: string | undefined) => void;
+  guidance: string;
+  setGuidance: (v: string) => void;
   onSave: () => void;
   onArchive?: () => void;
   busy: boolean;
@@ -362,6 +403,8 @@ function EditBody({
   setEmoji,
   color,
   setColor,
+  guidance,
+  setGuidance,
   onSave,
   onArchive,
   busy,
@@ -415,7 +458,7 @@ function EditBody({
             无
           </Sans>
         </TapEffect>
-        {COLOR_SWATCHES.map((c) => (
+        {projectSwatches.map((c) => (
           <TapEffect
             key={c}
             onPress={() => setColor(c)}
@@ -425,6 +468,23 @@ function EditBody({
           </TapEffect>
         ))}
       </View>
+
+      <Mono size={9} style={[styles.sectionStamp, styles.sectionTop]}>
+        ◆ 分析指引（可选）
+      </Mono>
+      <Serif size={12} italic style={styles.guidanceHint}>
+        给这个分类的 AI 推理写一句偏好，例如“关注渠道动销与海外扩张”。留空则不影响。
+      </Serif>
+      <TextInput
+        value={guidance}
+        onChangeText={setGuidance}
+        placeholder="这个分类要 AI 特别留意什么…"
+        placeholderTextColor={theme.color.muted2}
+        style={[styles.input, styles.guidanceInput]}
+        multiline
+        maxLength={2000}
+        scrollEnabled
+      />
 
       <TapEffect
         onPress={onSave}
@@ -465,12 +525,11 @@ const styles = StyleSheet.create({
     width: "100%",
     maxWidth: 420,
     maxHeight: "82%",
-    backgroundColor: theme.color.paper,
+    // backgroundColor / shadowColor 内联 resolved hex — Reanimated 不认动态色.
     borderRadius: theme.radius.lg,
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.sm,
     // 居中浮层用投影做层级提示 (底部弹层贴边不需要, 居中浮起需要)
-    shadowColor: theme.color.ink,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
@@ -565,6 +624,16 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.color.rule,
     backgroundColor: theme.color.paper2,
+  },
+  guidanceHint: {
+    color: theme.color.muted,
+    marginBottom: 8,
+  },
+  guidanceInput: {
+    minHeight: 88,
+    textAlignVertical: "top",
+    paddingTop: 10,
+    lineHeight: 21,
   },
   swatchRow: {
     flexDirection: "row",

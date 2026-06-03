@@ -2,7 +2,10 @@
  * Mastra HTTP 服务 · Go 同步调 Mastra Agents 用.
  *
  * 端点:
- *   - POST /consensus-check         (M6 G2 反共识打分)
+ *   - POST /consensus-check         (共识分析师 · 原 G2 反共识打分)
+ *   - POST /thickness-check         (佐证分析师 · 原 G1 信号厚度)
+ *   - POST /timing-check            (时机分析师 · 原 G3 时间窗口)
+ *   - POST /competence-check        (能力圈分析师 · 原 G4 能力圈)
  *   - POST /editor                  (M9 焦虑日陪伴文字)
  *   - POST /diagnostician           (M11 复盘 focus)
  *   - GET  /healthz                 (探活)
@@ -22,6 +25,8 @@ import { runConsensusCheck } from "../agents/consensus.js";
 import { runEditor } from "../agents/editor.js";
 import { runDiagnostician } from "../agents/diagnostician.js";
 import { runThicknessJudge } from "../agents/thickness.js";
+import { runTimingCheck } from "../agents/timing.js";
+import { runCompetenceCheck } from "../agents/competence.js";
 
 export interface HttpHandle {
   stop(): Promise<void>;
@@ -76,7 +81,12 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   const body = await readBody(req);
 
   if (url === "/consensus-check") {
-    const input = body as { asset: string; signal_text: string };
+    const input = body as {
+      asset: string;
+      signal_text: string;
+      project_name?: string;
+      project_guidance?: string;
+    };
     if (!input.asset || !input.signal_text) {
       writeJSON(res, 400, { error: "asset and signal_text required" });
       return;
@@ -123,6 +133,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       raw_text: string;
       summary: string;
       tags: string[];
+      project_id?: string;
+      project_name?: string;
+      project_guidance?: string;
     };
     if (!input.user_id || !input.signal_id || !input.raw_text || !input.summary) {
       writeJSON(res, 400, { error: "user_id + signal_id + raw_text + summary required" });
@@ -136,6 +149,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
         raw_text: input.raw_text,
         summary: input.summary,
         tags: input.tags ?? [],
+        project_id: input.project_id,
+        project_name: input.project_name,
+        project_guidance: input.project_guidance,
       });
       log("info", "thickness done", {
         signal_id: input.signal_id,
@@ -146,6 +162,76 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       writeJSON(res, 200, result);
     } catch (err) {
       log("warn", "thickness failed", { signal_id: input.signal_id, err: String(err) });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/timing-check") {
+    const input = body as {
+      asset: string;
+      signal_text: string;
+      stated_action?: string;
+      stated_months?: number;
+      plan_text?: string;
+      project_name?: string;
+      project_guidance?: string;
+    };
+    if (!input.asset || !input.signal_text) {
+      writeJSON(res, 400, { error: "asset and signal_text required" });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runTimingCheck(input);
+      log("info", "timing done", {
+        asset: input.asset,
+        pass: result.pass,
+        months: result.months,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "timing failed", { asset: input.asset, err: String(err) });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/competence-check") {
+    const input = body as {
+      asset: string;
+      signal_text: string;
+      direct: boolean;
+      round1_text: string;
+      exit_text?: string;
+      project_name?: string;
+      project_guidance?: string;
+    };
+    if (!input.asset || !input.signal_text || !input.round1_text) {
+      writeJSON(res, 400, { error: "asset + signal_text + round1_text required" });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runCompetenceCheck({
+        asset: input.asset,
+        signal_text: input.signal_text,
+        direct: !!input.direct,
+        round1_text: input.round1_text,
+        exit_text: input.exit_text,
+        project_name: input.project_name,
+        project_guidance: input.project_guidance,
+      });
+      log("info", "competence done", {
+        asset: input.asset,
+        explain: result.explain,
+        exit_known: result.exit_known,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "competence failed", { asset: input.asset, err: String(err) });
       writeJSON(res, 502, { error: String(err) });
     }
     return;

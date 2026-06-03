@@ -1,10 +1,12 @@
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import Animated from "react-native-reanimated";
 
 import { Mono, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
+import { LIST_LAYOUT } from "@/shared/motion";
 
-import { formatMonthDay } from "./format";
+import { formatMonthDay } from "@/shared/format";
 import type { MergedSignal } from "./hooks";
 
 interface SignalRowProps {
@@ -12,23 +14,26 @@ interface SignalRowProps {
 }
 
 export function SignalRow({ signal }: SignalRowProps) {
+  // 列表恒按当前分类筛选 (没有"全部"视图), 整列同分类 —— 不再逐行重复显示分类标识.
   return (
-    <TapEffect onPress={() => router.push(`/signal/${signal.id}`)} style={styles.row}>
-      <Mono size={10} style={styles.date}>
-        {formatMonthDay(signal.captured_at)}
-      </Mono>
-      <View style={styles.content}>
-        <Serif size={15} style={styles.text} numberOfLines={3}>
-          {signal.raw_text}
-        </Serif>
-        {signal.inference_summary ? (
-          <Serif size={12} italic style={styles.summary} numberOfLines={2}>
-            {signal.inference_summary}
+    <Animated.View layout={LIST_LAYOUT}>
+      <TapEffect onPress={() => router.push(`/signal/${signal.id}`)} style={styles.row}>
+        <Mono size={10} style={styles.date}>
+          {formatMonthDay(signal.captured_at)}
+        </Mono>
+        <View style={styles.content}>
+          <Serif size={15} style={styles.text} numberOfLines={3}>
+            {signal.raw_text}
           </Serif>
-        ) : null}
-        <SignalStatus signal={signal} />
-      </View>
-    </TapEffect>
+          {signal.inference_summary ? (
+            <Serif size={12} italic style={styles.summary} numberOfLines={2}>
+              {signal.inference_summary}
+            </Serif>
+          ) : null}
+          <SignalStatus signal={signal} />
+        </View>
+      </TapEffect>
+    </Animated.View>
   );
 }
 

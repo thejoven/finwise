@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/httpapi/auth"
-	"flashfi/server/internal/infra/db"
-	"flashfi/server/internal/infra/metrics"
+	"wiseflow/server/internal/httpapi/auth"
+	"wiseflow/server/internal/infra/db"
+	"wiseflow/server/internal/infra/metrics"
 )
 
 type Deps struct {
@@ -30,12 +30,17 @@ type Deps struct {
 	// nil 时回退到单纯 dev bearer 模式.
 	Sessions auth.SessionLookup
 
+	// AdminLookup: user → is_admin 查询, 给 /v1/admin/* 的 RequireAdmin 用.
+	// 通常注入 account.Service (与 Sessions 同一实例). nil 时 admin 路由仅 DevUserID 可达.
+	AdminLookup auth.AdminLookup
+
 	// RegisterModules is the module hook. Called once with the route groups
 	// after the global middleware is attached.
 	//   anon       — /v1 下 unauth (register/login/healthz-like)
 	//   publicV1   — /v1, 走 Bearer (dev token 或 session token)
 	//   internalV1 — /v1/internal, 走 InternalSecret
-	RegisterModules func(anon, publicV1, internalV1 *gin.RouterGroup)
+	//   adminV1    — /v1/admin, 走 Bearer + RequireAdmin
+	RegisterModules func(anon, publicV1, internalV1, adminV1 *gin.RouterGroup)
 }
 
 func NewRouter(d Deps) *gin.Engine {
@@ -68,8 +73,19 @@ func NewRouter(d Deps) *gin.Engine {
 		LoopbackOnly: d.InternalLoopback,
 	}))
 
+	// adminV1: /v1/admin/* — 走和 v1 同样的 Bearer, 再叠一层 RequireAdmin.
+	// 单独 Group (不嵌在 v1 下) 避免 Bearer 中间件双跑. 只有 is_admin 用户或 DevUserID 可达.
+	adminV1 := r.Group("/v1/admin",
+		auth.Bearer(auth.BearerConfig{
+			DevBearerToken: d.DevBearerToken,
+			DevUserID:      d.DevUserID,
+			Sessions:       d.Sessions,
+		}),
+		auth.RequireAdmin(d.AdminLookup, d.DevUserID),
+	)
+
 	if d.RegisterModules != nil {
-		d.RegisterModules(anonV1, v1, internalV1)
+		d.RegisterModules(anonV1, v1, internalV1, adminV1)
 	}
 
 	return r

@@ -14,11 +14,18 @@
 
 import type { NativeStackNavigationOptions } from "@react-navigation/native-stack";
 
+import { theme } from "@/core/theme";
+
 type ScreenOptions = NativeStackNavigationOptions;
 
-/** 根 Stack 默认: 不显 header, 屏首尾自己渲染. */
+/**
+ * 根 Stack 默认: 不显 header, 屏首尾自己渲染.
+ * contentStyle 给 native-stack 容器铺 paper 底 (动态色, 随明暗翻) —— 兜住推屏间隙 /
+ * modal 边缘露出的原生白底, 暗色模式下尤其重要.
+ */
 export const rootStackScreenOptions: ScreenOptions = {
   headerShown: false,
+  contentStyle: { backgroundColor: theme.color.paper },
 };
 
 /** App 主屏 / Tab 容器 — 禁止任何返回手势. */

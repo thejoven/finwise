@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"flashfi/server/internal/domain"
+	"wiseflow/server/internal/domain"
 )
 
 // ErrInvalidInput is the family of "user typed something we won't accept".
@@ -95,9 +95,11 @@ func (s *Service) Capture(ctx context.Context, cmd CaptureCommand) (*CaptureResu
 
 // ListFilter 是 List 的可选过滤. 加 q (search) 后参数太多, 收进 struct.
 type ListFilter struct {
-	Before *time.Time
-	Limit  int
-	Query  string // raw 用户输入; service 自己 trim. 空 = 不过滤.
+	Before     *time.Time
+	Limit      int
+	Query      string     // raw 用户输入; service 自己 trim. 空 = 不过滤.
+	ProjectID  *uuid.UUID // nil = 全部 (不按分类过滤)
+	HasTargets bool       // true → 只返回降噪后推演出相关标的的信号
 }
 
 // List returns the user's signals, newest first, paginated.
@@ -108,10 +110,12 @@ func (s *Service) List(ctx context.Context, userID uuid.UUID, f ListFilter) ([]d
 		return nil, false, fmt.Errorf("%w: q too long", ErrInvalidInput)
 	}
 	return s.repo.List(ctx, ListInput{
-		UserID: userID,
-		Before: f.Before,
-		Limit:  f.Limit,
-		Query:  q,
+		UserID:     userID,
+		Before:     f.Before,
+		Limit:      f.Limit,
+		Query:      q,
+		ProjectID:  f.ProjectID,
+		HasTargets: f.HasTargets,
 	})
 }
 

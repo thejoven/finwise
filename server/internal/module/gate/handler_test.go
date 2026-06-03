@@ -16,11 +16,11 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/httpapi"
-	"flashfi/server/internal/infra/db"
-	mastrax "flashfi/server/internal/infra/mastra"
-	refinementmod "flashfi/server/internal/module/refinement"
-	signalmod "flashfi/server/internal/module/signal"
+	"wiseflow/server/internal/httpapi"
+	"wiseflow/server/internal/infra/db"
+	mastrax "wiseflow/server/internal/infra/mastra"
+	refinementmod "wiseflow/server/internal/module/refinement"
+	signalmod "wiseflow/server/internal/module/signal"
 )
 
 const (
@@ -74,7 +74,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		DevUserID:        devUserID,
 		InternalToken:    testInternalToken,
 		InternalLoopback: false,
-		RegisterModules: func(_, v1, internalV1 *gin.RouterGroup) {
+		RegisterModules: func(_, v1, internalV1, _ *gin.RouterGroup) {
 			sigHandler.Register(v1, internalV1)
 			refHandler.Register(v1, internalV1)
 			gateHandler.Register(v1, internalV1)
@@ -217,10 +217,18 @@ func TestGateEvaluateProducesGateDetails(t *testing.T) {
 	var resp struct {
 		ID    string `json:"id"`
 		Gates struct {
-			G1Thickness     struct{ Pass bool `json:"pass"` } `json:"g1_thickness"`
-			G2AntiConsensus struct{ Pass bool; Score int }    `json:"g2_anti_consensus"`
-			G3Window        struct{ Pass bool; Months float64 } `json:"g3_window"`
-			G4Edge          struct{ Pass bool }                 `json:"g4_edge"`
+			G1Thickness struct {
+				Pass bool `json:"pass"`
+			} `json:"g1_thickness"`
+			G2AntiConsensus struct {
+				Pass  bool
+				Score int
+			} `json:"g2_anti_consensus"`
+			G3Window struct {
+				Pass   bool
+				Months float64
+			} `json:"g3_window"`
+			G4Edge struct{ Pass bool } `json:"g4_edge"`
 		} `json:"gates"`
 	}
 	_ = json.Unmarshal(w.Body.Bytes(), &resp)

@@ -20,9 +20,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"flashfi/server/internal/httpapi"
-	"flashfi/server/internal/infra/db"
-	signalmod "flashfi/server/internal/module/signal"
+	"wiseflow/server/internal/httpapi"
+	"wiseflow/server/internal/infra/db"
+	signalmod "wiseflow/server/internal/module/signal"
 )
 
 const (
@@ -78,7 +78,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		DevUserID:        devUserID,
 		InternalToken:    testInternalToken,
 		InternalLoopback: false,
-		RegisterModules: func(_, v1, internalV1 *gin.RouterGroup) {
+		RegisterModules: func(_, v1, internalV1, _ *gin.RouterGroup) {
 			sigHandler.Register(v1, internalV1)
 			refHandler.Register(v1, internalV1)
 		},

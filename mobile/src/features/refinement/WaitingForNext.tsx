@@ -28,7 +28,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
-import { theme } from "@/core/theme";
+import { theme, useThemeColors } from "@/core/theme";
 
 import { TypewriterText } from "./TypewriterText";
 
@@ -129,8 +129,10 @@ function PulsingDot({ delay }: { delay: number }) {
     return () => cancelAnimation(opacity);
   }, [delay, opacity]);
 
+  // Reanimated 不认 DynamicColorIOS 动态色 → 点的底色取 resolved hex.
+  const c = useThemeColors();
   const animStyle = useAnimatedStyle(() => ({ opacity: opacity.value }));
-  return <Animated.View style={[styles.dot, animStyle]} />;
+  return <Animated.View style={[styles.dot, { backgroundColor: c.ink }, animStyle]} />;
 }
 
 /** ink 细线 shimmer 从左滑到右, 1.6s 周期. */
@@ -146,11 +148,12 @@ function ShimmerRule() {
     return () => cancelAnimation(tx);
   }, [tx]);
 
+  const c = useThemeColors();
   const animStyle = useAnimatedStyle(() => ({ transform: [{ translateX: tx.value }] }));
 
   return (
     <View style={styles.ruleTrack}>
-      <Animated.View style={[styles.ruleSlide, animStyle]} />
+      <Animated.View style={[styles.ruleSlide, { backgroundColor: c.ink }, animStyle]} />
     </View>
   );
 }
@@ -181,7 +184,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: theme.color.ink,
+    // backgroundColor 内联 resolved hex — Reanimated 不认动态色.
   },
   ruleTrack: {
     marginTop: theme.spacing.md,
@@ -192,7 +195,7 @@ const styles = StyleSheet.create({
   ruleSlide: {
     width: 80,
     height: StyleSheet.hairlineWidth,
-    backgroundColor: theme.color.ink,
+    // backgroundColor 内联 resolved hex — Reanimated 不认动态色.
   },
   retryBlock: {
     marginTop: theme.spacing.lg,

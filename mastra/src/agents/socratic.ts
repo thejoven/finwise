@@ -20,6 +20,7 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK, lensFocusBlock, type LensId } from "./lens.js";
+import { categoryContextBlock } from "./category.js";
 import type { SearchResult } from "../tools/exa-search.js";
 
 // ─────────────────────────── Schemas ───────────────────────────
@@ -89,7 +90,7 @@ export interface PriorRound {
 export const socratic = new Agent({
   name: "socratic",
   instructions: `
-你是 Flashfi Engine 的 Socratic.
+你是 WiseFlow Engine 的 Socratic.
 
 任务: 给定一个用户的认知场景 (一条或几条相关 signal + 已答过的轮次), 出一道**追问**, 让用户在选项里暴露自己的认知盲点.
 
@@ -244,6 +245,9 @@ export async function runSocratic(input: {
   training_focus_text?: string;
   /** 本轮按 lens 定向检索的 grounding 材料. 空时不注入. */
   round_research?: SearchResult[];
+  /** 分类上下文 (分类名 + 分析指引), 空时不注入. */
+  project_name?: string;
+  project_guidance?: string;
 }): Promise<Question> {
   const userMessage = buildSocraticPrompt(input);
   const messages = [{ role: "user" as const, content: userMessage }];
@@ -319,7 +323,11 @@ function buildSocraticPrompt(input: {
   training_focus_dim?: string;
   training_focus_text?: string;
   round_research?: SearchResult[];
+  project_name?: string;
+  project_guidance?: string;
 }): string {
+  const catBlock = categoryContextBlock(input.project_name, input.project_guidance);
+  const catPrefix = catBlock ? catBlock + "\n\n" : "";
   const signals = input.signal_raw_texts.map((t, i) => `信号 ${i + 1}: ${t}`).join("\n");
   const asset = input.primary_asset ? `\n推演主资产: ${input.primary_asset}\n` : "\n";
   const priorBlock = input.prior_rounds.length
@@ -331,7 +339,7 @@ function buildSocraticPrompt(input: {
   const roundLens = ROUND_LENS[input.round];
   const lensBlock = roundLens ? lensFocusBlock(roundLens.ids, roundLens.why) : "";
   const researchBlock = buildResearchBlock(input.round_research);
-  return `${signals}${asset}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
+  return `${catPrefix}${signals}${asset}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
 }
 
 function buildResearchBlock(items?: SearchResult[]): string {
@@ -368,7 +376,7 @@ function formatPrior(p: PriorRound): string {
 export const diagnosisAgent = new Agent({
   name: "diagnosis",
   instructions: `
-你是 Flashfi Engine 的 Diagnosis.
+你是 WiseFlow Engine 的 Diagnosis.
 
 任务: 给定一道题 (包含 options 的 is_distractor 标注 + round 主导 lens) 和用户的答案, 输出一段"诊断", 不是判对错.
 
