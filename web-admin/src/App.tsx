@@ -17,6 +17,7 @@ import { GatePage } from "@/pages/Gate";
 import { MetricsPage } from "@/pages/Metrics";
 import { SettingsPage } from "@/pages/Settings";
 import { UsersPage } from "@/pages/Users";
+import { InvitesPage } from "@/pages/Invites";
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
@@ -113,6 +114,7 @@ export default function App() {
         <Route path="/holdings" element={<HoldingsPage />} />
         <Route path="/retrospects" element={<RetrospectsPage />} />
         <Route path="/users" element={<UsersPage />} />
+        <Route path="/invites" element={<InvitesPage />} />
         <Route path="/metrics" element={<MetricsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

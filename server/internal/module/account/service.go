@@ -25,14 +25,43 @@ const MaxPasswordLen = 128
 var (
 	ErrInvalidInput   = errors.New("invalid input")
 	ErrBadCredentials = errors.New("bad credentials")
+	// ErrInviteRequired 注册没带邀请码 (空).
+	ErrInviteRequired = errors.New("invite code required")
+	// ErrInviteInvalid 注册带的邀请码不可兑换 (无效/过期/用尽/已吊销).
+	ErrInviteInvalid = errors.New("invite code invalid")
 )
+
+// InviteGate 是注册时校验+消费邀请码的依赖. 解耦目的同 auth 的 SessionLookup:
+// account 不引 invite 包, 由 main.go 用闭包 (InviteGateFuncs) 注入实现.
+//   - RedeemInvite: 原子消费一次; 不可兑换须返回 ErrInviteInvalid.
+//   - RefundInvite: best-effort 退回 (注册后续失败时补偿), 失败可忽略.
+type InviteGate interface {
+	RedeemInvite(ctx context.Context, code string) error
+	RefundInvite(ctx context.Context, code string) error
+}
+
+// InviteGateFuncs 把两个闭包适配成 InviteGate, 省掉 main.go 里单独定义适配类型.
+type InviteGateFuncs struct {
+	Redeem func(ctx context.Context, code string) error
+	Refund func(ctx context.Context, code string) error
+}
+
+func (g InviteGateFuncs) RedeemInvite(ctx context.Context, code string) error {
+	return g.Redeem(ctx, code)
+}
+func (g InviteGateFuncs) RefundInvite(ctx context.Context, code string) error {
+	return g.Refund(ctx, code)
+}
 
 type Service struct {
 	repo *Repository
+	// invites 门禁注册的邀请码. nil 表示未配置 —— 此时 Register 一律拒绝 (fail closed).
+	// cmd/admin 不走 Register (用 EnsureAdmin), 所以那边传 nil 无碍.
+	invites InviteGate
 }
 
-func NewService(repo *Repository) *Service {
-	return &Service{repo: repo}
+func NewService(repo *Repository, invites InviteGate) *Service {
+	return &Service{repo: repo, invites: invites}
 }
 
 // ────── DTO ──────
@@ -72,9 +101,14 @@ type RegisterCommand struct {
 	Email       string
 	Password    string
 	DisplayName *string
+	InviteCode  string
 }
 
 func (c *RegisterCommand) normalize() error {
+	c.InviteCode = strings.TrimSpace(c.InviteCode)
+	if c.InviteCode == "" {
+		return ErrInviteRequired
+	}
 	c.Email = strings.TrimSpace(c.Email)
 	if c.Email == "" {
 		return fmt.Errorf("%w: email required", ErrInvalidInput)
@@ -102,15 +136,28 @@ func (c *RegisterCommand) normalize() error {
 }
 
 // Register 创建新用户, 同时签发 session token.
-// 不验证邮箱 (产品决策: 邮箱注册不需要验证码).
+// 不验证邮箱 (产品决策: 邮箱注册不需要验证码), 但必须持有有效邀请码.
+//
+// 顺序: 先原子消费邀请码 (兼校验) → 再建用户 → 建失败则退回邀请码.
+// 这样: 邀请码无效时不会建出用户; 邮箱重复 (建用户失败) 时不会白白烧掉一次邀请码额度.
+// 消费走单条原子 UPDATE, 并发抢最后一次额度也只会有一个成功 (见 invite repo).
 func (s *Service) Register(ctx context.Context, cmd RegisterCommand) (*PublicUser, *SessionToken, error) {
 	if err := cmd.normalize(); err != nil {
 		return nil, nil, err
+	}
+	// fail closed: 没配邀请码门禁就拒绝注册, 而不是放任无码注册.
+	if s.invites == nil {
+		return nil, nil, ErrInviteInvalid
 	}
 	hash, err := hashPassword(cmd.Password)
 	if err != nil {
 		return nil, nil, fmt.Errorf("hash password: %w", err)
 	}
+	// (1) 消费邀请码. 不可兑换 → ErrInviteInvalid, 不建用户.
+	if err := s.invites.RedeemInvite(ctx, cmd.InviteCode); err != nil {
+		return nil, nil, err
+	}
+	// (2) 建用户. 失败 (如邮箱重复) → 退回邀请码额度, 再把错误抛出去.
 	u, err := s.repo.CreateUser(ctx, CreateUserInput{
 		ID:           uuid.New(),
 		Email:        cmd.Email,
@@ -118,6 +165,7 @@ func (s *Service) Register(ctx context.Context, cmd RegisterCommand) (*PublicUse
 		DisplayName:  cmd.DisplayName,
 	})
 	if err != nil {
+		_ = s.invites.RefundInvite(ctx, cmd.InviteCode) // best-effort 补偿
 		return nil, nil, err
 	}
 	tok, err := s.issueSession(ctx, u.ID)

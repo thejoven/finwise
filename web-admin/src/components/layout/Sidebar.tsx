@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   Settings as SettingsIcon,
   Sparkles,
+  Ticket,
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const nav: NavItem[] = [
   { to: "/holdings", label: "持仓 Holdings", icon: Briefcase, hint: "M9" },
   { to: "/retrospects", label: "复盘 Retrospects", icon: History, hint: "M11" },
   { to: "/users", label: "用户 Users", icon: Users },
+  { to: "/invites", label: "邀请码 Invites", icon: Ticket },
   { to: "/metrics", label: "Metrics", icon: Activity },
   { to: "/settings", label: "设置", icon: SettingsIcon },
 ];

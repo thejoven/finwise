@@ -9,11 +9,13 @@ import { useAuth } from "@/core/auth/store";
 import { formFieldStyles } from "@/shared/styles/form";
 
 /**
- * 注册屏. 邮箱 + 密码 + 昵称 (可选). 不发邮件验证码 — 产品决策.
+ * 注册屏. 邀请码 + 邮箱 + 密码 + 昵称 (可选). 不发邮件验证码 — 产品决策.
  *
+ * 邀请码必填: 注册受邀请制门禁, 码由管理员在后台生成 (见 server invite 模块).
  * 密码长度最低 8, 跟后端一致. UI 错误信息直接落表单底部.
  */
 export default function RegisterScreen() {
+  const [inviteCode, setInviteCode] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -23,7 +25,9 @@ export default function RegisterScreen() {
 
   const trimmedEmail = email.trim();
   const trimmedName = displayName.trim();
-  const canSubmit = trimmedEmail.length > 0 && password.length >= 8 && !pending;
+  const trimmedInvite = inviteCode.trim();
+  const canSubmit =
+    trimmedInvite.length > 0 && trimmedEmail.length > 0 && password.length >= 8 && !pending;
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -34,6 +38,7 @@ export default function RegisterScreen() {
         email: trimmedEmail,
         password,
         display_name: trimmedName.length > 0 ? trimmedName : null,
+        invite_code: trimmedInvite,
       });
       await setSession({
         token: res.session.token,
@@ -57,8 +62,22 @@ export default function RegisterScreen() {
           </Display>
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
-            邮箱 + 密码, 不需要验证码。{"\n"}你可以随后再补昵称和签名。
+            注册需要邀请码。{"\n"}向管理员索取后填入下方即可。
           </Serif>
+
+          <Sans size={11} weight="600" style={styles.label}>
+            邀请码
+          </Sans>
+          <TextInput
+            value={inviteCode}
+            onChangeText={setInviteCode}
+            placeholder="管理员发给你的邀请码"
+            placeholderTextColor={theme.color.muted2}
+            autoCapitalize="characters"
+            autoCorrect={false}
+            autoComplete="off"
+            style={styles.input}
+          />
 
           <Sans size={11} weight="600" style={styles.label}>
             邮箱

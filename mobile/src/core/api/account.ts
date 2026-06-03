@@ -36,6 +36,7 @@ export interface RegisterInput {
   email: string;
   password: string;
   display_name?: string | null;
+  invite_code: string;
 }
 
 export async function register(input: RegisterInput): Promise<AuthResponse> {

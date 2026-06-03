@@ -51,6 +51,7 @@ type registerRequest struct {
 	Email       string  `json:"email"`
 	Password    string  `json:"password"`
 	DisplayName *string `json:"display_name"`
+	InviteCode  string  `json:"invite_code"`
 }
 
 type loginRequest struct {
@@ -117,6 +118,7 @@ func (h *Handler) register(c *gin.Context) {
 		Email:       req.Email,
 		Password:    req.Password,
 		DisplayName: req.DisplayName,
+		InviteCode:  req.InviteCode,
 	})
 	if err != nil {
 		writeServiceError(c, err)
@@ -303,6 +305,10 @@ func writeServiceError(c *gin.Context, err error) {
 	switch {
 	case errors.Is(err, ErrInvalidInput):
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	case errors.Is(err, ErrInviteRequired):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "请输入邀请码"})
+	case errors.Is(err, ErrInviteInvalid):
+		c.JSON(http.StatusForbidden, gin.H{"error": "邀请码无效或已用尽"})
 	case errors.Is(err, ErrEmailExists):
 		c.JSON(http.StatusConflict, gin.H{"error": "email already registered"})
 	case errors.Is(err, ErrBadCredentials):

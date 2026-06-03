@@ -282,6 +282,30 @@ export interface AdminUserRow extends User {
   last_seen_at?: string | null;
 }
 
+// 邀请码状态 (后端派生): 可用 / 用尽 / 过期 / 已吊销.
+export type InviteStatus = "active" | "exhausted" | "expired" | "revoked";
+
+// InviteCodeRow 是 /v1/admin/invites 列表行.
+export interface InviteCodeRow {
+  id: string;
+  code: string;
+  label?: string | null;
+  max_uses?: number | null; // null = 不限次
+  uses: number;
+  status: InviteStatus;
+  expires_at?: string | null; // null = 永不过期
+  revoked_at?: string | null;
+  created_by?: string | null;
+  created_at: string;
+}
+
+// 新建邀请码入参. 全部可选: 默认不限次、永不过期.
+export interface CreateInviteInput {
+  label?: string | null;
+  max_uses?: number | null;
+  expires_in_days?: number | null;
+}
+
 export interface AuthResponse {
   user: User;
   session: { token: string; expires_at: string };
@@ -320,6 +344,19 @@ export const wiseflow = {
         api<User>(`/v1/admin/users/${id}/admin`, {
           method: "POST",
           body: { is_admin },
+        }),
+    },
+    invites: {
+      list: () =>
+        api<{ invites: InviteCodeRow[]; total: number }>("/v1/admin/invites"),
+      create: (input: CreateInviteInput) =>
+        api<InviteCodeRow>("/v1/admin/invites", {
+          method: "POST",
+          body: input,
+        }),
+      revoke: (id: string) =>
+        api<InviteCodeRow>(`/v1/admin/invites/${id}/revoke`, {
+          method: "POST",
         }),
     },
   },

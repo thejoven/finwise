@@ -29,6 +29,7 @@ import (
 	distillationmod "wiseflow/server/internal/module/distillation"
 	exitmod "wiseflow/server/internal/module/exit"
 	gatemod "wiseflow/server/internal/module/gate"
+	invitemod "wiseflow/server/internal/module/invite"
 	projectmod "wiseflow/server/internal/module/project"
 	refinementmod "wiseflow/server/internal/module/refinement"
 	researchmod "wiseflow/server/internal/module/research"
@@ -78,8 +79,28 @@ func run() error {
 	}
 
 	// ───── Module wiring ─────
+	// invite 先于 account 构建 —— account.Register 经闭包消费邀请码 (注册门禁).
+	inviteRepo := invitemod.NewRepository(pool)
+	inviteSvc := invitemod.NewService(inviteRepo)
+	inviteHandler := invitemod.NewHandler(inviteSvc)
+
 	accountRepo := accountmod.NewRepository(pool)
-	accountSvc := accountmod.NewService(accountRepo)
+	// 邀请码门禁: Redeem 把 invite.ErrNotRedeemable 翻成 account.ErrInviteInvalid,
+	// 让 account 不必 import invite 的 sentinel.
+	accountSvc := accountmod.NewService(accountRepo, accountmod.InviteGateFuncs{
+		Redeem: func(ctx context.Context, code string) error {
+			if err := inviteSvc.Redeem(ctx, code); err != nil {
+				if errors.Is(err, invitemod.ErrNotRedeemable) {
+					return accountmod.ErrInviteInvalid
+				}
+				return err
+			}
+			return nil
+		},
+		Refund: func(ctx context.Context, code string) error {
+			return inviteSvc.Refund(ctx, code)
+		},
+	})
 	accountHandler := accountmod.NewHandler(accountSvc)
 
 	// dev bearer 兼容: 保证 DEV_USER_ID 在 users 表有占位行, 使 GET /v1/me 在
@@ -167,6 +188,7 @@ func run() error {
 		AdminLookup:      accountSvc,
 		RegisterModules: func(anon, v1, internal, admin *gin.RouterGroup) {
 			accountHandler.Register(anon, v1, internal, admin)
+			inviteHandler.Register(admin)
 			projectHandler.Register(v1, internal)
 			signalHandler.Register(v1, internal)
 			refinementHandler.Register(v1, internal)
