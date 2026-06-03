@@ -16,7 +16,7 @@ import { haptic } from "@/core/haptics";
 import { theme } from "@/core/theme";
 import { BottomCategoryCell } from "@/features/project";
 
-import { IslandGlass, PILL_HEIGHT, glassOverlay } from "./glass";
+import { IslandGlass, PILL_HEIGHT, PILL_RADIUS, glassOverlay } from "./glass";
 
 /**
  * 底部栏 — 两颗分离的玻璃胶囊 (液态玻璃).
@@ -218,7 +218,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     height: PILL_HEIGHT,
     paddingHorizontal: ISLAND_PAD,
-    borderRadius: theme.radius.full,
+    borderRadius: PILL_RADIUS, // 半高 = 左右两侧完全圆形
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden", // 把玻璃背景层裁进药丸形
   },

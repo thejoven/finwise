@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Alert, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { Alert, LogBox, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -222,7 +222,18 @@ const APPEARANCE_OPTIONS: { key: AppearancePref; label: string }[] = [
  * 原生模块. Expo Go / 未重建的 dev client 里没有 —— 此时连 require 它的 JS 顶层都会抛
  * (Cannot find native module 'ExpoUI'). 故把 require 包在 try/catch 里探测: 有就用原生
  * SwiftUI 控件, 没有就优雅回退到自绘行 —— App 照常跑、不崩; 原生重建后此控件自动点亮.
+ *
+ * 噪音静音: `@expo/ui/swift-ui` 是 barrel, 顶层 `export * from './BottomSheet'` 会在求值时
+ * 跑 BottomSheet 的 `requireNativeView('ExpoUI','BottomSheetView')`. 当前原生二进制的 ExpoUI
+ * pod 偏旧、尚无 BottomSheetView (JS 端已是更新的 0.2.0-canary, package.json 仍锁 ~0.2.0-beta.9),
+ * expo-modules-core 便在 __DEV__ 下 console.warn 一条. 本屏从不渲染 BottomSheet, 这条纯属噪音.
+ * 因 metro 开了 unstable_enablePackageExports, 无法只 import 子模块绕开 barrel —— 故精确静音
+ * 这一条 (只匹配 BottomSheetView; Picker/Host 等在用控件真缺失时仍会照常报警, 不掩盖真问题).
+ * 治本: 对齐 @expo/ui 版本并 `expo prebuild` 重建原生. 必须在 require barrel 之前调用, 否则
+ * warn 已先打出, 故就近放在 require 上方.
  */
+LogBox.ignoreLogs([/native view manager for module\(ExpoUI\).*BottomSheetView/]);
+
 let SwiftUI: typeof import("@expo/ui/swift-ui") | null = null;
 let SwiftUIModifiers: typeof import("@expo/ui/swift-ui/modifiers") | null = null;
 if (Platform.OS === "ios") {

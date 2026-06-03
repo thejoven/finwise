@@ -7,7 +7,7 @@
  *
  * 材质: iOS 26+ 走 expo-glass-effect 的 GlassView (liquid glass), iOS 18 及以下 / Android
  *   降级到 expo-blur 的 BlurView. 玻璃作 absoluteFill 背景层, 由父胶囊的 `overflow:hidden`
- *   + `radius.full` 裁成药丸形. 跟随明暗: 玻璃用 colorScheme="auto" / 按 scheme 选 BlurView
+ *   + `PILL_RADIUS` 裁成药丸形. 跟随明暗: 玻璃用 colorScheme="auto" / 按 scheme 选 BlurView
  *   tint; 不在调色板里的 rgba 覆盖层 (描边 / 选中高亮) 走 `glassOverlay` 按明暗手动给.
  *
  * @see https://docs.expo.dev/versions/latest/sdk/glass-effect/
@@ -17,10 +17,17 @@ import { StyleSheet } from "react-native";
 import { GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { BlurView } from "expo-blur";
 
-import { theme } from "@/core/theme";
-
 /** 两颗胶囊统一高度. tab 岛: paddingV 4*2 + tab 44 = 52; 分类格也取此值, 视觉成对. */
 export const PILL_HEIGHT = 52;
+
+/**
+ * 胶囊圆角 = 半高 —— 让左右两侧成**完全圆形**(真半圆), 两颗胶囊共用.
+ *
+ * 为什么钉成 PILL_HEIGHT/2 而非 radius.full(9999): 液态玻璃 GlassView 按 borderRadius 的
+ *   字面值生成玻璃形状, 不像普通 CALayer 会把超大值夹到半高, 9999 下两端会渲染成圆角矩形
+ *   而非正圆. 钉成半高 (= 26) 是 iOS capsule 的规范值, 左右两侧必为完整半圆.
+ */
+export const PILL_RADIUS = PILL_HEIGHT / 2;
 
 /**
  * 玻璃表面上的"覆盖层"颜色 —— 不在调色板里的 rgba, 按明暗手动给.
@@ -58,6 +65,6 @@ export function IslandGlass({ isDark }: { isDark: boolean }) {
 
 const styles = StyleSheet.create({
   glassFill: {
-    borderRadius: theme.radius.full, // 让 GlassView 走原生圆角, 边缘更"液态"
+    borderRadius: PILL_RADIUS, // 半高 = 完全圆形两端; 让 GlassView 走原生圆角, 边缘更"液态"
   },
 });

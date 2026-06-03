@@ -23,8 +23,12 @@ import { useQuery } from "@tanstack/react-query";
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
 import { haptic } from "@/core/haptics";
-import { Icon, Sans, TapEffect } from "@/shared/components";
-import { IslandGlass, PILL_HEIGHT, glassOverlay } from "@/shared/components/glass";
+// 走具体文件而非 "@/shared/components" barrel: 该 barrel 经 DynamicIslandTabBar/Masthead
+// 反向依赖本 feature, 走 barrel 会形成 shared ⇄ feature 的 require cycle. 具体路径切断回边.
+import { Icon } from "@/shared/components/Icon";
+import { Sans } from "@/shared/components/Text";
+import { TapEffect } from "@/shared/components/TapEffect";
+import { IslandGlass, PILL_HEIGHT, PILL_RADIUS, glassOverlay } from "@/shared/components/glass";
 
 import { useActiveProject } from "./store";
 import { useEnsureCategory } from "./useEnsureCategory";
@@ -167,7 +171,7 @@ const styles = StyleSheet.create({
   cell: {
     height: PILL_HEIGHT,
     justifyContent: "center",
-    borderRadius: theme.radius.full,
+    borderRadius: PILL_RADIUS, // 半高 = 左右两侧完全圆形
     borderWidth: StyleSheet.hairlineWidth,
     overflow: "hidden", // 把玻璃背景层裁进药丸形
     // borderColor 走内联 overlay.border (随明暗手动给).

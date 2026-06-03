@@ -42,7 +42,10 @@ import {
   type ProjectView,
 } from "@/core/api/project";
 import { theme, useThemeColors, projectSwatches } from "@/core/theme";
-import { Display, Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
+// 走具体文件而非 "@/shared/components" barrel: 避免 shared ⇄ feature 的 require cycle.
+import { Display, Mono, Sans, Serif } from "@/shared/components/Text";
+import { Icon } from "@/shared/components/Icon";
+import { TapEffect } from "@/shared/components/TapEffect";
 
 import { useActiveProject } from "./store";
 

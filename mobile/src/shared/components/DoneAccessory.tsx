@@ -16,7 +16,10 @@
 
 import { InputAccessoryView, Keyboard, Platform, StyleSheet, View } from "react-native";
 
-import { Mono, TapEffect } from "@/shared/components";
+// 直接从同目录文件取, 不走 "@/shared/components" barrel —— 自己就是 barrel 的成员,
+// 经 barrel 自我引用会与 index.ts 形成 require cycle (Metro 会告警).
+import { Mono } from "./Text";
+import { TapEffect } from "./TapEffect";
 import { theme } from "@/core/theme";
 
 interface Props {

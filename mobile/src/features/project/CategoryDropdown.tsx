@@ -26,7 +26,10 @@ import { ScrollView } from "react-native-gesture-handler";
 
 import { type ProjectView } from "@/core/api/project";
 import { theme, useThemeColors } from "@/core/theme";
-import { Icon, Sans, TapEffect } from "@/shared/components";
+// 走具体文件而非 "@/shared/components" barrel: 避免 shared ⇄ feature 的 require cycle.
+import { Icon } from "@/shared/components/Icon";
+import { Sans } from "@/shared/components/Text";
+import { TapEffect } from "@/shared/components/TapEffect";
 
 export interface DropdownAnchor {
   x: number;

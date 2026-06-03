@@ -25,7 +25,11 @@ import { useQuery } from "@tanstack/react-query";
 
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
-import { Icon, Sans, TapEffect } from "@/shared/components";
+// 走具体文件而非 "@/shared/components" barrel: 该 barrel 经 Masthead 反向依赖本 feature,
+// 走 barrel 会形成 shared ⇄ feature 的 require cycle (Metro 告警). 具体路径切断回边.
+import { Icon } from "@/shared/components/Icon";
+import { Sans } from "@/shared/components/Text";
+import { TapEffect } from "@/shared/components/TapEffect";
 
 import { useActiveProject } from "./store";
 import { ProjectSelectModal } from "./ProjectSelectModal";
