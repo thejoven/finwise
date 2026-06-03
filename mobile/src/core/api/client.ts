@@ -3,17 +3,18 @@
  *
  * Bearer 来源优先级:
  *   1) auth store 里登录拿到的 session token
- *   2) EXPO_PUBLIC_DEV_BEARER_TOKEN (dev/调试 fallback, 单用户兼容)
+ *   2) dev bearer — 仅当 EXPO_PUBLIC_DEV_AUTOLOGIN 显式打开 (默认关闭,
+ *      见 @/core/auth/devBearer)
  *
- * 没登录 + 没 dev token → 不附加 header, server 401, 客户端 auth gate 跳 /login.
+ * 没登录 + 没开 dev autologin → 不附加 header, server 401, auth gate 跳 /login.
  */
 
 import ky from "ky";
 
 import { getStoredToken } from "@/core/auth/store";
+import { getDevBearer } from "@/core/auth/devBearer";
 
 const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
-const envBearer = process.env.EXPO_PUBLIC_DEV_BEARER_TOKEN ?? "";
 
 export const api = ky.create({
   prefixUrl: baseUrl,
@@ -26,7 +27,7 @@ export const api = ky.create({
   hooks: {
     beforeRequest: [
       (request) => {
-        const tok = getStoredToken() ?? envBearer;
+        const tok = getStoredToken() ?? getDevBearer();
         if (tok) {
           request.headers.set("Authorization", `Bearer ${tok}`);
         }

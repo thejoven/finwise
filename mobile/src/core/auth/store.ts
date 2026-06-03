@@ -8,8 +8,9 @@
  *   - user 落 SecureStore 同一个 record (JSON), 启动 hydrate 一次.
  *   - 调 client.ts 时通过 getToken() 拿 — 不直接读 process.env. 这样 dev/prod
  *     都走同一条路径, 测试可以 mock store.
- *   - dev 兼容: 没登录但 env 有 EXPO_PUBLIC_DEV_BEARER_TOKEN → 当 fallback 用
- *     (auth gate 不强制跳 login). 留这个口子主要给 web-admin / 内部调试.
+ *   - dev 兼容: 没登录时, 只有显式开了 EXPO_PUBLIC_DEV_AUTOLOGIN 才会拿
+ *     dev bearer 当 fallback (默认关闭, 见 @/core/auth/devBearer). 留这个口子
+ *     给单用户调试; 默认走正常 login.
  *
  * 不持久化的状态 (hydrated 标志) 用 in-memory zustand 就行.
  */
