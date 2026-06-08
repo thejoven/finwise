@@ -31,6 +31,9 @@ void SplashScreen.preventAutoHideAsync();
 
 // 显式声明 root stack 默认 route — 防止 Expo Router 选错首屏 (例: modal capture
 // 被选成 initial 时, 用户看到的就是黑屏/空白).
+// Expo Router 要求路由配置 (unstable_settings) 从路由文件本身导出, 无法外移 —— 故此处
+// 的 only-export-components (Fast Refresh) 与框架约定冲突, 属有意为之.
+// react-doctor-disable-next-line react-doctor/only-export-components
 export const unstable_settings = {
   initialRouteName: "(tabs)",
 };
@@ -108,7 +111,10 @@ export default function RootLayout() {
 
   const [loaded] = useFonts(FONTS);
 
+  // 等字体 + 存储都就绪 (异步加载完成) 再收原生 splash —— 对异步就绪的响应, 无用户事件触发,
+  // 故 no-event-handler 在此为误报.
   useEffect(() => {
+    // react-doctor-disable-next-line react-doctor/no-event-handler
     if (loaded && storageReady) {
       // 注意: 这里只是把 native splash 收掉, JS 自己的 <SplashCover> 仍在上层渲染.
       void SplashScreen.hideAsync();

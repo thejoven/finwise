@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { Alert, LogBox, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
@@ -13,19 +13,22 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
-import { theme } from "@/core/theme";
+import { UI, MODS, hasNativeUI } from "@/shared/native";
+import { theme, useThemeColors } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
-import { useAuth } from "@/core/auth/store";
+import { useAuth, type AuthUser } from "@/core/auth/store";
 import { useAppearance, type AppearancePref } from "@/core/theme/store";
 import { useNotifications } from "@/features/notifications";
 
 /**
  * 个人资料 tab.
  *
- * 内容:
- *   · 报刊头 (卷号戳 + 标题) + 方形字母章 + 用户昵称 / 邮箱 / 加入日期
- *   · bio (如果有)
- *   · 分组 (红菱形栏目戳): 账号 / 通讯 / 外观 / 其他 + 退出登录
+ * 编排:
+ *   · 上半「报刊头」(RN, 始终自绘): 卷号戳 + 标题 + 方形字母章 + 昵称/邮箱/加入日期 + bio.
+ *     ——这是 bespoke editorial 面, 按约定保持自绘 (见 memory: mobile-native-ui-conventions).
+ *   · 下半「设置」: 原生 SwiftUI `Form` (@expo/ui) —— 真·原生 iOS 分组列表, 自带分组卡片 /
+ *     分隔线 / 触感 / 动态明暗. 只两组:「账号」「偏好」+ 退出登录, 不再四组零散.
+ *     原生不可用时 (Android / Expo Go / 未 rebuild) 优雅回退到自绘行, 同样两组.
  *
  * 首次进入会调一次 GET /v1/me 同步最新 — store 里可能是离线时的旧值.
  */
@@ -37,9 +40,9 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-  // 悬浮"灵动岛" tab 顶 ≈ insets.bottom + 64 (见 DynamicIslandTabBar). 退出登录是按钮,
-  // 必须整条在岛上方可点 — 不像其它 tab 末尾是列表(内容透到岛下是有意的). 故在 64 之上
-  // 再加一档留白. 原来用静态 xxxl(48) 不含 safe-area, 在刘海机上被岛盖住, 这是本次修复点.
+  // 悬浮"灵动岛" tab 顶 ≈ insets.bottom + 64 (见 DynamicIslandTabBar). 自绘回退路径用 ScrollView,
+  // 末尾退出登录是按钮, 须整条在岛上方可点 — 故在 64 之上再加一档留白. 原生 Form 路径内容顶对齐 +
+  // 屏底大片留白, 行本就不会落到岛下, 无需此 pad.
   const bottomPad = insets.bottom + 64 + theme.spacing.lg;
 
   // 进入时拉一次最新. 没 token (dev fallback 模式) 就不拉.
@@ -111,6 +114,43 @@ export default function ProfileScreen() {
     );
   }
 
+  const header = <ProfileHeader user={user} error={error} refreshing={refreshing} />;
+
+  // ── 原生 SwiftUI Form 路径 ─────────────────────────────────────────
+  // 报刊头钉在顶部 (RN), 原生 Form 充满其下 (自带滚动) —— 避免 RN ScrollView 套原生
+  // 滚动列表的测高/嵌套滚动问题. 内容短, 顶对齐, 不会落到悬浮 tab 之下.
+  if (hasNativeUI) {
+    return (
+      <SafeAreaView style={styles.root} edges={["top"]}>
+        <View style={styles.nativeRoot}>
+          <View style={styles.nativeHeader}>{header}</View>
+          <NativeSettingsForm token={token} onLogout={handleLogout} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  // ── 自绘回退路径 (Android / Expo Go / 未 rebuild) ──────────────────
+  return (
+    <SafeAreaView style={styles.root} edges={["top"]}>
+      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
+        {header}
+        <FallbackSettings token={token} onLogout={handleLogout} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+/** 报刊头 — 卷号戳 / 标题 / 字母章 + 身份 / bio / 同步状态. 原生与回退两路共用 (始终 RN 自绘). */
+function ProfileHeader({
+  user,
+  error,
+  refreshing,
+}: {
+  user: AuthUser | null;
+  error: string | null;
+  refreshing: boolean;
+}) {
   const displayName = user?.display_name?.trim() || user?.email || "—";
   const initial = displayName.charAt(0).toUpperCase();
   const createdLabel = user?.created_at
@@ -118,96 +158,62 @@ export default function ProfileScreen() {
     : "—";
 
   return (
-    <SafeAreaView style={styles.root} edges={["top"]}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
-        <Mono size={9} style={styles.headStamp}>
-          VOL. I · 读者档案
-        </Mono>
-        <Display size={28} italic style={styles.title}>
-          个人资料.
-        </Display>
-        <DoubleRule />
+    <>
+      <Mono size={9} style={styles.headStamp}>
+        VOL. I · 读者档案
+      </Mono>
+      <Display size={28} italic style={styles.title}>
+        个人资料.
+      </Display>
+      <DoubleRule />
 
-        {/* 字母章 + 身份 */}
-        <View style={styles.headBlock}>
-          <View style={styles.monogram}>
-            <Display size={30} style={styles.monogramText}>
-              {initial}
-            </Display>
-          </View>
-          <View style={styles.identity}>
-            <Serif size={20} weight="semibold" style={styles.name}>
-              {displayName}
-            </Serif>
-            {user?.email ? (
-              <Mono size={11} style={styles.email}>
-                {user.email}
-              </Mono>
-            ) : null}
-            <Mono size={9} style={styles.metaLine}>
-              加入于 {createdLabel}
-            </Mono>
-          </View>
+      {/* 字母章 + 身份 */}
+      <View style={styles.headBlock}>
+        <View style={styles.monogram}>
+          <Display size={30} style={styles.monogramText}>
+            {initial}
+          </Display>
         </View>
-
-        {user?.bio ? (
-          <View style={styles.bioBlock}>
-            <Serif size={14} italic style={styles.bio}>
-              {user.bio}
-            </Serif>
-          </View>
-        ) : (
-          <View style={styles.bioBlock}>
-            <Serif size={12} italic style={styles.bioMuted}>
-              还没写个人签名。
-            </Serif>
-          </View>
-        )}
-
-        {error ? (
-          <Serif size={11} italic style={styles.error}>
-            {error}
+        <View style={styles.identity}>
+          <Serif size={20} weight="semibold" style={styles.name}>
+            {displayName}
           </Serif>
-        ) : null}
-        {refreshing ? (
-          <Mono size={9} style={styles.metaLine}>
-            同步中…
-          </Mono>
-        ) : null}
-
-        <View style={styles.section}>
-          <SectionHeader label="账号" />
-          <RowLink label="编辑资料" onPress={() => router.push("/profile/edit")} />
-          <RowLink label="修改密码" onPress={() => router.push("/profile/password")} />
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader label="通讯" />
-          <NotificationRow />
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader label="外观" />
-          <AppearanceRows />
-        </View>
-
-        <View style={styles.section}>
-          <SectionHeader label="其他" />
-          <RowLink label="卷首语 · 关于" onPress={() => router.push("/colophon")} />
-          <RowLink label="搜索观察记录" onPress={() => router.push("/search")} />
-        </View>
-
-        <View style={styles.section}>
-          {token ? (
-            <TapEffect style={styles.dangerBtn} onPress={handleLogout}>
-              <Sans size={11} weight="700" style={styles.dangerLabel}>
-                退出登录
-              </Sans>
-            </TapEffect>
+          {user?.email ? (
+            <Mono size={11} style={styles.email}>
+              {user.email}
+            </Mono>
           ) : null}
+          <Mono size={9} style={styles.metaLine}>
+            加入于 {createdLabel}
+          </Mono>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+      </View>
+
+      {user?.bio ? (
+        <View style={styles.bioBlock}>
+          <Serif size={14} italic style={styles.bio}>
+            {user.bio}
+          </Serif>
+        </View>
+      ) : (
+        <View style={styles.bioBlock}>
+          <Serif size={12} italic style={styles.bioMuted}>
+            还没写个人签名。
+          </Serif>
+        </View>
+      )}
+
+      {error ? (
+        <Serif size={11} italic style={styles.error}>
+          {error}
+        </Serif>
+      ) : null}
+      {refreshing ? (
+        <Mono size={9} style={styles.metaLine}>
+          同步中…
+        </Mono>
+      ) : null}
+    </>
   );
 }
 
@@ -218,69 +224,136 @@ const APPEARANCE_OPTIONS: { key: AppearancePref; label: string }[] = [
 ];
 
 /**
- * @expo/ui 是 beta **原生**模块: 只有 `expo prebuild` + 原生重建后, 二进制里才有 'ExpoUI'
- * 原生模块. Expo Go / 未重建的 dev client 里没有 —— 此时连 require 它的 JS 顶层都会抛
- * (Cannot find native module 'ExpoUI'). 故把 require 包在 try/catch 里探测: 有就用原生
- * SwiftUI 控件, 没有就优雅回退到自绘行 —— App 照常跑、不崩; 原生重建后此控件自动点亮.
+ * 原生 iOS 设置表 —— 真·原生 SwiftUI `Form` (@expo/ui). 仅在 `hasNativeUI` 时渲染, 故内部
+ * 放心用 `UI!` / `MODS!`. 两组:
+ *   · 账号  —— 编辑资料 / 修改密码 / 消息通知 (未读数红字)
+ *   · 偏好  —— 外观 (菜单选择器: 光亮/暗黑/跟随系统) / 卷首语·关于 / 搜索观察记录
+ *   · 退出登录 —— 独立 destructive section
  *
- * 噪音静音: `@expo/ui/swift-ui` 是 barrel, 顶层 `export * from './BottomSheet'` 会在求值时
- * 跑 BottomSheet 的 `requireNativeView('ExpoUI','BottomSheetView')`. 当前原生二进制的 ExpoUI
- * pod 偏旧、尚无 BottomSheetView (JS 端已是更新的 0.2.0-canary, package.json 仍锁 ~0.2.0-beta.9),
- * expo-modules-core 便在 __DEV__ 下 console.warn 一条. 本屏从不渲染 BottomSheet, 这条纯属噪音.
- * 因 metro 开了 unstable_enablePackageExports, 无法只 import 子模块绕开 barrel —— 故精确静音
- * 这一条 (只匹配 BottomSheetView; Picker/Host 等在用控件真缺失时仍会照常报警, 不掩盖真问题).
- * 治本: 对齐 @expo/ui 版本并 `expo prebuild` 重建原生. 必须在 require barrel 之前调用, 否则
- * warn 已先打出, 故就近放在 require 上方.
+ * 配色: 原生修饰符只吃 hex 字符串, 故用 `useThemeColors()` 拿当前明暗的纯 hex (外观切换会
+ *   重渲染). 画到 paper/paper2 上 (而非系统灰), 与全 App 纸感统一; 结构 (分组卡 / 分隔线 /
+ *   触感) 仍是系统原生.
  */
-LogBox.ignoreLogs([/native view manager for module\(ExpoUI\).*BottomSheetView/]);
+function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogout: () => void }) {
+  const c = useThemeColors();
+  const pref = useAppearance((s) => s.pref);
+  const setPref = useAppearance((s) => s.setAppearance);
+  const items = useNotifications((s) => s.items);
+  const unread = items.filter((n) => !n.read).length;
 
-let SwiftUI: typeof import("@expo/ui/swift-ui") | null = null;
-let SwiftUIModifiers: typeof import("@expo/ui/swift-ui/modifiers") | null = null;
-if (Platform.OS === "ios") {
-  try {
-    SwiftUI = require("@expo/ui/swift-ui");
-    SwiftUIModifiers = require("@expo/ui/swift-ui/modifiers");
-  } catch {
-    SwiftUI = null;
-    SwiftUIModifiers = null;
-  }
+  const { Host, Form, Section, Button, Picker, HStack, Spacer, Text: T, Image } = UI!;
+  const {
+    buttonStyle,
+    foregroundStyle,
+    tint,
+    pickerStyle,
+    tag,
+    listRowBackground,
+    scrollContentBackground,
+    bold,
+  } = MODS!;
+
+  /** 标准导航行: 主标题 + 可选尾随值 + 灰 chevron, 整行可点 (List 行里 Button 天然全宽命中). */
+  const navRow = (label: string, onPress: () => void, trailing?: ReactElement) => (
+    <Button onPress={onPress} modifiers={[buttonStyle("plain")]}>
+      <HStack spacing={6}>
+        <T modifiers={[foregroundStyle(c.ink)]}>{label}</T>
+        <Spacer />
+        {trailing}
+        <Image systemName="chevron.right" size={13} color={c.muted2} />
+      </HStack>
+    </Button>
+  );
+
+  return (
+    <Host style={styles.nativeHost}>
+      <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
+        <Section title="账号" modifiers={[listRowBackground(c.paper2)]}>
+          {navRow("编辑资料", () => router.push("/profile/edit"))}
+          {navRow("修改密码", () => router.push("/profile/password"))}
+          {navRow(
+            "消息通知",
+            () => router.push("/notifications"),
+            unread > 0 ? <T modifiers={[foregroundStyle(c.red)]}>{String(unread)}</T> : undefined,
+          )}
+        </Section>
+
+        <Section title="偏好" modifiers={[listRowBackground(c.paper2)]}>
+          <Picker
+            label="外观"
+            selection={pref}
+            onSelectionChange={(value) => void setPref(value as AppearancePref)}
+            modifiers={[pickerStyle("menu")]}
+          >
+            {APPEARANCE_OPTIONS.map((o) => (
+              <T key={o.key} modifiers={[tag(o.key)]}>
+                {o.label}
+              </T>
+            ))}
+          </Picker>
+          {navRow("卷首语 · 关于", () => router.push("/colophon"))}
+          {navRow("搜索观察记录", () => router.push("/search"))}
+        </Section>
+
+        {token ? (
+          <Section modifiers={[listRowBackground(c.paper2)]}>
+            <Button
+              // @expo/ui SwiftUI ButtonRole (native), 非 ARIA role —— aria-role 规则在此为误报
+              // react-doctor-disable-next-line react-doctor/aria-role
+              role="destructive"
+              onPress={onLogout}
+              modifiers={[tint(c.red)]}
+            >
+              <HStack>
+                <Spacer />
+                <T modifiers={[foregroundStyle(c.red), bold()]}>退出登录</T>
+                <Spacer />
+              </HStack>
+            </Button>
+          </Section>
+        ) : null}
+      </Form>
+    </Host>
+  );
 }
 
 /**
- * 外观选择器 — 光亮 / 暗黑 / 跟随系统.
- *
- * iOS + 已原生重建: 原生 SwiftUI 分段控件 (@expo/ui) —— 真·原生控件, 不是自绘. 这是"用
- *   AppKit/原生 UI"的示范面: 设置类工具控件用系统外观本就合适, SwiftUI Picker 自带
- *   Dynamic Type / 暗色 / 触感.
- * 其他情况 (Android / Expo Go / 未 rebuild): 自绘行 + 红菱形 (Android 故意只跑浅色).
- * 切换即时生效: useAppearance → Appearance.setColorScheme → 全 App 动态色重解析.
+ * 自绘回退设置 (Android / Expo Go / 未 rebuild) —— 与原生路径同样两组, 维持报刊式行.
  */
-function AppearanceRows() {
+function FallbackSettings({ token, onLogout }: { token: string | null; onLogout: () => void }) {
+  return (
+    <>
+      <View style={styles.section}>
+        <SectionHeader label="账号" />
+        <RowLink label="编辑资料" onPress={() => router.push("/profile/edit")} />
+        <RowLink label="修改密码" onPress={() => router.push("/profile/password")} />
+        <NotificationRow />
+      </View>
+
+      <View style={styles.section}>
+        <SectionHeader label="偏好" />
+        <FallbackAppearanceRows />
+        <RowLink label="卷首语 · 关于" onPress={() => router.push("/colophon")} />
+        <RowLink label="搜索观察记录" onPress={() => router.push("/search")} />
+      </View>
+
+      {token ? (
+        <View style={styles.section}>
+          <TapEffect style={styles.dangerBtn} onPress={onLogout}>
+            <Sans size={11} weight="700" style={styles.dangerLabel}>
+              退出登录
+            </Sans>
+          </TapEffect>
+        </View>
+      ) : null}
+    </>
+  );
+}
+
+/** 外观选择器 (自绘回退) — 光亮 / 暗黑 / 跟随系统, 各一行带红菱形选中点. */
+function FallbackAppearanceRows() {
   const pref = useAppearance((s) => s.pref);
   const setPref = useAppearance((s) => s.setAppearance);
-
-  if (SwiftUI && SwiftUIModifiers) {
-    const { Host, Picker, Text: SwiftUIText } = SwiftUI;
-    const { pickerStyle, tag } = SwiftUIModifiers;
-    return (
-      <View style={styles.appearanceHost}>
-        <Host matchContents>
-          <Picker
-            selection={pref}
-            onSelectionChange={(value) => void setPref(value as AppearancePref)}
-            modifiers={[pickerStyle("segmented")]}
-          >
-            {APPEARANCE_OPTIONS.map((o) => (
-              <SwiftUIText key={o.key} modifiers={[tag(o.key)]}>
-                {o.label}
-              </SwiftUIText>
-            ))}
-          </Picker>
-        </Host>
-      </View>
-    );
-  }
-
   return (
     <>
       {APPEARANCE_OPTIONS.map((o) => (
@@ -318,7 +391,7 @@ function RowLink({ label, onPress }: { label: string; onPress: () => void }) {
 }
 
 /**
- * NotificationRow — 通知中心入口, 含未读 badge.
+ * NotificationRow (自绘回退) — 通知中心入口, 含未读 badge.
  * 未读 N > 0 → red diamond + Mono "N" 数字; 0 → 灰 "无";
  */
 function NotificationRow() {
@@ -363,6 +436,13 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxxl,
   },
+  // 原生路径: 报刊头钉顶 + Form 充满其下.
+  nativeRoot: { flex: 1 },
+  nativeHeader: {
+    paddingHorizontal: theme.spacing.lg,
+    paddingTop: theme.spacing.md,
+  },
+  nativeHost: { flex: 1, backgroundColor: theme.color.paper },
   headStamp: {
     color: theme.color.muted,
     letterSpacing: 2,
@@ -425,10 +505,6 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.ruleSoft,
   },
   rowLabel: { color: theme.color.ink },
-  appearanceHost: {
-    // 原生 SwiftUI 分段控件的容器 — 与列表行同一纵向节奏.
-    paddingVertical: theme.spacing.md,
-  },
   dangerBtn: {
     paddingVertical: theme.spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,

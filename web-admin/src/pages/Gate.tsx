@@ -63,7 +63,7 @@ export function GatePage() {
     <div>
       <PageHeader
         title="分析师评审"
-        description="M6 四位分析师 (佐证 · 共识 · 时机 · 能力圈, 原四道门). 全部评估, 点行看明细."
+        description="M6 投决会 · 四位分析师 (佐证 · 共识 · 时机 · 能力圈). 全部评估, 点行看明细."
         actions={
           <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
             <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
@@ -214,8 +214,8 @@ function GateDetail({ e }: { e: GateEvaluation }) {
               {(g.g2_anti_consensus.unpriced_directions ?? []).length > 0 && (
                 <div className="mt-2 space-y-1">
                   <p className="text-xs text-muted-foreground">未被定价的方向</p>
-                  {g.g2_anti_consensus.unpriced_directions!.map((u, i) => (
-                    <div key={i} className="rounded bg-muted/40 p-2 text-xs">
+                  {g.g2_anti_consensus.unpriced_directions!.map((u) => (
+                    <div key={u.angle} className="rounded bg-muted/40 p-2 text-xs">
                       <span className="font-medium">{u.angle}</span> — {u.why_unpriced}
                     </div>
                   ))}

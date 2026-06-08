@@ -38,3 +38,4 @@ web-build/
 
 # Docker volumes (managed by compose, but ignore stray exports)
 pgdata/
+.gstack/

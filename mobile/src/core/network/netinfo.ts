@@ -20,7 +20,7 @@ export function useIsReachable(): Reachability {
       setReachable(deriveReachability(state));
     });
     NetInfo.fetch().then((state) => setReachable(deriveReachability(state)));
-    return unsub;
+    return () => unsub();
   }, []);
 
   return reachable;

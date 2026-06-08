@@ -8,6 +8,9 @@ export function Loading({ label = "Loading…" }: { label?: string }) {
   );
 }
 
+// Loading / ErrorBox / EmptyBox 是一组配套的查询态原子组件, 各页面成组按 barrel 导入,
+// 拆成单文件只会割裂这组共用工具并徒增 11 处导入改动, 故保留同文件.
+// react-doctor-disable-next-line react-doctor/no-multi-comp
 export function ErrorBox({ error }: { error: unknown }) {
   const msg = error instanceof Error ? error.message : String(error);
   return (
@@ -18,6 +21,8 @@ export function ErrorBox({ error }: { error: unknown }) {
   );
 }
 
+// 同上: 与 Loading / ErrorBox 配套的查询态原子组件, 保留同文件.
+// react-doctor-disable-next-line react-doctor/no-multi-comp
 export function EmptyBox({ label = "没有数据" }: { label?: string }) {
   return (
     <div className="rounded-md border border-dashed px-3 py-10 text-center text-sm text-muted-foreground">

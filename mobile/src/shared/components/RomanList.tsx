@@ -23,7 +23,7 @@ export function RomanList({ items }: RomanListProps) {
       {items.map((item, i) => {
         const roman = ROMAN[i] ?? `${i + 1}.`;
         return (
-          <View key={i} style={styles.row}>
+          <View key={item.text} style={styles.row}>
             <Display size={22} italic style={styles.roman}>
               {roman}
             </Display>

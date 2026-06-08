@@ -40,7 +40,7 @@ const (
 	DiagnosisWeak        AnswerDiagnosisKind = "weak"
 )
 
-// RefinementDecision 是五轮结束后, Socratic 给出的"是否进入四道门"判断.
+// RefinementDecision 是五轮结束后, Socratic 给出的"是否上投决会"判断.
 type RefinementDecision string
 
 const (
@@ -113,7 +113,7 @@ const (
 	PoolDiscard     ArchivePool = "discard"
 )
 
-// GateDetail 是四道门各自的判据. 灵活字段用 map.
+// GateDetail 是投决会四位分析师各自的判据. 灵活字段用 map.
 // 物化到 gate_evaluations.gates_detail JSONB.
 type GateDetail struct {
 	G1Thickness     GateG1 `json:"g1_thickness"`

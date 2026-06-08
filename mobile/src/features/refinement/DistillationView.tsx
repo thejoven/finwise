@@ -14,14 +14,16 @@ import type { BeneficiaryTarget } from "@/core/api/distillation";
 
 /** 降噪综述正文 — 把 distilled_content 按空行分段渲染. */
 export function DistilledContent({ content }: { content: string }) {
-  const paras = content
-    .split(/\n{2,}/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  // flatMap 一次走完: trim 后空段直接丢, 不再 .filter(Boolean) 二次遍历.
+  const paras = content.split(/\n{2,}/).flatMap((p) => {
+    const t = p.trim();
+    return t ? [t] : [];
+  });
   return (
     <View style={styles.distilledBody}>
-      {paras.map((p, i) => (
-        <Serif key={i} size={16} style={styles.distilledPara}>
+      {/* key 用段落正文本身: 同一篇降噪综述各段文本天然各异且不重排, 比数组下标稳定. */}
+      {paras.map((p) => (
+        <Serif key={p} size={16} style={styles.distilledPara}>
           {p}
         </Serif>
       ))}

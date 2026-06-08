@@ -1,8 +1,9 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useReducer } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Link, router } from "expo-router";
 
 import { Display, DoubleRule, KeyboardForm, Sans, Serif, TapEffect } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { register, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
@@ -14,29 +15,49 @@ import { formFieldStyles } from "@/shared/styles/form";
  * 邀请码必填: 注册受邀请制门禁, 码由管理员在后台生成 (见 server invite 模块).
  * 密码长度最低 8, 跟后端一致. UI 错误信息直接落表单底部.
  */
+
+// 注册表单是一坨相关状态 (四个输入 + 提交态/错误), 用 patch reducer 攒成一个,
+// setForm({...}) 局部更新, 替代散开的多个 setState.
+interface FormState {
+  inviteCode: string;
+  email: string;
+  password: string;
+  displayName: string;
+  pending: boolean;
+  error: string | null;
+}
+type FormAction = Partial<FormState>;
+function formReducer(s: FormState, patch: FormAction): FormState {
+  return { ...s, ...patch };
+}
+
 export default function RegisterScreen() {
-  const [inviteCode, setInviteCode] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useReducer(formReducer, {
+    inviteCode: "",
+    email: "",
+    password: "",
+    displayName: "",
+    pending: false,
+    error: null,
+  });
   const setSession = useAuth((s) => s.setSession);
 
-  const trimmedEmail = email.trim();
-  const trimmedName = displayName.trim();
-  const trimmedInvite = inviteCode.trim();
+  const trimmedEmail = form.email.trim();
+  const trimmedName = form.displayName.trim();
+  const trimmedInvite = form.inviteCode.trim();
   const canSubmit =
-    trimmedInvite.length > 0 && trimmedEmail.length > 0 && password.length >= 8 && !pending;
+    trimmedInvite.length > 0 &&
+    trimmedEmail.length > 0 &&
+    form.password.length >= 8 &&
+    !form.pending;
 
   async function handleSubmit() {
     if (!canSubmit) return;
-    setPending(true);
-    setError(null);
+    setForm({ pending: true, error: null });
     try {
       const res = await register({
         email: trimmedEmail,
-        password,
+        password: form.password,
         display_name: trimmedName.length > 0 ? trimmedName : null,
         invite_code: trimmedInvite,
       });
@@ -45,11 +66,11 @@ export default function RegisterScreen() {
         expires_at: res.session.expires_at,
         user: res.user,
       });
-      router.replace("/(tabs)/inbox");
+      router.replace("/(tabs)/caizhi");
     } catch (err) {
-      setError(await readErrorMessage(err));
+      setForm({ error: await readErrorMessage(err) });
     } finally {
-      setPending(false);
+      setForm({ pending: false });
     }
   }
 
@@ -68,66 +89,57 @@ export default function RegisterScreen() {
           <Sans size={11} weight="600" style={styles.label}>
             邀请码
           </Sans>
-          <TextInput
-            value={inviteCode}
-            onChangeText={setInviteCode}
+          <NativeField
+            value={form.inviteCode}
+            onChangeText={(text) => setForm({ inviteCode: text })}
             placeholder="管理员发给你的邀请码"
-            placeholderTextColor={theme.color.muted2}
             autoCapitalize="characters"
-            autoCorrect={false}
             autoComplete="off"
-            style={styles.input}
+            returnKeyType="next"
           />
 
           <Sans size={11} weight="600" style={styles.label}>
             邮箱
           </Sans>
-          <TextInput
-            value={email}
-            onChangeText={setEmail}
+          <NativeField
+            value={form.email}
+            onChangeText={(text) => setForm({ email: text })}
             placeholder="you@example.com"
-            placeholderTextColor={theme.color.muted2}
             keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
             autoComplete="email"
             textContentType="emailAddress"
-            style={styles.input}
+            returnKeyType="next"
           />
 
           <Sans size={11} weight="600" style={styles.label}>
             密码
           </Sans>
-          <TextInput
-            value={password}
-            onChangeText={setPassword}
+          <NativeField
+            value={form.password}
+            onChangeText={(text) => setForm({ password: text })}
             placeholder="至少 8 位"
-            placeholderTextColor={theme.color.muted2}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
+            secure
             autoComplete="new-password"
             textContentType="newPassword"
-            style={styles.input}
+            returnKeyType="next"
           />
 
           <Sans size={11} weight="600" style={styles.label}>
             昵称 (可选)
           </Sans>
-          <TextInput
-            value={displayName}
-            onChangeText={setDisplayName}
+          <NativeField
+            value={form.displayName}
+            onChangeText={(text) => setForm({ displayName: text })}
             placeholder="想被怎么称呼"
-            placeholderTextColor={theme.color.muted2}
-            autoCorrect={false}
+            autoCapitalize="sentences"
             maxLength={60}
-            style={styles.input}
-            onSubmitEditing={handleSubmit}
+            returnKeyType="go"
+            onSubmit={handleSubmit}
           />
 
-          {error ? (
+          {form.error ? (
             <Serif size={12} italic style={styles.error}>
-              {error}
+              {form.error}
             </Serif>
           ) : null}
         </View>
@@ -140,7 +152,7 @@ export default function RegisterScreen() {
             disabled={!canSubmit}
           >
             <Sans size={11} weight="700" style={styles.signLabel}>
-              {pending ? "注册中…" : "注册"}
+              {form.pending ? "注册中…" : "注册"}
             </Sans>
           </TapEffect>
           <Link href="/login" asChild>

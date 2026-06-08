@@ -31,26 +31,15 @@ wiseflow-bundle/
 ├── GOAL/                                  ← 开发目标书 · 给 AI Agent 看
 │   ├── GOAL.md                            🔴 必读 · 项目总入口
 │   ├── AGENT_BRIEF.md                     🔴 必读 · 元指令
-│   ├── phase-1-quiet/                    Phase 1 · 安静(W1-W8)
-│   │   ├── 00-overview.md
-│   │   ├── M1-data-foundation.md
-│   │   ├── M2-signal-pipeline.md
-│   │   ├── M3-client-shell.md
-│   │   └── M4-end-to-end.md
-│   ├── phase-2-ritual/                   Phase 2 · 仪式(W9-W18)
-│   │   ├── 00-overview.md
-│   │   ├── M5-socratic-refinement.md
-│   │   ├── M6-gate-engine.md
-│   │   ├── M7-commitment-book.md
-│   │   └── M8-signing-flow.md
-│   └── phase-3-mirror/                   Phase 3 · 镜子(W19-W26)
-│       ├── 00-overview.md
-│       ├── M9-anxiety-companion.md
-│       ├── M10-exit-monitor.md
-│       └── M11-retrospect-training.md
+│   └── (phase-1/2/3 建造任务单 M1-M11 已建完, 归档至 归档/GOAL/)
 │
-└── 原型/
-    └── wiseflow-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
+├── 原型/
+│   └── wiseflow-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
+│
+└── 归档/                                   ← 跟不上更新速度的历史文档(见其 README)
+    ├── PROGRESS.md / *.html                # 冻结于 5/25-5/26 的进度面板与分析
+    ├── iii-console-bug-report.md           # 已修复的上游 issue 草稿
+    └── GOAL/phase-1·2·3/                    # 已建完的三个 Phase 建造任务单
 ```
 
 ---
@@ -103,7 +92,7 @@ wiseflow-bundle/
 | Phase | 周数 | 模块 | 完成时能做什么 |
 |---|---|---|---|
 | **Phase 1 · 安静** | W1-W8 | M1-M4 | 每天写信号, AI 后台推演, 不打扰 |
-| **Phase 2 · 仪式** | W9-W18 | M5-M8 | 五轮追问 + 四道门 + 签字承诺 |
+| **Phase 2 · 仪式** | W9-W18 | M5-M8 | 五轮追问 + 投决会 + 签字承诺 |
 | **Phase 3 · 镜子** | W19-W26 | M9-M11 | 持仓陪伴 + 复盘训练, 看见自己 |
 
 每个 Phase 结束都有"自己用一周", 不达标不进下个 Phase。

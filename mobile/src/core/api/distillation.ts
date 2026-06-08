@@ -23,7 +23,7 @@ export const BeneficiaryTarget = z.object({
 });
 export type BeneficiaryTarget = z.infer<typeof BeneficiaryTarget>;
 
-export const DistillationResponse = z.object({
+const DistillationResponse = z.object({
   refinement_id: z.string(),
   distilled_content: z.string().nullable().optional(),
   beneficiary: z.array(BeneficiaryTarget).nullable().optional(),
@@ -51,7 +51,7 @@ export async function getDistillation(refinementId: string): Promise<Distillatio
 }
 
 /**
- * 用户在降噪页点"进入四道门" → 触发四道门评估 ("前置于四道门"流程).
+ * 用户在降噪页点"上投决会" → 触发投决会评估 ("前置于投决会"流程).
  * server detached 跑评估, 立即 202; 结果之后照常通过 inbox 的承诺书 callout 浮现.
  */
 export async function proceedToGate(refinementId: string): Promise<void> {

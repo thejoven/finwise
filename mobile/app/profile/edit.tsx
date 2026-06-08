@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
 import {
@@ -12,6 +12,7 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { updateMe, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
@@ -78,26 +79,25 @@ export default function ProfileEditScreen() {
         <Sans size={11} weight="600" style={styles.label}>
           昵称
         </Sans>
-        <TextInput
+        <NativeField
           value={displayName}
           onChangeText={setDisplayName}
           placeholder="想被怎么称呼"
-          placeholderTextColor={theme.color.muted2}
+          autoCapitalize="sentences"
           maxLength={60}
-          style={styles.input}
         />
 
         <Sans size={11} weight="600" style={styles.label}>
           签名
         </Sans>
-        <TextInput
+        <NativeField
           value={bio}
           onChangeText={setBio}
           placeholder="一句话介绍自己"
-          placeholderTextColor={theme.color.muted2}
+          autoCapitalize="sentences"
           multiline
           maxLength={280}
-          style={[styles.input, styles.multiline]}
+          minHeight={96}
         />
 
         {error ? (
@@ -138,7 +138,6 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.color.ruleSoft,
   },
-  multiline: { minHeight: 96, textAlignVertical: "top" },
   footer: {
     paddingHorizontal: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,

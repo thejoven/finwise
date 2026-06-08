@@ -8,7 +8,7 @@
  *   1. 降噪综述 (distilled_content) — distiller agent
  *   2. 收益标的信号 (beneficiary)   — beneficiary agent (拉实时检索, 慢一点)
  *
- * "前置于四道门": 页底由用户决定是否"进入四道门"评审 — 不自动跑.
+ * "前置于投决会": 页底由用户决定是否"上投决会"评审 — 不自动跑.
  *
  * 严格遵守产品哲学: 等待用 typewriter, 不弹 toast, 不显示 spinner / loading.
  */
@@ -48,7 +48,7 @@ export default function DistilledScreen() {
     } catch {
       // 静默: 失败不弹 toast. 评估是 detached 的, 回到收件箱后照常 (或不) 浮现.
     }
-    router.replace("/(tabs)/inbox");
+    router.replace("/(tabs)/caizhi");
   };
 
   return (
@@ -140,12 +140,12 @@ function Footer({ onProceed, isProceeding }: { onProceed: () => void; isProceedi
         disabled={isProceeding}
       >
         <Sans size={11} weight="700" style={styles.primaryLabel}>
-          {isProceeding ? "正在交给四道门…" : "进入四道门"}
+          {isProceeding ? "正在上会…" : "上投决会"}
         </Sans>
       </TapEffect>
       <TapEffect
         style={styles.secondaryButton}
-        onPress={() => router.replace("/(tabs)/inbox")}
+        onPress={() => router.replace("/(tabs)/caizhi")}
         disableEffect
       >
         <Serif size={13} style={styles.secondaryLabel}>

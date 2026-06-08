@@ -44,9 +44,12 @@ export function RichText({ text }: Props) {
   return (
     <>
       {tokens.map((tok, i) => {
-        // 换行 token: 用 "\n" 字符串, Text 会按换行渲染
+        // 换行 token: 包一层 <Text> 渲染 "\n" (父级仍是 Text, 会内联换行)
         if (tok.text === "\n") {
-          return <Fragment key={i}>{"\n"}</Fragment>;
+          // 定位型 token: 每次按源串重新 tokenize, 可能重复 (如两个 "\n") 且无稳定 id,
+          // 列表不会重排/原地过滤, index 作 key 安全.
+          // react-doctor-disable-next-line react-doctor/no-array-index-as-key
+          return <Text key={i}>{"\n"}</Text>;
         }
         if (tok.marks.length === 0) {
           // 直接 string, RN <Text> 会把它合到父 Text 里
@@ -56,7 +59,10 @@ export function RichText({ text }: Props) {
         if (tok.marks.includes("bold")) style.fontWeight = "700";
         if (tok.marks.includes("italic")) style.fontStyle = "italic";
         if (tok.marks.includes("underline")) style.textDecorationLine = "underline";
+        // 定位型 token: 每次按源串重新 tokenize, 可能重复 (如两段相同 bold) 且无稳定 id,
+        // 列表不会重排/原地过滤, index 作 key 安全.
         return (
+          // react-doctor-disable-next-line react-doctor/no-array-index-as-key
           <Text key={i} style={style}>
             {tok.text}
           </Text>
@@ -88,7 +94,11 @@ function tokenize(input: string): Token[] {
 
   // 把单换行作为独立 token, 让 React 渲染时不被相邻 mark style 影响
   const flushNewlines = () => {
+    // buf 是每轮被 slice 重新赋值的字符串 (非数组), 这里是逐字符消费换行而非
+    // 重复扫描同一集合 — 无法用 Set 替代, 否则破坏"找首个 \n → 切分 → 继续"的语义.
+    // react-doctor-disable-next-line react-doctor/js-set-map-lookups
     while (buf.includes("\n")) {
+      // react-doctor-disable-next-line react-doctor/js-set-map-lookups
       const idx = buf.indexOf("\n");
       const before = buf.slice(0, idx);
       if (before.length > 0) tokens.push({ text: before, marks: [...marks] });
@@ -139,6 +149,9 @@ function tokenize(input: string): Token[] {
     if (text[i] === "*") {
       const prev = text[i - 1] ?? "";
       const next = text[i + 1] ?? "";
+      // marks 是随 push/splice 不断变化的小栈 (≤3 项), 此处每个 `*` 边界只查一次;
+      // 把它 hoist 成 Set 会失效 (内容随循环变), 这不是对稳定集合的重复扫描.
+      // react-doctor-disable-next-line react-doctor/js-set-map-lookups
       const isBoundary = !/[a-zA-Z0-9]/.test(prev) || marks.includes("italic");
       if (isBoundary && next !== "*") {
         flushNewlines();

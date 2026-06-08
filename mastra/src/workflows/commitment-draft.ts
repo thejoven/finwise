@@ -1,7 +1,8 @@
 /**
  * commitment-draft workflow.
  *
- * 触发: NATS gate.passed (gate engine 四门全过后发的信号).
+ * 触发: gate.passed 事件 — gate engine 全票过会后写 outbox, 经 iii 的
+ *       /v1/events/gate-passed shim 入 q:commitment-draft 队列 (ADR 0004, 非 NATS).
  *
  * 步骤:
  *   1. fetchRefinement — 拿 raw_text + r5 (commitment_setup 选项 + open_text) + ticker

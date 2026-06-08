@@ -34,7 +34,7 @@ export function useRetrospectList() {
   });
 }
 
-export function useStartRetrospect() {
+function useStartRetrospect() {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async (input: {

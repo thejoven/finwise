@@ -16,7 +16,7 @@
 
 import { DynamicColorIOS, Platform, type ColorValue } from "react-native";
 
-export const lightColors = {
+const lightColors = {
   paper: "#ffffff",
   paper2: "#fafaf7",
   paper3: "#f3f1ec",
@@ -47,7 +47,7 @@ export type ColorToken = keyof typeof lightColors;
  * 够对比). paper→paper4 仍单调变浅以维持层级. redSoft/highlight 是文字底色, 故倒成
  * 暗色调而非浅色. 键名必须与 lightColors 完全一致(satisfies 强校验).
  */
-export const darkColors = {
+const darkColors = {
   paper: "#14110c",
   paper2: "#1b1813",
   paper3: "#221e18",

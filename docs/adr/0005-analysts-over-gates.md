@@ -2,7 +2,7 @@
 
 - 状态: Accepted
 - 日期: 2026-05-30
-- 相关: [ADR 0003 (Mastra over LangChain)](0003-mastra-over-langchain.md) · [第三层 · 确定性评估](../产品文档/03_第三层_确定性评估.md) · [M6 gate engine](../GOAL/phase-2-ritual/M6-gate-engine.md)
+- 相关: [ADR 0003 (Mastra over LangChain)](0003-mastra-over-langchain.md) · [第三层 · 确定性评估](../产品文档/03_第三层_确定性评估.md) · [M6 gate engine (归档)](../归档/GOAL/phase-2-ritual/M6-gate-engine.md)
 
 ## Context
 

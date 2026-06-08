@@ -181,7 +181,7 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Arrow />
 
         <Stage
-          label="评审 Gate"
+          label="投决会"
           to="/gate"
           loading={evalQ.isLoading}
           present={!!evalQ.data}
@@ -191,9 +191,9 @@ function SignalChain({ signalId }: { signalId: string }) {
             <div className="space-y-1.5 text-sm">
               <div className="flex items-center gap-2">
                 {evalQ.data.passed ? (
-                  <Badge variant="success">四门通过</Badge>
+                  <Badge variant="success">全票过会</Badge>
                 ) : (
-                  <Badge variant="destructive">第 {evalQ.data.failed_gate} 门未过</Badge>
+                  <Badge variant="destructive">第 {evalQ.data.failed_gate} 位否决</Badge>
                 )}
                 {evalQ.data.archived_pool && (
                   <Badge variant="outline">{evalQ.data.archived_pool}</Badge>

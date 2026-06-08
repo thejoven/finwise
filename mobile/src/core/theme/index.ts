@@ -34,7 +34,7 @@ export function useThemeColors() {
   return resolveColors(useColorScheme());
 }
 
-export { lightColors, darkColors, resolveColors, projectSwatches } from "./colors";
+export { resolveColors, projectSwatches } from "./colors";
 
 export type { ColorToken } from "./colors";
 export type { SpacingToken } from "./spacing";

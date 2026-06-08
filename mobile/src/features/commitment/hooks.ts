@@ -39,14 +39,14 @@ export function useCommitment(id: string | undefined) {
   return useQuery(byIdQuery(["commitment"], id, getCommitment));
 }
 
-export function useActiveHolding() {
+function useActiveHolding() {
   return useQuery({
     queryKey: ACTIVE_HOLDING_KEY,
     queryFn: getActiveHolding,
   });
 }
 
-export function useHolding(id: string | undefined) {
+function useHolding(id: string | undefined) {
   return useQuery(byIdQuery(["holding"], id, getHolding));
 }
 

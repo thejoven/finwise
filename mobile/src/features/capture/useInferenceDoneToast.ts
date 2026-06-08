@@ -21,7 +21,9 @@ interface SignalLike {
 }
 
 export function useInferenceDoneToast(signals: SignalLike[]) {
-  const lastStatusMap = useRef<Map<string, string>>(new Map());
+  // 懒初始化: new Map() 只在首渲染建一次, 不是每渲染都新建一个丢掉.
+  const lastStatusMap = useRef<Map<string, string> | null>(null);
+  if (lastStatusMap.current === null) lastStatusMap.current = new Map<string, string>();
   const mounted = useRef(false);
 
   useEffect(() => {
@@ -36,7 +38,7 @@ export function useInferenceDoneToast(signals: SignalLike[]) {
 
     // 检测 pending → done 跃迁
     for (const s of signals) {
-      const prev = lastStatusMap.current.get(s.id);
+      const prev = lastStatusMap.current!.get(s.id);
       if (s.inference_status === "done" && prev === "pending") {
         const preview =
           (s.inference_summary && s.inference_summary.slice(0, 40)) ||

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FlatList, StyleSheet, TextInput, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -11,6 +11,7 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { SignalRow, type MergedSignal } from "@/features/capture";
 import { listSignals } from "@/core/api/signals";
 import { readErrorMessage } from "@/core/api/account";
@@ -26,6 +27,11 @@ import { theme } from "@/core/theme";
  *
  * 结果点击仍走 /signal/[id] 详情页 (SignalRow 已经实现).
  */
+// renderItem 抽成模块级稳定引用, 避免每次重渲染重建 (rn-no-inline-flatlist-renderitem).
+function renderSignalRow({ item }: { item: MergedSignal }) {
+  return <SignalRow signal={item} />;
+}
+
 export default function SearchScreen() {
   const [raw, setRaw] = useState("");
   const [debounced, setDebounced] = useState("");
@@ -54,11 +60,14 @@ export default function SearchScreen() {
     }));
   }, [query.data]);
 
+  // errorMsg 是从 query.error **异步**解析出的可读文案 (readErrorMessage 读 response body),
+  // 无法在渲染期同步派生, 故用 effect 跟 query.error —— no-chain-state-updates 在此为误报.
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   useEffect(() => {
     if (query.error) {
       void readErrorMessage(query.error).then(setErrorMsg);
     } else {
+      // react-doctor-disable-next-line react-doctor/no-chain-state-updates
       setErrorMsg(null);
     }
   }, [query.error]);
@@ -75,16 +84,15 @@ export default function SearchScreen() {
       </View>
 
       <View style={styles.searchRow}>
-        <TextInput
+        <NativeField
           value={raw}
           onChangeText={setRaw}
           placeholder="输入关键词…"
-          placeholderTextColor={theme.color.muted2}
           autoFocus
-          autoCapitalize="none"
-          autoCorrect={false}
           returnKeyType="search"
-          style={styles.input}
+          bare
+          containerStyle={styles.inputWrap}
+          inputStyle={styles.input}
         />
         {raw.length > 0 ? (
           <TapEffect onPress={() => setRaw("")} style={styles.clearBtn}>
@@ -96,7 +104,7 @@ export default function SearchScreen() {
       <FlatList<MergedSignal>
         data={items}
         keyExtractor={(s) => s.id}
-        renderItem={({ item }) => <SignalRow signal={item} />}
+        renderItem={renderSignalRow}
         ItemSeparatorComponent={Separator}
         keyboardShouldPersistTaps="handled"
         ListEmptyComponent={
@@ -139,8 +147,8 @@ const styles = StyleSheet.create({
     borderBottomColor: theme.color.rule,
     gap: theme.spacing.sm,
   },
+  inputWrap: { flex: 1 },
   input: {
-    flex: 1,
     fontFamily: theme.fontFamily.serifRegular,
     fontSize: 16,
     lineHeight: 22,

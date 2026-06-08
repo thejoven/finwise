@@ -48,7 +48,7 @@ export function useGateByRefinement(refinementId: string | undefined) {
   });
 }
 
-export const POOLS: Array<{ id: ArchivePoolT; label: string; meta: string }> = [
+const POOLS: Array<{ id: ArchivePoolT; label: string; meta: string }> = [
   { id: "observation", label: "观察池", meta: "信号还不够厚, 再看看" },
   { id: "lesson", label: "课堂池", meta: "能力圈外, 记下来" },
   { id: "calendar", label: "日历池", meta: "时机不在窗口, 等" },

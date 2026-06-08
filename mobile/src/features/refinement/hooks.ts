@@ -170,10 +170,17 @@ export function useDistillation(refinementId: string | undefined) {
   });
 }
 
-/** 降噪页"进入四道门" — 手动触发四道门评估 ("前置于四道门"流程). */
+/** 降噪页"上投决会" — 手动触发投决会评估 ("前置于投决会"流程). */
 export function useProceedToGate() {
+  const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (refinementId: string) => proceedToGate(refinementId),
+    // 触发评估后, 该 refinement 的单条评估 (信号详情页) 与归档各池 (archive tab)
+    // 都可能出现新结果, invalidate 让它们重拉. 评估是 detached, 这里只是尽早刷新.
+    onSuccess: (_data, refinementId) => {
+      void queryClient.invalidateQueries({ queryKey: ["gate-by-refinement", refinementId] });
+      void queryClient.invalidateQueries({ queryKey: ["gate-pool"] });
+    },
   });
   return { proceed: mutation.mutateAsync, isProceeding: mutation.isPending };
 }

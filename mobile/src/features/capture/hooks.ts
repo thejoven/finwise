@@ -38,7 +38,7 @@ export interface MergedSignal {
   related_assets?: { ticker: string; rationale: string; order: string }[];
 }
 
-export function useSignals() {
+function useSignals() {
   // 当前激活分类进 queryKey, 切分类即重新拉; null = 全部.
   const activeId = useActiveProject((s) => s.activeId);
   return useQuery({
@@ -82,19 +82,22 @@ export function useMergedSignals() {
   const serverSignals = query.data?.signals ?? [];
   const serverIds = new Set(serverSignals.map((s) => s.id));
 
-  const local: MergedSignal[] = Object.values(pending)
-    .filter((p) => !serverIds.has(p.id))
-    // 本地 pending 也按 active 分类过滤: 全部(null) 全留, 否则只留同分类的.
-    .filter((p) => activeId === null || p.project_id === activeId)
-    .map((p) => ({
-      id: p.id,
-      raw_text: p.raw_text,
-      captured_at: p.captured_at,
-      inference_status: "pending" as const,
-      project_id: p.project_id,
-      local_sync: p.status,
-      local_attempts: p.attempts,
-    }));
+  // 一次遍历: 过滤 (排除已在 server 的 + 非当前分类的) 同时映射成展示结构.
+  const local: MergedSignal[] = Object.values(pending).flatMap((p) =>
+    !serverIds.has(p.id) && (activeId === null || p.project_id === activeId)
+      ? [
+          {
+            id: p.id,
+            raw_text: p.raw_text,
+            captured_at: p.captured_at,
+            inference_status: "pending" as const,
+            project_id: p.project_id,
+            local_sync: p.status,
+            local_attempts: p.attempts,
+          },
+        ]
+      : [],
+  );
 
   const remote: MergedSignal[] = serverSignals.map((s) => ({
     id: s.id,
@@ -134,6 +137,9 @@ export function useCaptureSignal() {
       await submit({ id, raw_text: rawText, captured_at: capturedAt, project_id: projectId });
 
       try {
+        // 这几个 await 有真实的成功顺序依赖, 不能并行: postSignal 必须先成功, remove
+        // (删本地 pending) / invalidate 才能跑; 失败走 catch 保留记录. async-parallel 误报.
+        // react-doctor-disable-next-line react-doctor/async-parallel
         await postSignal({
           client_event_id: id,
           raw_text: rawText,
@@ -180,6 +186,8 @@ export function useRetryPending() {
         await markSyncing(item.id);
       }
       try {
+        // 同 useCaptureSignal: 成功顺序依赖, 不能并行 (postSignal 成功后才 remove/invalidate).
+        // react-doctor-disable-next-line react-doctor/async-parallel
         await postSignal({
           client_event_id: item.id,
           raw_text: item.raw_text,

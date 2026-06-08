@@ -46,6 +46,9 @@ export function PendingFlush() {
       if (eligible.length === 0) return;
 
       for (const row of eligible) {
+        // 串行重投是有意为之 (见顶部注释): mutex + 逐条 POST 避免"同一 signal 并发 POST"的脏数据.
+        // 并行化会破坏该保证, 故 async-await-in-loop 在此为误报.
+        // react-doctor-disable-next-line react-doctor/async-await-in-loop
         await markSyncing(row.id);
         try {
           await postSignal({
@@ -71,7 +74,9 @@ export function PendingFlush() {
   // 触发 1 · 冷启动一次.
   useEffect(() => {
     void sweep();
+    // 仅冷启动跑一次 (回前台 / 网络恢复另有 effect 兜); sweep 变化不应重跑. 故意空依赖.
     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // react-doctor-disable-next-line react-doctor/exhaustive-deps
   }, []);
 
   // 触发 2 · App 从后台回前台.

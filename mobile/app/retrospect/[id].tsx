@@ -12,7 +12,7 @@
  */
 
 import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
@@ -26,6 +26,7 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 
 import {
@@ -99,7 +100,7 @@ export default function RetrospectScreen() {
       </ScrollView>
 
       {finalized ? (
-        <Footer label="回到收件箱" onPress={() => router.replace("/(tabs)/inbox")} enabled />
+        <Footer label="回到信箱" onPress={() => router.replace("/(tabs)/caizhi")} enabled />
       ) : currentQ ? (
         <Footer
           label={
@@ -181,13 +182,15 @@ function QuestionBlock({
           <Serif size={12} italic style={styles.openPrompt}>
             {q.openPrompt}
           </Serif>
-          <TextInput
+          <NativeField
             value={openText}
             onChangeText={onOpenTextChange}
             placeholder="(可选)"
-            placeholderTextColor={theme.color.muted2}
             multiline
-            style={styles.openInput}
+            minHeight={96}
+            bare
+            containerStyle={styles.openBox}
+            inputStyle={styles.openText}
           />
         </View>
       ) : null}
@@ -345,17 +348,17 @@ const styles = StyleSheet.create({
   optionTextSelected: { color: theme.color.ink },
   openWrap: { gap: theme.spacing.sm, marginTop: theme.spacing.sm },
   openPrompt: { color: theme.color.muted },
-  openInput: {
-    minHeight: 96,
-    fontFamily: "SourceSerif4-Regular",
-    fontSize: 14,
-    lineHeight: 22,
-    color: theme.color.ink,
+  openBox: {
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: theme.color.rule,
     backgroundColor: theme.color.paper2,
     padding: theme.spacing.md,
-    textAlignVertical: "top",
+  },
+  openText: {
+    fontFamily: "SourceSerif4-Regular",
+    fontSize: 14,
+    lineHeight: 22,
+    color: theme.color.ink,
   },
   completedBlock: { gap: theme.spacing.md },
   focusTitle: { color: theme.color.ink, marginTop: theme.spacing.sm },

@@ -168,8 +168,8 @@ function HoldingDetail({ h }: { h: HoldingRow }) {
         <div>
           <p className="mb-1 text-xs text-muted-foreground">退出条件</p>
           <ul className="list-disc space-y-0.5 pl-5">
-            {(h.exit_conditions ?? []).map((e, i) => (
-              <li key={i}>{e}</li>
+            {(h.exit_conditions ?? []).map((e) => (
+              <li key={e}>{e}</li>
             ))}
           </ul>
         </div>
@@ -188,8 +188,8 @@ function HoldingDetail({ h }: { h: HoldingRow }) {
             </p>
             {(commit.data.thesis.reasons_for_future_self ?? []).length > 0 && (
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
-                {commit.data.thesis.reasons_for_future_self.map((r, i) => (
-                  <li key={i}>{r}</li>
+                {commit.data.thesis.reasons_for_future_self.map((r) => (
+                  <li key={r}>{r}</li>
                 ))}
               </ul>
             )}

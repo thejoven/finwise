@@ -50,7 +50,7 @@ export default function ColophonScreen() {
             财知
           </RNText>
           <Display size={18} italic style={styles.nameplateEN}>
-            FinWise
+            WiseFlow
           </Display>
         </View>
 
@@ -123,7 +123,7 @@ export default function ColophonScreen() {
           </Serif>
 
           <Serif size={13} italic style={styles.compoundIntroSub}>
-            每一次完整的录入、追问、过门、签字、复盘，都是一笔本金；时间会替你把它们利上滚利。
+            每一次完整的录入、追问、过会、签字、复盘，都是一笔本金；时间会替你把它们利上滚利。
           </Serif>
 
           <View style={styles.compoundList}>
@@ -138,7 +138,7 @@ export default function ColophonScreen() {
                   subtext: "PHASE 2 · 仪式",
                 },
                 {
-                  text: "纪律 — 每过一道门，是一次能力圈的校准。",
+                  text: "纪律 — 每一次过会，是一次能力圈的校准。",
                   subtext: "PHASE 2 · 仪式",
                 },
                 {
@@ -172,7 +172,7 @@ export default function ColophonScreen() {
             VOL. I · 创刊号
           </Mono>
           <Mono size={9} style={styles.footMeta}>
-            FINWISE · 财知大道
+            WISEFLOW · 财知大道
           </Mono>
         </View>
       </ScrollView>

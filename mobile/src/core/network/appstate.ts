@@ -19,6 +19,6 @@ export function useAppState(): AppStateStatus {
   return state;
 }
 
-export function useAppActive(): boolean {
+function useAppActive(): boolean {
   return useAppState() === "active";
 }

@@ -4,7 +4,7 @@
  * 视觉沿用整本 App 的报刊语言 —
  *   · paper 底, 居中报刊头
  *   · 中文主名 "财知" (NotoSerifSC, 极大字号)
- *   · 英文副线 "FinWise" (Playfair Display italic)
+ *   · 英文副线 "WiseFlow" (Playfair Display italic)
  *   · slogan "以智驭财 · 行远致富"
  *   · 双横线分隔
  *   · 底部刊号小字
@@ -21,7 +21,7 @@
  * 单次性: 没有 progress / skip — 这是品牌瞬间, 不是 onboarding.
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
@@ -54,6 +54,11 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
   const taglineOpacity = useSharedValue(0);
   const rootOpacity = useSharedValue(1);
 
+  // onFinish 由父级以内联箭头传入(每渲染换引用), 用 ref 固定它 —
+  // 这样入场 effect 的 deps 才能真正留空, 动画只跑一次, 不被父级重渲打断.
+  const onFinishRef = useRef(onFinish);
+  onFinishRef.current = onFinish;
+
   useEffect(() => {
     const ease = Easing.out(Easing.cubic);
 
@@ -70,12 +75,20 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
     rootOpacity.value = withDelay(
       1950,
       withTiming(0, { duration: 420, easing: Easing.in(Easing.quad) }, (finished) => {
-        if (finished) runOnJS(onFinish)();
+        if (finished) runOnJS(onFinishRef.current)();
       }),
     );
-    // 单次入场 — 不依赖任何外部状态变化, 故 deps 留空.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // 单次入场: 列出的全是 useSharedValue 返回的稳定引用, 整组件生命周期不变,
+    // 故 effect 实际只跑一次; onFinish 经 ref 读取不入 deps.
+  }, [
+    ruleScale,
+    nameOpacity,
+    nameScale,
+    sublineOpacity,
+    sublineTranslate,
+    taglineOpacity,
+    rootOpacity,
+  ]);
 
   const rootStyle = useAnimatedStyle(() => ({ opacity: rootOpacity.value }));
   const ruleStyle = useAnimatedStyle(() => ({
@@ -124,7 +137,7 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
 
         <Animated.View style={sublineStyle}>
           <Display size={22} italic style={styles.subline}>
-            FinWise
+            WiseFlow
           </Display>
         </Animated.View>
 
@@ -156,8 +169,8 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     // backgroundColor 改为内联 resolved hex (见上) — Reanimated 不认动态色.
+    // 仅做层叠盖顶, 非投影: 新架构 Fabric 在 Android 也认 zIndex, 故去掉旧 elevation.
     zIndex: 100,
-    elevation: 100,
   },
   topMeta: {
     paddingHorizontal: theme.spacing.lg,

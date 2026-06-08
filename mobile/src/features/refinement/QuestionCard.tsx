@@ -142,29 +142,25 @@ function MultiChoice({ question, onAnswerChange }: Props) {
 
   const toggle = useCallback(
     (id: string) => {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
-        else next.add(id);
-        pushAnswer(next, userText);
-        return next;
-      });
+      const next = new Set(selected);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      setSelected(next);
+      pushAnswer(next, userText);
     },
-    [pushAnswer, userText],
+    [selected, pushAnswer, userText],
   );
 
   const changeUserText = useCallback(
     (s: string) => {
       setUserText(s);
       if (!userOpt) return;
-      setSelected((prev) => {
-        const next = new Set(prev);
-        next.add(userOpt.id);
-        pushAnswer(next, s);
-        return next;
-      });
+      const next = new Set(selected);
+      next.add(userOpt.id);
+      setSelected(next);
+      pushAnswer(next, s);
     },
-    [pushAnswer, userOpt],
+    [selected, pushAnswer, userOpt],
   );
 
   const options = question.options ?? [];
@@ -209,27 +205,23 @@ function Ordering({ question, onAnswerChange }: Props) {
 
   const toggle = useCallback(
     (id: string) => {
-      setOrder((prev) => {
-        const idx = prev.indexOf(id);
-        const next = idx === -1 ? [...prev, id] : prev.filter((x) => x !== id);
-        pushAnswer(next, userText);
-        return next;
-      });
+      const idx = order.indexOf(id);
+      const next = idx === -1 ? [...order, id] : order.filter((x) => x !== id);
+      setOrder(next);
+      pushAnswer(next, userText);
     },
-    [pushAnswer, userText],
+    [order, pushAnswer, userText],
   );
 
   const changeUserText = useCallback(
     (s: string) => {
       setUserText(s);
       if (!userOpt) return;
-      setOrder((prev) => {
-        const next = prev.includes(userOpt.id) ? prev : [...prev, userOpt.id];
-        pushAnswer(next, s);
-        return next;
-      });
+      const next = order.includes(userOpt.id) ? order : [...order, userOpt.id];
+      setOrder(next);
+      pushAnswer(next, s);
     },
-    [pushAnswer, userOpt],
+    [order, pushAnswer, userOpt],
   );
 
   const options = question.options ?? [];
@@ -272,8 +264,8 @@ function OpenText({ question, onAnswerChange }: Props) {
 
   return (
     <View style={styles.openWrap}>
-      {(question.open_prompts ?? []).map((p, i) => (
-        <Serif key={i} size={13} italic style={styles.openPrompt}>
+      {(question.open_prompts ?? []).map((p) => (
+        <Serif key={p} size={13} italic style={styles.openPrompt}>
           <RichText text={p} />
         </Serif>
       ))}
@@ -392,8 +384,8 @@ function CommitmentSetup({ question, onAnswerChange }: Props) {
       <Mono size={9} style={[styles.groupLabel, styles.groupLabelSpaced]}>
         C · 你的理由 + 退出条件
       </Mono>
-      {(question.open_prompts ?? []).map((p, i) => (
-        <Serif key={i} size={13} italic style={styles.openPrompt}>
+      {(question.open_prompts ?? []).map((p) => (
+        <Serif key={p} size={13} italic style={styles.openPrompt}>
           <RichText text={p} />
         </Serif>
       ))}

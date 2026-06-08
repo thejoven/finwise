@@ -14,7 +14,14 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, Modal, Pressable, StyleSheet, Text as RNText, View } from "react-native";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text as RNText,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import Animated, {
   Easing,
   runOnJS,
@@ -66,7 +73,9 @@ export function CategoryDropdown({
   onEdit,
   onClosed,
 }: Props) {
-  const [mounted, setMounted] = useState(visible);
+  // 初值 false: 这些下拉/弹层恒由父级以 visible=false 创建后再 toggle, 故不从 prop 派生 ——
+  // 打开时 effect 挂载并放入场动画, 关闭时放完退场再卸载.
+  const [mounted, setMounted] = useState(false);
   const progress = useSharedValue(0);
   const c = useThemeColors();
 
@@ -77,6 +86,9 @@ export function CategoryDropdown({
 
   useEffect(() => {
     if (visible) {
+      // 动画化 Modal 的挂载生命周期: 先挂载再放入场动画, 关闭时放完退场再卸载. Modal 在
+      // 动画前不可见, 不存在"旧值闪烁", 故 no-adjust-state 在此为误报.
+      // react-doctor-disable-next-line react-doctor/no-adjust-state-on-prop-change
       setMounted(true);
       progress.value = withTiming(1, { duration: 160, easing: Easing.out(Easing.cubic) });
     } else {
@@ -91,11 +103,10 @@ export function CategoryDropdown({
         },
       );
     }
-  }, [visible, progress]);
+  }, [visible, progress, notifyClosed]);
 
   // 屏幕尺寸 + 弹出方向: 锚点中心落在下半屏 → 向上弹, 否则向下弹.
-  const screenW = Dimensions.get("window").width;
-  const screenH = Dimensions.get("window").height;
+  const { width: screenW, height: screenH } = useWindowDimensions();
   const dropUp = anchor ? anchor.y + anchor.height / 2 > screenH / 2 : false;
 
   // 入场位移方向: 向下弹从上方 -6 落下; 向上弹从下方 +6 升起.
@@ -137,7 +148,8 @@ export function CategoryDropdown({
             ...verticalPos,
             backgroundColor: c.paper,
             borderColor: c.rule,
-            shadowColor: c.ink,
+            // 动态 resolved hex 色 → boxShadow 内联 (新架构跨平台投影, 取代旧 shadow*/elevation).
+            boxShadow: `0px 10px 22px ${c.ink}29`,
           },
           panelStyle,
         ]}
@@ -147,6 +159,8 @@ export function CategoryDropdown({
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* 分类菜单有界 (用户分类数, maxHeight 内滚动), ScrollView+map 足够; 长列表才需 FlatList. */}
+          {/* react-doctor-disable-next-line react-doctor/rn-no-scrollview-mapped-list */}
           {projects.map((p) => {
             const active = p.id === activeId;
             return (
@@ -211,11 +225,7 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     // borderColor 走内联 resolved hex (c.rule): Reanimated 不认 DynamicColorIOS 动态色.
     paddingVertical: theme.spacing.xs,
-    // 居中浮起用投影做层级提示
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.16,
-    shadowRadius: 22,
-    elevation: 12,
+    // 居中浮起用投影做层级提示 — boxShadow 在 Animated.View 内联 (色值是动态 resolved hex).
   },
   scroll: {
     maxHeight: 320,

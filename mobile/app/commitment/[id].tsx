@@ -16,7 +16,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
@@ -30,6 +30,7 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { formatIsoDate } from "@/shared/format";
 
@@ -79,7 +80,7 @@ export default function CommitmentScreen() {
     const slowTimer = setTimeout(() => setShowSlowSign(true), 200);
     try {
       await sign(commit.id);
-      router.replace("/(tabs)/inbox");
+      router.replace("/(tabs)/caizhi");
     } catch (err) {
       console.warn("[sign] failed:", err);
     } finally {
@@ -231,13 +232,15 @@ function FinalDecision({ thesis, choice, note, onChoice, onNote }: FinalDecision
         })}
       </View>
       {choice === "user_input" ? (
-        <TextInput
+        <NativeField
           value={note}
           onChangeText={onNote}
           placeholder="例: 我接受买入但只用 3%, 因为这条信号还没穿过供应链层"
-          placeholderTextColor={theme.color.muted2}
           multiline
-          style={decisionStyles.noteInput}
+          minHeight={80}
+          bare
+          containerStyle={decisionStyles.noteBox}
+          inputStyle={decisionStyles.noteText}
         />
       ) : null}
     </View>
@@ -309,7 +312,7 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
       <SectionHeader label="退出条件" meta="EXIT" />
       <View style={styles.list}>
         {t.exit_conditions.map((c, i) => (
-          <View key={i} style={styles.listItem}>
+          <View key={c} style={styles.listItem}>
             <Mono size={11} style={styles.listMarker}>
               {roman(i + 1)}.
             </Mono>
@@ -323,7 +326,7 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
       <SectionHeader label="给未来的你" meta="REASONS" />
       <View style={styles.reasons}>
         {t.reasons_for_future_self.map((r, i) => (
-          <View key={i} style={styles.reasonItem}>
+          <View key={r} style={styles.reasonItem}>
             <Mono size={10} style={styles.reasonMarker}>
               § {i + 1}
             </Mono>
@@ -529,18 +532,18 @@ const decisionStyles = StyleSheet.create({
     color: theme.color.muted,
     letterSpacing: 0.5,
   },
-  noteInput: {
-    minHeight: 80,
-    fontFamily: "SourceSerif4-Regular",
-    fontSize: 14,
-    lineHeight: 22,
-    color: theme.color.ink,
+  noteBox: {
     borderLeftWidth: 2,
     borderLeftColor: theme.color.ink,
     backgroundColor: theme.color.paper3,
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    textAlignVertical: "top",
+  },
+  noteText: {
+    fontFamily: "SourceSerif4-Regular",
+    fontSize: 14,
+    lineHeight: 22,
+    color: theme.color.ink,
   },
 });
 

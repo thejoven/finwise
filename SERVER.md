@@ -15,7 +15,7 @@
 
 升级 iii 引擎 + console + iii-sdk 到 **0.16.1**. 三者现都跑 0.16.1, 全栈健康.
 
-- **动机**: 0.16.1 的 `fix(console): worker detail crash when worker has no functions array` ([PR #1710](https://github.com/iii-hq/iii/pull/1710)) 正是我们 [docs/iii-console-bug-report.md](docs/iii-console-bug-report.md) 记的那个 console 崩溃. 顺手升 engine + SDK 对齐.
+- **动机**: 0.16.1 的 `fix(console): worker detail crash when worker has no functions array` ([PR #1710](https://github.com/iii-hq/iii/pull/1710)) 正是我们 [docs/归档/iii-console-bug-report.md](docs/归档/iii-console-bug-report.md) 记的那个 console 崩溃. 顺手升 engine + SDK 对齐.
 - **⚠️ 非无痛补丁**: 0.16.1 把 SDK 导出的客户端类型 `IiiClient` 改名成 `ISdk` (release notes 未提). `mastra/src/iii/worker.ts` 不改类型导入会编译/启动失败. 已改 (import + 3 处注解), tsc 0 错; 生产日志确认 worker 正常注册、零类型报错.
 - **升级手法** (符合 GFW 约定):
   - engine: `docker compose pull iii && up -d iii` (registry mirror 直接拿到 0.16.1; `iiidata` volume 保留, 队列/状态不丢)

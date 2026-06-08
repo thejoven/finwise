@@ -1,4 +1,4 @@
-export { ProjectChipsRow, Chip, type ChipProps } from "./ProjectChipsRow";
+export { Chip, type ChipProps } from "./ProjectChipsRow";
 export { ProjectSelectModal } from "./ProjectSelectModal";
 export { ProjectBadge } from "./ProjectBadge";
 export { BottomCategoryCell } from "./BottomCategoryCell";

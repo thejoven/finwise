@@ -5,12 +5,12 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const RetrospectDim = z.enum(["perception", "inference", "evaluation", "execution"]);
+const RetrospectDim = z.enum(["perception", "inference", "evaluation", "execution"]);
 export type RetrospectDimT = z.infer<typeof RetrospectDim>;
 
-export const RetrospectState = z.enum(["pending", "in_progress", "finalized"]);
+const RetrospectState = z.enum(["pending", "in_progress", "finalized"]);
 
-export const AnswerEntry = z.object({
+const AnswerEntry = z.object({
   q: z.number().int().min(1).max(4),
   dim: RetrospectDim,
   choice: z.string(),
@@ -31,7 +31,7 @@ export const Retrospect = z.object({
 });
 export type Retrospect = z.infer<typeof Retrospect>;
 
-export const RetrospectList = z.object({
+const RetrospectList = z.object({
   retrospects: z.array(Retrospect),
 });
 

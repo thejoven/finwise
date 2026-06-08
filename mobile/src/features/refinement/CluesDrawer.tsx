@@ -17,7 +17,7 @@
  */
 
 import { useEffect } from "react";
-import { Dimensions, Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
+import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Animated, {
@@ -163,8 +163,6 @@ function computeStatusMeta({
   return "· 未检索到";
 }
 
-const SCREEN_HEIGHT = Dimensions.get("window").height;
-
 const styles = StyleSheet.create({
   layer: {
     zIndex: 100,
@@ -177,16 +175,11 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     right: 0,
-    height: SCREEN_HEIGHT,
+    // top:0 + bottom:0 已撑满高度 (容器为 absolute fill 全屏层), 不再显式取屏高.
     // backgroundColor / borderLeftColor 内联 resolved hex — Reanimated 不认动态色.
     borderLeftWidth: StyleSheet.hairlineWidth,
-    // iOS 阴影
-    shadowColor: "#000",
-    shadowOffset: { width: -3, height: 0 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    // Android 阴影
-    elevation: 12,
+    // 跨平台投影: 新架构 boxShadow 同时覆盖 iOS/Android, 取代旧 shadow*/elevation.
+    boxShadow: "-3px 0px 8px rgba(0,0,0,0.12)",
   },
   drawerInner: {
     flex: 1,

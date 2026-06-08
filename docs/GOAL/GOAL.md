@@ -15,7 +15,7 @@
 任何 AI Agent 开始任何任务前, **必须**先读这两份:
 
 1. **`AGENT_BRIEF.md`**(同级目录)— 给 AI 的元指令, 包括产品哲学、自由度边界、验收哲学
-2. **当前 Phase 的 overview.md** — 知道你在哪一阶段, 这阶段的整体目标
+2. **(历史)各 Phase 的 `overview.md` / `Mn-xxx.md`** — 三个 Phase 已建完, 任务单移至 [`归档/GOAL/`](../归档/GOAL/);回溯当初建造意图时再查
 
 不读直接开干 = 没读过题就交卷。
 
@@ -40,7 +40,7 @@
 | Phase | 周数 | 完成时我能做什么 |
 |---|---|---|
 | **Phase 1 · 安静** | W1-W8 | 我能每天往 APP 里写信号, AI 在后台推演, 但不打扰我 |
-| **Phase 2 · 仪式** | W9-W18 | AI 找我聊一条信号, 走五轮追问、四道门、最后签字 |
+| **Phase 2 · 仪式** | W9-W18 | AI 找我聊一条信号, 走五轮追问、投决会、最后签字 |
 | **Phase 3 · 镜子** | W19-W26 | 持仓期间 APP 陪我度过焦虑日, 到期后和我一起复盘 |
 
 每个 Phase 结束都有一周"自己用", 不准开始下个 Phase 的任何代码, 只用。
@@ -59,7 +59,7 @@ Phase 1 · 安静 (8 周)
 
 Phase 2 · 仪式 (10 周)
 ├─ M5 五轮追问对话      (W9-W11)   Mastra Socratic + RN UI + SSE
-├─ M6 四道门评估引擎    (W12-W13)  Gate Engine + 沉默归档 + 4 个池
+├─ M6 投决会评估引擎    (W12-W13)  Gate Engine + 沉默归档 + 4 个池
 ├─ M7 承诺书生成 + PDF  (W14-W15)  Narrator Agent + chromedp 渲染
 ├─ M8 签字流程 + 持仓   (W16-W17)  RN 签字页 + 持仓状态机
 └─ 自己用一周           (W18)
@@ -93,7 +93,7 @@ Phase 2
                    [ M5 五轮追问 ]
                             │
                             ▼
-                   [ M6 四道门评估 ]
+                   [ M6 投决会评估 ]
                             │
                             ▼
                    [ M7 承诺书 + PDF ]
@@ -214,28 +214,14 @@ W26 ⬜ Phase 3 自己用完
 
 ```
 GOAL/
-├── GOAL.md                          # 你正在看的这份
-├── AGENT_BRIEF.md                   # 给 AI 的元指令(必读)
-│
-├── phase-1-quiet/
-│   ├── 00-overview.md               # Phase 1 总览
-│   ├── M1-data-foundation.md        # 数据底座任务单
-│   ├── M2-signal-pipeline.md        # 信号管道任务单
-│   ├── M3-client-shell.md           # 客户端外壳任务单
-│   └── M4-end-to-end.md             # 端到端验证任务单
-│
-├── phase-2-ritual/
-│   ├── 00-overview.md
-│   ├── M5-socratic-refinement.md
-│   ├── M6-gate-engine.md
-│   ├── M7-commitment-book.md
-│   └── M8-signing-flow.md
-│
-└── phase-3-mirror/
-    ├── 00-overview.md
-    ├── M9-anxiety-companion.md
-    ├── M10-exit-monitor.md
-    └── M11-retrospect-training.md
+├── GOAL.md                          # 你正在看的这份(愿景 + 路线图)
+└── AGENT_BRIEF.md                   # 给 AI 的元指令(必读)
+
+# 三个 Phase 的建造任务单(M1-M11 + 两份 IMPLEMENTATION_PLAN)已建完, 归档至:
+归档/GOAL/
+├── phase-1-quiet/     # 00-overview + M1-M4
+├── phase-2-ritual/    # 00-overview + IMPLEMENTATION_PLAN + M5-M8
+└── phase-3-mirror/    # 00-overview + IMPLEMENTATION_PLAN + M9-M11
 ```
 
 ---

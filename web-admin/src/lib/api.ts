@@ -56,7 +56,7 @@ interface RequestOpts {
   signal?: AbortSignal;
 }
 
-export async function api<T = unknown>(
+async function api<T = unknown>(
   path: string,
   opts: RequestOpts = {},
 ): Promise<T> {
@@ -234,7 +234,7 @@ export interface RefinementSessionDetail extends RefinementSession {
   training_focus_text?: string;
 }
 
-// 四道门 (佐证 g1 · 共识 g2 · 时机 g3 · 能力圈 g4) 评估明细.
+// 投决会 · 四位分析师 (佐证 g1 · 共识 g2 · 时机 g3 · 能力圈 g4) 评估明细.
 export interface GateDetail {
   g1_thickness: { pass: boolean; count: number; detail?: string | null };
   g2_anti_consensus: {

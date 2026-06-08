@@ -26,7 +26,7 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	pub.GET("/evaluations/:id", h.get)
 	pub.GET("/pools/:pool", h.listPool)
 	pub.GET("/by-refinement/:refinement_id", h.getByRefinement)
-	// 用户从降噪页手动触发四道门 ("前置于四道门" 流程). 校验 ownership 后 detached 跑.
+	// 用户从降噪页手动触发投决会 ("前置于投决会" 流程). 校验 ownership 后 detached 跑.
 	pub.POST("/evaluate", h.evaluatePublic)
 
 	// 这个 endpoint 给运维 / 调试用 — 直接触发 Evaluate (不校验 ownership), 不走业务流.
@@ -183,7 +183,7 @@ func (h *Handler) evaluate(c *gin.Context) {
 	c.JSON(http.StatusOK, toEvaluationResponse(ev))
 }
 
-// evaluatePublic — 用户从降噪页点"进入四道门"时调. 校验 refinement 属于本人后,
+// evaluatePublic — 用户从降噪页点"上投决会"时调. 校验 refinement 属于本人后,
 // detached 跑评估 (含 4 次 LLM, 不让客户端干等), 立即 202. 评估结果之后照常
 // 通过 gate.passed → 承诺书草稿 → inbox callout 浮现.
 func (h *Handler) evaluatePublic(c *gin.Context) {

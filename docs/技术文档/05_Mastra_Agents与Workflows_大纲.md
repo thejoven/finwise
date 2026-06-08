@@ -68,7 +68,7 @@
 - Tools:rag-search
 
 **§ 3.3 Narrator (承诺书)**
-- 用途:四门全过后生成承诺书叙述
+- 用途:全票过会后生成承诺书叙述
 - System Prompt 全文 — 这是产品最重要的一段 prompt
 - 推荐模型:Claude Opus / GPT-4 (文案质量决定签字率)
 - Temperature 较高 (0.7)

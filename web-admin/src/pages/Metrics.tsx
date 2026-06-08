@@ -70,6 +70,7 @@ export function MetricsPage() {
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
             placeholder="过滤: http_requests / outbox / ..."
+            aria-label="按 name 或 labels 过滤指标"
             className="mb-3 h-9 w-full max-w-sm rounded-md border bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
           {q.isLoading && <Loading />}
@@ -85,8 +86,8 @@ export function MetricsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.slice(0, 500).map((l, i) => (
-                    <tr key={i} className="border-t">
+                  {filtered.slice(0, 500).map((l) => (
+                    <tr key={l.name + l.labels} className="border-t">
                       <td className="px-2 py-1 font-mono">{l.name}</td>
                       <td className="px-2 py-1 font-mono text-muted-foreground">{l.labels}</td>
                       <td className="px-2 py-1 text-right font-mono">{l.value}</td>

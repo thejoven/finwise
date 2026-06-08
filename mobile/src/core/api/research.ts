@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const MarketOutcome = z.object({
+const MarketOutcome = z.object({
   label: z.string(),
   /** 市场隐含概率, 0..1. */
   probability: z.number(),
@@ -22,7 +22,7 @@ export const MarketData = z.object({
 });
 export type MarketData = z.infer<typeof MarketData>;
 
-export const ResearchResult = z.object({
+const ResearchResult = z.object({
   title: z.string(),
   url: z.string(),
   description: z.string(),

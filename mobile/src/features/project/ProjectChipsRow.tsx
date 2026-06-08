@@ -1,100 +1,19 @@
 /**
- * ProjectChipsRow — 报刊头下的"分类条".
+ * Chip — 单个分类标签 (报刊感的细线胶囊).
  *
- * 视觉:
- *   [🧸 泡泡玛特] [🔋 新能源] ... [＋]
- *   - 不含"全部": 始终停在某一真实分类 (见 GOAL); active 恒为其中一项.
  *   - active: ink 填充 + paper 文字
- *   - inactive: paper2 + 细线 + ink 文字
- *   - 末尾 + 号: 打开 ProjectSelectModal (创建 / 管理)
- *   - 长按已有 chip 也打开 modal, 自动滚到该 project 用于改名/归档
+ *   - inactive: paper2 + 细线 + ink 文字 (有 color 时用其作描边)
  *
- * 数据:
- *   - 列表通过 react-query (queryKey ["projects"]) 拉
- *   - active 状态从 useActiveProject() store 读
- *   - 切换 active 同时把 react-query 的 attention 查询 invalidate (在 useEffect 里)
- *
- * 设计上保持 stateless, 让父组件 (Masthead / CollapsibleMasthead) 决定是否
- * 参与折叠动画.
+ * 目前由 capture 的 CategoryPicker 复用. (历史上的 ProjectChipsRow 横滑分类条已下线,
+ * 分类切换改走底栏 BottomCategoryCell + CategoryDropdown.)
  */
 
-import { useState } from "react";
-import { StyleSheet, View } from "react-native";
-import { ScrollView } from "react-native-gesture-handler";
-import { useQuery } from "@tanstack/react-query";
+import { StyleSheet } from "react-native";
 
-import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
-// 走具体文件而非 "@/shared/components" barrel: 该 barrel 经 Masthead 反向依赖本 feature,
-// 走 barrel 会形成 shared ⇄ feature 的 require cycle (Metro 告警). 具体路径切断回边.
-import { Icon } from "@/shared/components/Icon";
+// 走具体文件而非 "@/shared/components" barrel: 切断 shared ⇄ feature 的 require cycle.
 import { Sans } from "@/shared/components/Text";
 import { TapEffect } from "@/shared/components/TapEffect";
-
-import { useActiveProject } from "./store";
-import { ProjectSelectModal } from "./ProjectSelectModal";
-
-interface ProjectChipsRowProps {
-  /**
-   * 父容器是否自带 paddingHorizontal=lg. true 表示自己不再加横向 padding,
-   * 用于 Masthead 内嵌; false (默认) 用于 AttentionScreen 等无 padding 父.
-   */
-  parentPadded?: boolean;
-}
-
-export function ProjectChipsRow({ parentPadded = false }: ProjectChipsRowProps = {}) {
-  const activeId = useActiveProject((s) => s.activeId);
-  const setActive = useActiveProject((s) => s.setActive);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-
-  const { data: projects } = useQuery({
-    queryKey: ["projects"],
-    queryFn: listProjects,
-    staleTime: 60_000,
-  });
-
-  const items: ProjectView[] = projects ?? [];
-
-  const openCreate = () => {
-    setEditingId(null);
-    setModalOpen(true);
-  };
-  const openEdit = (id: string) => {
-    setEditingId(id);
-    setModalOpen(true);
-  };
-
-  return (
-    <View style={styles.wrap}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={parentPadded ? styles.rowBleed : styles.row}
-      >
-        {items.map((p) => (
-          <Chip
-            key={p.id}
-            label={p.emoji ? `${p.emoji} ${p.name}` : p.name}
-            active={activeId === p.id}
-            color={p.color ?? undefined}
-            onPress={() => void setActive(p.id)}
-            onLongPress={() => openEdit(p.id)}
-          />
-        ))}
-        <TapEffect onPress={openCreate} style={[styles.chip, styles.chipAdd]}>
-          <Icon name="plus" size={12} color={theme.color.ink2} strokeWidth={2} />
-        </TapEffect>
-      </ScrollView>
-
-      <ProjectSelectModal
-        visible={modalOpen}
-        editingId={editingId}
-        onClose={() => setModalOpen(false)}
-      />
-    </View>
-  );
-}
 
 export interface ChipProps {
   label: string;
@@ -124,23 +43,6 @@ export function Chip({ label, active, color, onPress, onLongPress }: ChipProps) 
 }
 
 const styles = StyleSheet.create({
-  wrap: {
-    paddingTop: 4,
-    paddingBottom: 6,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: theme.spacing.lg,
-    gap: theme.spacing.xs,
-  },
-  rowBleed: {
-    flexDirection: "row",
-    alignItems: "center",
-    // 父已自带 lg padding, 内层只需右侧加 padding 让滚到末尾时 "+" 不贴边.
-    paddingRight: theme.spacing.lg,
-    gap: theme.spacing.xs,
-  },
   chip: {
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: 4,
@@ -156,12 +58,6 @@ const styles = StyleSheet.create({
   chipInactive: {
     backgroundColor: theme.color.paper2,
     borderColor: theme.color.rule,
-  },
-  chipAdd: {
-    backgroundColor: theme.color.paper,
-    borderColor: theme.color.rule,
-    paddingHorizontal: theme.spacing.xs,
-    width: 28,
   },
   labelActive: {
     color: theme.color.paper,

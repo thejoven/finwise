@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 
 import { Display, Serif, Sans, TapEffect, DoubleRule } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { CaptureCategoryPicker, useCaptureSignal } from "@/features/capture";
 import { useActiveProject } from "@/features/project";
@@ -60,16 +61,16 @@ export default function CaptureModal() {
             选个分类放好, 字句不必精确。
           </Serif>
 
-          <TextInput
+          <NativeField
             value={text}
             onChangeText={setText}
             placeholder="今天看到什么…"
-            placeholderTextColor={theme.color.muted2}
             multiline
             autoFocus
             maxLength={2000}
-            style={styles.input}
-            scrollEnabled
+            bare
+            containerStyle={styles.inputWrap}
+            inputStyle={styles.input}
           />
         </View>
 
@@ -116,6 +117,7 @@ const styles = StyleSheet.create({
     marginTop: theme.spacing.md,
     marginBottom: theme.spacing.lg,
   },
+  inputWrap: { flex: 1 },
   input: {
     flex: 1,
     minHeight: 120,

@@ -9,10 +9,10 @@ import { api } from "./client";
 
 // ───── Schemas ─────
 
-export const QuestionKind = z.enum(["single", "multi", "ordering", "open", "commitment_setup"]);
+const QuestionKind = z.enum(["single", "multi", "ordering", "open", "commitment_setup"]);
 export type QuestionKindT = z.infer<typeof QuestionKind>;
 
-export const OptionGroup = z.enum(["action", "duration"]);
+const OptionGroup = z.enum(["action", "duration"]);
 export type OptionGroupT = z.infer<typeof OptionGroup>;
 
 export const QuestionOption = z.object({
@@ -27,7 +27,7 @@ export const QuestionOption = z.object({
 });
 export type QuestionOption = z.infer<typeof QuestionOption>;
 
-export const DiagnosisKind = z.enum(["correct", "partial_miss", "distractor", "weak"]);
+const DiagnosisKind = z.enum(["correct", "partial_miss", "distractor", "weak"]);
 
 export const Diagnosis = z.object({
   kind: DiagnosisKind,
@@ -66,7 +66,7 @@ export const PendingQuestionPayload = z.object({
 });
 export type PendingQuestionPayload = z.infer<typeof PendingQuestionPayload>;
 
-export const PendingQuestion = z.object({
+const PendingQuestion = z.object({
   round: z.number().int().min(1).max(5),
   payload: PendingQuestionPayload,
 });
@@ -88,7 +88,7 @@ export const SessionResponse = z.object({
 });
 export type SessionResponse = z.infer<typeof SessionResponse>;
 
-export const AnswerResponse = z.object({
+const AnswerResponse = z.object({
   new_round: z.number().int(),
   completed: z.boolean(),
   decision: z.string().optional(),

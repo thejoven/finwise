@@ -1,9 +1,8 @@
 import { useCallback, useMemo, useState } from "react";
-import { RefreshControl, StyleSheet, View } from "react-native";
-import Animated from "react-native-reanimated";
-import { router } from "expo-router";
+import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CollapsibleMasthead, SectionHeader, Serif } from "@/shared/components";
+import { SectionHeader, Serif } from "@/shared/components";
 import {
   SignalRow,
   SilenceStamp,
@@ -11,26 +10,24 @@ import {
   useMergedSignals,
   type MergedSignal,
 } from "@/features/capture";
-import { InboxCallouts } from "@/features/inbox";
+// 走具体文件而非 "@/features/inbox" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
+// inbox/index ⇄ InboxView 的自引用 require cycle. 具体路径切断回边.
+import { InboxCallouts } from "@/features/inbox/Callouts";
 import { theme } from "@/core/theme";
-import { chineseMonthDay, chineseWeekday, isSameLocalDay, isoWeekOfYear } from "@/shared/format";
-import { useCollapsibleScroll } from "@/shared/hooks";
+import { isSameLocalDay, isoWeekOfYear } from "@/shared/format";
 
 /**
- * A1 收件箱 (M4).
+ * 信箱 (原「收件箱」) · 财知页内的第一张子页.
  *
- * - Animated.FlatList 渲染 server + local-pending 合并的列表
- * - 顶部 CollapsibleMasthead 浮层 absolute, 滚动时折叠 (跟 archive 一样)
- * - 下拉刷新触发 refetch
- * - useMergedSignals 内部每 10s 轮询, 看 inference_status 是否回写
- * - 空状态文案接纳式, 不催促
+ * 内容与旧 inbox 屏一致 —— server + local-pending 合并列表, 顶部沉默戳 + callouts +
+ * 「本周记录」段, 下拉刷新, 每 10s 轮询看 inference_status 回写. 唯一区别: 报头/卷号戳
+ * /记录入口已上移到财知 host 的固定 CaizhiHeader, 本视图不再自带 CollapsibleMasthead.
  *
- * 关于 paddingBottom: NativeTabs 在 iOS 是原生 UITabBarController, 这里手动给
- * ScrollView 加足够 paddingBottom (tab bar ~49 + safe-area bottom), 否则最后一条
- * 会被半透明 glass tab bar 盖住. Android 同理 (Material 56dp).
+ * 布局: 作为 PagerView 的一页, 顶部紧接吸顶分段栏, 故只留一点呼吸 (spacing.md);
+ *   底部仍留 insets.bottom + 64 给悬浮的灵动岛 tab bar 让位.
  */
-export default function InboxScreen() {
-  const { scrollY, onScroll, headerPad, bottomPad } = useCollapsibleScroll();
+export function InboxView() {
+  const insets = useSafeAreaInsets();
   const { data, refetch, isLoading } = useMergedSignals();
   const [refreshing, setRefreshing] = useState(false);
 
@@ -44,8 +41,6 @@ export default function InboxScreen() {
 
   const today = useMemo(() => new Date(), []);
   const isoWeek = isoWeekOfYear(today);
-  const monthDay = chineseMonthDay(today);
-  const weekday = chineseWeekday(today);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -56,15 +51,27 @@ export default function InboxScreen() {
     }
   }, [refetch]);
 
+  const bottomPad = insets.bottom + 64;
+
+  // 提到 useMemo: 否则每次 render 都 new 一个 RefreshControl 元素 (jsx-no-jsx-as-prop).
+  const refreshControl = useMemo(
+    () => (
+      <RefreshControl
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        tintColor={theme.color.ink}
+      />
+    ),
+    [refreshing, handleRefresh],
+  );
+
   return (
     <View style={styles.root}>
-      <Animated.FlatList<MergedSignal>
+      <FlatList<MergedSignal>
         data={data}
         keyExtractor={keyExtractor}
         renderItem={renderItem}
         ItemSeparatorComponent={Separator}
-        onScroll={onScroll}
-        scrollEventThrottle={16}
         ListHeaderComponent={
           <View>
             <SilenceStamp todayCount={todayCount} edition={isoWeek} />
@@ -83,27 +90,11 @@ export default function InboxScreen() {
             </Serif>
           </View>
         }
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={handleRefresh}
-            tintColor={theme.color.ink}
-            progressViewOffset={headerPad}
-          />
-        }
+        refreshControl={refreshControl}
         contentContainerStyle={[
-          { paddingTop: headerPad, paddingBottom: bottomPad },
+          { paddingTop: theme.spacing.md, paddingBottom: bottomPad },
           data.length === 0 ? styles.flexScroll : undefined,
         ]}
-      />
-      <CollapsibleMasthead
-        volume="I"
-        edition={String(isoWeek)}
-        date={monthDay}
-        weekday={weekday}
-        onMenuPress={() => router.push("/colophon")}
-        onCapturePress={() => router.push("/capture")}
-        scrollY={scrollY}
       />
     </View>
   );

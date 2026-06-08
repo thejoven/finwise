@@ -9,8 +9,6 @@ export { RichText } from "./RichText";
 export { Icon } from "./Icon";
 export type { IconName, IconProps } from "./Icon";
 
-export { DoneAccessory } from "./DoneAccessory";
-
 export { TapEffect } from "./TapEffect";
 export type { TapEffectProps } from "./TapEffect";
 
@@ -25,16 +23,6 @@ export type { SectionHeaderProps } from "./SectionHeader";
 
 export { RomanList } from "./RomanList";
 export type { RomanListProps, RomanListItem } from "./RomanList";
-
-export { Masthead } from "./Masthead";
-export type { MastheadProps } from "./Masthead";
-
-export {
-  CollapsibleMasthead,
-  COLLAPSIBLE_MASTHEAD_EXPANDED,
-  COLLAPSIBLE_MASTHEAD_COLLAPSED,
-} from "./CollapsibleMasthead";
-export type { CollapsibleMastheadProps } from "./CollapsibleMasthead";
 
 export { DynamicIslandTabBar } from "./DynamicIslandTabBar";
 

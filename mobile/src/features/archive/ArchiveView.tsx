@@ -1,34 +1,31 @@
 /**
- * 档案 tab · 沉默归档 + 复盘历史.
+ * 归档 · 财知页第三张子页 · 沉默归档 + 复盘历史.
  *
- * 顶部和收件箱共用同一个 CollapsibleMasthead — 同样的 absolute 浮层 + 滚动折叠.
- *
- * 把 4 道门归档池合并为 2 组, 每组加口语化说明:
+ * 把投决会四位分析师的归档池合并为 2 组, 每组加口语化说明:
  *   · "还在等" = observation (信号不够厚) + calendar (窗口未到)
  *   · "已经放下" = lesson (能力圈外) + discard (市场已定价)
- *
  * 下半部: 已 finalized 的复盘列表.
  *
- * 视觉: 报刊感. 不弹 toast, 不显示 "no archives 😢". 空状态用 italic 文案接纳.
+ * 与旧 archive 屏唯一区别: 报头已上移到财知 host 的固定 CaizhiHeader, 本视图不再自带
+ *   CollapsibleMasthead. 作为 PagerView 一页, 顶部紧接吸顶分段栏 (留一点呼吸), 底部留
+ *   insets.bottom + 64 给悬浮的灵动岛 tab bar 让位.
  *
- * 关于 paddingBottom: NativeTabs 是 native UITabBarController + glass, 不会自动给
- * scrollview 加 bottom inset. 手动给 ScrollView 留出 tab bar (~49) + safe-area bottom
- * 的空间, 否则最后一条复盘 / pool 行会被半透明 glass tab bar 盖住.
+ * 视觉: 报刊感. 不弹 toast, 不显示 "no archives 😢". 空状态用 italic 文案接纳.
  */
 
 import { useMemo } from "react";
-import { StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
-import { router } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CollapsibleMasthead, Mono, SectionHeader, Serif } from "@/shared/components";
-import { chineseMonthDay, chineseWeekday, isoWeekOfYear } from "@/shared/format";
-import { useGatePool, type GateEvaluation } from "@/features/archive";
+import { Mono, SectionHeader, Serif } from "@/shared/components";
+// 走具体文件而非 "@/features/archive" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
+// archive/index ⇄ ArchiveView 的自引用 require cycle. 具体路径切断回边.
+import { useGatePool, type GateEvaluation } from "@/features/archive/hooks";
 import { useRetrospectList, type Retrospect } from "@/features/retrospect";
 import { analystByGate, type ArchivePoolT } from "@/core/api/gate";
 import { theme } from "@/core/theme";
 import { LIST_LAYOUT } from "@/shared/motion";
-import { useCollapsibleScroll } from "@/shared/hooks";
 
 // 两个语义组. 每组合并多个底层 pool, 用一句口语说人话.
 // pools 定为 [A, B] 定长元组, 让 GroupSection 里两次 useGatePool 顺序固定 (rules-of-hooks).
@@ -58,18 +55,21 @@ const GROUPS: PoolGroup[] = [
   },
 ];
 
-export default function ArchiveScreen() {
-  const { scrollY, onScroll, headerPad, bottomPad } = useCollapsibleScroll();
-  const today = useMemo(() => new Date(), []);
+export function ArchiveView() {
+  const insets = useSafeAreaInsets();
   const { data: retrospects } = useRetrospectList();
   const finalizedRetrospects = (retrospects ?? []).filter((r) => r.state === "finalized");
 
   return (
     <View style={styles.root}>
-      <Animated.ScrollView
-        onScroll={onScroll}
-        scrollEventThrottle={16}
-        contentContainerStyle={{ paddingTop: headerPad, paddingBottom: bottomPad }}
+      <ScrollView
+        // 这是带固定段落的滚动页 (非重排列表), 底部安全区 padding 只随旋转/安全区变化 (极少),
+        // contentInset 是 iOS-only 且语义不同, 故此处保留 contentContainerStyle padding.
+        contentContainerStyle={{
+          // react-doctor-disable-next-line react-doctor/rn-scrollview-dynamic-padding
+          paddingTop: theme.spacing.md,
+          paddingBottom: insets.bottom + 64,
+        }}
       >
         <View style={styles.section}>
           <SectionHeader label="沉默归档" meta="没进承诺书的, 都在这里" />
@@ -78,6 +78,8 @@ export default function ArchiveScreen() {
           </Serif>
         </View>
 
+        {/* GROUPS 是静态的 2 项模块常量, 整页是带异构段落的滚动页 (非长列表) —— ScrollView 正确. */}
+        {/* react-doctor-disable-next-line react-doctor/rn-no-scrollview-mapped-list */}
         {GROUPS.map((g) => (
           <GroupSection key={g.label} group={g} />
         ))}
@@ -96,17 +98,7 @@ export default function ArchiveScreen() {
             </View>
           )}
         </View>
-      </Animated.ScrollView>
-
-      <CollapsibleMasthead
-        volume="I"
-        edition={String(isoWeekOfYear(today))}
-        date={chineseMonthDay(today)}
-        weekday={chineseWeekday(today)}
-        onMenuPress={() => router.push("/colophon")}
-        onCapturePress={() => router.push("/capture")}
-        scrollY={scrollY}
-      />
+      </ScrollView>
     </View>
   );
 }

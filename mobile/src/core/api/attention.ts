@@ -5,7 +5,7 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const AttentionSummaryRow = z.object({
+const AttentionSummaryRow = z.object({
   refinement_id: z.string().uuid(),
   focus_score: z.number().int().min(0).max(100),
   depth_score: z.number().int().min(0).max(100),
@@ -17,13 +17,13 @@ export const AttentionSummaryRow = z.object({
 });
 export type AttentionSummaryRow = z.infer<typeof AttentionSummaryRow>;
 
-export const TagFreq = z.object({
+const TagFreq = z.object({
   tag: z.string(),
   count: z.number().int().nonnegative(),
 });
 export type TagFreq = z.infer<typeof TagFreq>;
 
-export const AttentionSummary = z.object({
+const AttentionSummary = z.object({
   window: z.string(),
   total_completed: z.number().int().nonnegative(),
   average_focus_score: z.number().int().min(0).max(100),

@@ -6,10 +6,10 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const CommitmentAction = z.enum(["buy", "sell", "hold"]);
+const CommitmentAction = z.enum(["buy", "sell", "hold"]);
 export type CommitmentActionT = z.infer<typeof CommitmentAction>;
 
-export const Thesis = z.object({
+const Thesis = z.object({
   asset_ticker: z.string(),
   asset_name: z.string(),
   action: CommitmentAction,
@@ -21,7 +21,7 @@ export const Thesis = z.object({
 });
 export type Thesis = z.infer<typeof Thesis>;
 
-export const CommitmentStatus = z.enum(["drafted", "signed", "postponed", "abandoned"]);
+const CommitmentStatus = z.enum(["drafted", "signed", "postponed", "abandoned"]);
 
 export const Commitment = z.object({
   id: z.string().uuid(),
@@ -36,7 +36,7 @@ export const Commitment = z.object({
 });
 export type Commitment = z.infer<typeof Commitment>;
 
-export const HoldingStatus = z.enum(["active", "triggered", "expired", "closed", "archived"]);
+const HoldingStatus = z.enum(["active", "triggered", "expired", "closed", "archived"]);
 
 export const Holding = z.object({
   id: z.string().uuid(),
@@ -51,7 +51,7 @@ export const Holding = z.object({
 });
 export type Holding = z.infer<typeof Holding>;
 
-export const SignResponse = z.object({
+const SignResponse = z.object({
   commitment: Commitment,
   holding: Holding.optional(),
 });

@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const ArchivePool = z.enum(["observation", "lesson", "calendar", "discard"]);
+const ArchivePool = z.enum(["observation", "lesson", "calendar", "discard"]);
 export type ArchivePoolT = z.infer<typeof ArchivePool>;
 
 const GateG1 = z.object({
@@ -46,7 +46,7 @@ const GateG4 = z.object({
   detail: z.string().nullable().optional(),
 });
 
-export const GateDetail = z.object({
+const GateDetail = z.object({
   g1_thickness: GateG1,
   g2_anti_consensus: GateG2,
   g3_window: GateG3,
@@ -100,7 +100,7 @@ export async function listGatePool(
   return PoolListResponse.parse(json).evaluations;
 }
 
-export async function getGateEvaluation(id: string): Promise<GateEvaluation> {
+async function getGateEvaluation(id: string): Promise<GateEvaluation> {
   const json = await api.get(`v1/gate/evaluations/${id}`).json();
   return GateEvaluation.parse(json);
 }

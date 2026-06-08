@@ -14,7 +14,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { Dimensions, ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
@@ -32,11 +32,11 @@ import { makeBaseChartConfig, makeDimensionColors, makePiePalette, hexToRgba } f
 const WINDOWS: WindowKey[] = ["7d", "30d", "all"];
 const WINDOW_LABEL: Record<WindowKey, string> = { "7d": "7 天", "30d": "30 天", all: "全部" };
 
-// chart 宽度 = 屏宽 - 2 * lg padding
-const CHART_WIDTH = Dimensions.get("window").width - 2 * theme.spacing.lg;
-
 export function AttentionScreen() {
   const [window, setWindow] = useState<WindowKey>("30d");
+  // chart 宽度 = 屏宽 - 2 * lg padding (用 hook 而非 Dimensions.get, 随旋转/分屏自适应)
+  const { width } = useWindowDimensions();
+  const chartWidth = width - 2 * theme.spacing.lg;
   // NativeTabs glass bar ~49pt + home indicator (insets.bottom). 与 inbox 一致.
   const insets = useSafeAreaInsets();
   const bottomPad = insets.bottom + 64;
@@ -142,7 +142,7 @@ export function AttentionScreen() {
                     },
                   ],
                 }}
-                width={CHART_WIDTH}
+                width={chartWidth}
                 height={180}
                 yAxisLabel=""
                 yAxisSuffix=""
@@ -206,7 +206,7 @@ export function AttentionScreen() {
                     ],
                     legend: ["专注", "深度", "广度", "执行"],
                   }}
-                  width={CHART_WIDTH}
+                  width={chartWidth}
                   height={220}
                   yAxisSuffix=""
                   fromZero
@@ -244,7 +244,7 @@ export function AttentionScreen() {
                     legendFontColor: c.ink2,
                     legendFontSize: 11,
                   }))}
-                  width={CHART_WIDTH}
+                  width={chartWidth}
                   height={200}
                   chartConfig={baseChartConfig}
                   accessor="count"

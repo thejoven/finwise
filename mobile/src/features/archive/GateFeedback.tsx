@@ -1,5 +1,5 @@
 /**
- * 分析师评审反馈卡 — signal 详情页底部. (原"四道门"反馈卡; 底层数据仍是 g1..g4)
+ * 投决会评审反馈卡 — signal 详情页底部. (原"四道门"反馈卡; 底层数据仍是 g1..g4)
  *
  * 状态:
  *   · 还没评估 (refinement 完成后异步触发, 可能滞后几秒) → 显示 "等待评估"
@@ -110,8 +110,8 @@ function DirectionList({ directions }: { directions?: UnpricedDirection[] }) {
       <Mono size={10} style={styles.directionsLabel}>
         未被定价的方向
       </Mono>
-      {directions.map((d, i) => (
-        <View key={i} style={styles.directionItem}>
+      {directions.map((d) => (
+        <View key={d.angle} style={styles.directionItem}>
           <Sans size={12} weight="600" style={styles.directionAngle}>
             {d.angle}
           </Sans>
@@ -134,7 +134,7 @@ function DirectionList({ directions }: { directions?: UnpricedDirection[] }) {
 type GateStatus = "pass" | "fail" | "skipped";
 
 function gateStatus(gateId: 1 | 2 | 3 | 4, ev: GateEvaluation): GateStatus {
-  // 失败那道门标 fail, 失败之后的门没跑算 skipped, 之前的都是 pass.
+  // 失败那位分析师标 fail, 之后的没跑算 skipped, 之前的都是 pass.
   const failed = ev.failed_gate ?? null;
   if (failed === null) return "pass";
   if (gateId < failed) return "pass";

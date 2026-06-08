@@ -213,9 +213,9 @@ func run() error {
 	workerCtx, workerCancel := context.WithCancel(ctx)
 	defer workerCancel()
 
-	// gate 评估不再自动触发. 改成"前置于四道门": refinement 完成后先进降噪页
+	// gate 评估不再自动触发. 改成"前置于投决会": refinement 完成后先进降噪页
 	// (mastra post-refinement: distiller + beneficiary), 由用户在降噪页手动点
-	// "进入四道门"才走 gate (POST /v1/gate/evaluate → gateSvc.EvaluateDetached).
+	// "上投决会"才走 gate (POST /v1/gate/evaluate → gateSvc.EvaluateDetached).
 	// attention-analyze 仍由 iii 在 refinement.completed 上照常跑, 不受影响.
 	outbox := iiix.NewOutboxWorker(pool, iiiClient, logger, iiix.OutboxConfig{
 		PollInterval: cfg.OutboxPollInterval,

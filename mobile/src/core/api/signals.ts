@@ -8,7 +8,7 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const RelatedAsset = z.object({
+const RelatedAsset = z.object({
   ticker: z.string(),
   rationale: z.string(),
   order: z.string(),
@@ -28,7 +28,7 @@ export const SignalView = z.object({
 });
 export type SignalView = z.infer<typeof SignalView>;
 
-export const SignalList = z.object({
+const SignalList = z.object({
   signals: z.array(SignalView),
   has_more: z.boolean(),
 });

@@ -42,7 +42,6 @@ function StatusBadge({ s }: { s: string }) {
 }
 
 export function CommitmentsPage() {
-  const qc = useQueryClient();
   const { toast } = useToast();
   const [filter, setFilter] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
@@ -143,16 +142,7 @@ export function CommitmentsPage() {
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setOpenId(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
-          {selected && (
-            <CommitmentDetail
-              c={selected}
-              onDone={() => {
-                qc.invalidateQueries({ queryKey: ["commitments"] });
-                qc.invalidateQueries({ queryKey: ["holdings"] });
-              }}
-              toast={toast}
-            />
-          )}
+          {selected && <CommitmentDetail c={selected} toast={toast} />}
         </DialogContent>
       </Dialog>
     </div>
@@ -161,13 +151,12 @@ export function CommitmentsPage() {
 
 function CommitmentDetail({
   c,
-  onDone,
   toast,
 }: {
   c: CommitmentRow;
-  onDone: () => void;
   toast: ReturnType<typeof useToast>["toast"];
 }) {
+  const qc = useQueryClient();
   const t = c.thesis;
   const [reason, setReason] = React.useState("");
 
@@ -175,7 +164,8 @@ function CommitmentDetail({
     mutationFn: () => wiseflow.commitments.sign(c.id, uuidv4()),
     onSuccess: () => {
       toast({ title: "已签字", description: "已翻面为持仓.", variant: "success" });
-      onDone();
+      qc.invalidateQueries({ queryKey: ["commitments"] });
+      qc.invalidateQueries({ queryKey: ["holdings"] });
     },
     onError: (err) =>
       toast({ title: "签字失败", description: String(err), variant: "destructive" }),
@@ -184,7 +174,8 @@ function CommitmentDetail({
     mutationFn: () => wiseflow.commitments.postpone(c.id, uuidv4(), reason || undefined),
     onSuccess: () => {
       toast({ title: "已推迟", variant: "success" });
-      onDone();
+      qc.invalidateQueries({ queryKey: ["commitments"] });
+      qc.invalidateQueries({ queryKey: ["holdings"] });
     },
     onError: (err) =>
       toast({ title: "推迟失败", description: String(err), variant: "destructive" }),
@@ -214,8 +205,8 @@ function CommitmentDetail({
           <div>
             <p className="mb-1 text-xs text-muted-foreground">退出条件</p>
             <ul className="list-disc space-y-0.5 pl-5">
-              {(t.exit_conditions ?? []).map((e, i) => (
-                <li key={i}>{e}</li>
+              {(t.exit_conditions ?? []).map((e) => (
+                <li key={e}>{e}</li>
               ))}
             </ul>
           </div>
@@ -223,8 +214,8 @@ function CommitmentDetail({
           <div>
             <p className="mb-1 text-xs text-muted-foreground">给未来自己的理由 (原话)</p>
             <ul className="list-disc space-y-0.5 pl-5">
-              {(t.reasons_for_future_self ?? []).map((r, i) => (
-                <li key={i} className="text-muted-foreground">
+              {(t.reasons_for_future_self ?? []).map((r) => (
+                <li key={r} className="text-muted-foreground">
                   {r}
                 </li>
               ))}

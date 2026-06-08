@@ -86,7 +86,7 @@ export function ProjectBadge({
       onPress={() => {
         // setActive 内存态同步生效 (持久化失败也不影响本次), 再跳回首页按分类过滤.
         void setActive(p.id);
-        router.navigate("/(tabs)/inbox");
+        router.navigate("/(tabs)/caizhi");
       }}
       accessibilityLabel={`按分类「${p.name}」筛选`}
     >

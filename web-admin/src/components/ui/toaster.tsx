@@ -58,8 +58,10 @@ export function Toaster({ children }: { children: React.ReactNode }) {
     }, dur);
   }, []);
 
+  const ctxValue = React.useMemo(() => ({ toast }), [toast]);
+
   return (
-    <ToastContext.Provider value={{ toast }}>
+    <ToastContext.Provider value={ctxValue}>
       <ToastPrimitive.Provider swipeDirection="right">
         {children}
         {items.map((item) => (

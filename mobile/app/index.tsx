@@ -8,10 +8,10 @@ import { getDevBearer } from "@/core/auth/devBearer";
  *
  * Expo Router 把 `/` 路径解析到这个文件. 这里基于 auth store:
  *   - 没 token → 跳 /login
- *   - 有 token → 跳 /(tabs)/inbox
+ *   - 有 token → 跳 /(tabs)/caizhi
  *
  * dev fallback (默认关闭): 只有显式开了 EXPO_PUBLIC_DEV_AUTOLOGIN 才会用
- * dev bearer 直接进 inbox — 给单用户调试模式. 详见 @/core/auth/devBearer.
+ * dev bearer 直接进 caizhi — 给单用户调试模式. 详见 @/core/auth/devBearer.
  *
  * _layout.tsx 已经 await hydrate, 所以这里 useAuth() 拿到的就是最终状态.
  */
@@ -21,5 +21,5 @@ export default function Index() {
   if (!token && !getDevBearer()) {
     return <Redirect href="/login" />;
   }
-  return <Redirect href="/(tabs)/inbox" />;
+  return <Redirect href="/(tabs)/caizhi" />;
 }

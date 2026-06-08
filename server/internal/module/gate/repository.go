@@ -1,13 +1,16 @@
-// Package gate is the M6 四道门评估 module.
+// Package gate is the M6 投决会 (四位分析师) 评估 module.
 //
-// 评估主体是确定性 Go 规则引擎. 只有 G2 反共识需要 LLM (M6.5 引入 Mastra).
+// 评估主体是 Go 编排, 四位分析师 (G1 厚度 / G2 共识 / G3 时机 / G4 能力圈) 的判断
+// 都由 LLM (Mastra agent) 给出 (ADR 0005); Mastra 不可用 / 超时才回退启发式兜底.
 //
 // 数据流:
 //
-//	refinement.completed → 内部 consumer 触发 Service.Evaluate(refinementID)
-//	→ 串行跑 G1, G2, G3, G4
-//	→ 任一门失败立即 ArchiveSilently (写 gate.archived event, 但不在 client 可见 subject 发)
-//	→ 全过 PassAndPromote (写 gate.evaluated + gate.passed, M7 narrator 会消费 gate.passed)
+//	用户在降噪页手动触发 POST /v1/gate/evaluate ("前置于投决会", 见 cmd/api/main.go)
+//	→ Service.EvaluateDetached → Evaluate(refinementID)
+//	→ 四位分析师 sync.WaitGroup 并行审核 (见 service.go, 非串行)
+//	→ 任一位否决立即 ArchiveSilently (写 gate.archived event, 但不在 client 可见 subject 发)
+//	→ 全票过会 PassAndPromote (写 gate.evaluated + gate.passed; gate.passed 经 outbox → iii
+//	  commitment-draft 队列, 由 M7 narrator 生成承诺书草稿)
 package gate
 
 import (
@@ -228,7 +231,7 @@ func (r *Repository) GetByID(ctx context.Context, userID, id uuid.UUID) (*Evalua
 }
 
 // GetByRefinementID 按 refinement_id 拿用户的 evaluation. 客户端 signal 详情页用,
-// 把"通过 / 哪道门没过"的结果展示在信号底部. 没有 → ErrNotFound.
+// 把"过会 / 哪位分析师否决"的结果展示在信号底部. 没有 → ErrNotFound.
 func (r *Repository) GetByRefinementID(ctx context.Context, userID, refinementID uuid.UUID) (*Evaluation, error) {
 	const q = `
 		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at

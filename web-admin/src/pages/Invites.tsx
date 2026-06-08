@@ -43,6 +43,20 @@ const STATUS_BADGE: Record<
   revoked: { label: "已吊销", variant: "destructive" },
 };
 
+// 新建邀请码的表单状态 (三个输入字段 + 刚生成的码), 一起重置, 用一个 reducer 管.
+interface InviteForm {
+  label: string;
+  maxUses: string; // 留空 = 不限次
+  expiresDays: string; // 留空 = 永不过期
+  created: InviteCodeRow | null; // 创建成功后高亮显示, 方便复制发给受邀人
+}
+
+const EMPTY_FORM: InviteForm = { label: "", maxUses: "1", expiresDays: "", created: null };
+
+function formReducer(s: InviteForm, patch: Partial<InviteForm>): InviteForm {
+  return { ...s, ...patch };
+}
+
 // 复制按钮: 点一下把文本写进剪贴板, 短暂显示 ✓ 反馈.
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = React.useState(false);
@@ -72,12 +86,9 @@ export function InvitesPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
   const [createOpen, setCreateOpen] = React.useState(false);
-  // 新建表单
-  const [label, setLabel] = React.useState("");
-  const [maxUses, setMaxUses] = React.useState("1"); // 留空 = 不限次
-  const [expiresDays, setExpiresDays] = React.useState(""); // 留空 = 永不过期
-  // 刚生成的码 (创建成功后在 dialog 里高亮显示, 方便复制发给受邀人)
-  const [created, setCreated] = React.useState<InviteCodeRow | null>(null);
+  // 新建表单 (三个字段 + 刚生成的码)
+  const [form, setForm] = React.useReducer(formReducer, EMPTY_FORM);
+  const { label, maxUses, expiresDays, created } = form;
 
   const q = useQuery({
     queryKey: ["admin", "invites"],
@@ -85,16 +96,13 @@ export function InvitesPage() {
   });
 
   function resetForm() {
-    setLabel("");
-    setMaxUses("1");
-    setExpiresDays("");
-    setCreated(null);
+    setForm(EMPTY_FORM);
   }
 
   const createMut = useMutation({
     mutationFn: (input: CreateInviteInput) => wiseflow.admin.invites.create(input),
     onSuccess: (row: InviteCodeRow) => {
-      setCreated(row);
+      setForm({ created: row });
       qc.invalidateQueries({ queryKey: ["admin", "invites"] });
     },
     onError: (err) => {
@@ -305,7 +313,7 @@ export function InvitesPage() {
                     id="invite-label"
                     placeholder="例如: 给老王 / 内测一批"
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
+                    onChange={(e) => setForm({ label: e.target.value })}
                     maxLength={80}
                   />
                 </div>
@@ -318,7 +326,7 @@ export function InvitesPage() {
                       min={1}
                       placeholder="留空 = 不限"
                       value={maxUses}
-                      onChange={(e) => setMaxUses(e.target.value)}
+                      onChange={(e) => setForm({ maxUses: e.target.value })}
                     />
                   </div>
                   <div className="space-y-1.5">
@@ -329,7 +337,7 @@ export function InvitesPage() {
                       min={1}
                       placeholder="留空 = 永久"
                       value={expiresDays}
-                      onChange={(e) => setExpiresDays(e.target.value)}
+                      onChange={(e) => setForm({ expiresDays: e.target.value })}
                     />
                   </div>
                 </div>

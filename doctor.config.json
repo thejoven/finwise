@@ -1,0 +1,8 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "comment": "Workspace-root config: react-doctor 在仓库根 (-y 扫两个子项目) 时不读子项目里的 doctor.config.json, 故这里再声明一遍, 让根扫描也对 mobile 生效. mobile/doctor.config.json 仍保留 (cd mobile 单独扫时用). textComponents 对 web-admin 无副作用 (非 react-native, rn-no-raw-text 不跑).",
+  "textComponents": ["Display", "Serif", "Sans", "Mono", "RNText", "T"],
+  "ignore": {
+    "files": ["**/shared/components/TabContextMenu.tsx"]
+  }
+}

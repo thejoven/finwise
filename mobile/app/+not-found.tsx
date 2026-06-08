@@ -14,8 +14,8 @@ export default function NotFound() {
         <Serif size={14} italic style={styles.note}>
           这条路径不存在, 或者还没建好。
         </Serif>
-        <Link href="/(tabs)/inbox" style={styles.link}>
-          <Serif size={13}>← 回收件箱</Serif>
+        <Link href="/(tabs)/caizhi" style={styles.link}>
+          <Serif size={13}>← 回信箱</Serif>
         </Link>
       </View>
     </>

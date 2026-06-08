@@ -20,7 +20,7 @@ import (
 	"wiseflow/server/internal/infra/mastra"
 )
 
-// Service 跑四位分析师审核 (原"四道门"). 入口是 Evaluate(refinementID).
+// Service 跑投决会评审 (四位分析师审核). 入口是 Evaluate(refinementID).
 type Service struct {
 	repo   *Repository
 	pool   *db.Pool // 直接查 events / signals / refinement_sessions, 跨模块只读
@@ -36,7 +36,7 @@ func NewService(repo *Repository, pool *db.Pool, mc *mastra.Client, logger *zap.
 }
 
 // OwnsRefinement 校验 refinementID 属于 userID. 给"用户手动触发评估"的 public
-// 端点 (降噪页"进入四道门") 做 ownership 关. 只读 refinement_sessions, 不评估.
+// 端点 (降噪页"上投决会") 做 ownership 关. 只读 refinement_sessions, 不评估.
 func (s *Service) OwnsRefinement(ctx context.Context, userID, refinementID uuid.UUID) (bool, error) {
 	const q = `SELECT 1 FROM refinement_sessions WHERE id = $1 AND user_id = $2`
 	var one int
@@ -49,7 +49,7 @@ func (s *Service) OwnsRefinement(ctx context.Context, userID, refinementID uuid.
 	return true, nil
 }
 
-// EvaluateDetached 后台跑四道门评估并记日志. 调用方需先 OwnsRefinement 校验.
+// EvaluateDetached 后台跑投决会评估并记日志. 调用方需先 OwnsRefinement 校验.
 // 不阻塞 HTTP 响应 — 评估含 4 次 LLM 往返, 客户端不该干等 (沉默优于发声, 降噪页
 // 不显示 loading). Evaluate 对 refinement_id 幂等, 重复触发不会重复跑 LLM.
 func (s *Service) EvaluateDetached(refinementID uuid.UUID) {

@@ -20,7 +20,7 @@ export const ProjectView = z.object({
 });
 export type ProjectView = z.infer<typeof ProjectView>;
 
-export const ProjectList = z.object({
+const ProjectList = z.object({
   projects: z.array(ProjectView),
 });
 export type ProjectList = z.infer<typeof ProjectList>;

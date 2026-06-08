@@ -26,6 +26,9 @@ export function getDB(): Promise<SQLite.SQLiteDatabase> {
 }
 
 async function openAndMigrate(): Promise<SQLite.SQLiteDatabase> {
+  // 这些 await 严格有序, 不可并行: 必须先开库拿到 db, 再设 PRAGMA, 最后跑迁移
+  // (建表/改表 must 先于后续读写). 故下行 async-parallel 是误报.
+  // react-doctor-disable-next-line react-doctor/async-parallel
   const db = await SQLite.openDatabaseAsync(DB_NAME);
   await db.execAsync(`PRAGMA journal_mode = WAL;`);
   await db.execAsync(`PRAGMA foreign_keys = ON;`);

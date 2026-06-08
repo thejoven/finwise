@@ -1,1 +1,1 @@
-export { useCompanion, useRecordOpen, type CompanionView, type OpenResponse } from "./hooks";
+export { useRecordOpen, type CompanionView, type OpenResponse } from "./hooks";

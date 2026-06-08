@@ -8,7 +8,7 @@ import { z } from "zod";
 
 import { api, apiAnon } from "./client";
 
-export const UserSchema = z.object({
+const UserSchema = z.object({
   id: z.string().uuid(),
   email: z.string(),
   display_name: z.string().nullable().optional(),
@@ -18,13 +18,13 @@ export const UserSchema = z.object({
 });
 export type UserDTO = z.infer<typeof UserSchema>;
 
-export const SessionSchema = z.object({
+const SessionSchema = z.object({
   token: z.string(),
   expires_at: z.string(),
 });
 export type SessionDTO = z.infer<typeof SessionSchema>;
 
-export const AuthResponseSchema = z.object({
+const AuthResponseSchema = z.object({
   user: UserSchema,
   session: SessionSchema,
 });

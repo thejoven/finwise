@@ -57,7 +57,7 @@
 
 - **iii 必须跑 docker**。0.16 原生二进制的 microVM 沙箱在 205 Ubuntu 上跟 sshd 抢网络命名空间,跑挂过两次 sshd;docker 镜像设 `III_EXECUTION_CONTEXT=docker`、worker 改回 in-process 绕开沙箱。
 - **iii-console 要自己 build**。上游不出 console 的 docker 镜像,用 [iii/Dockerfile.console](../../iii/Dockerfile.console) 把 musl 二进制装进 alpine;Mac 上必须 `buildx --platform linux/amd64` 再 save/load 上服务器。
-- **踩到一个上游 bug**。v0.16 console 在"有 function 但无 trigger 的 worker"上会崩,已起草上游 issue,见 [iii-console-bug-report.md](../iii-console-bug-report.md)。
+- **踩到一个上游 bug**。v0.16 console 在"有 function 但无 trigger 的 worker"上会崩,已起草上游 issue,见 [iii-console-bug-report.md](../归档/iii-console-bug-report.md)(已修复, 归档)。
 - **nonroot volume 权限坑**。iii 容器 user=65532,`iiidata` named volume 首次要 `chown 65532:65532` 才能持久化队列。
 - **Redis 留着但闲置**。compose 里还在,业务无依赖,可按需删。
 - 文档与代码:`server/internal/infra/iii/outbox.go` 取代 JetStream publish;`mastra/src/iii/worker.ts` 取代 `mastra/src/consumers/nats.ts`(已删)。

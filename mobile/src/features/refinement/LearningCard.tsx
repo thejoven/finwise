@@ -163,10 +163,10 @@ function TimelineNode({
           {title.toUpperCase()}
         </Mono>
         <View style={styles.resultStack}>
-          {record.results.map((r, idx) =>
+          {record.results.map((r) =>
             r.kind === "market" && r.market ? (
               <MarketRow
-                key={`${record.id}-${idx}`}
+                key={`${record.id}-${r.url}`}
                 title={r.title}
                 url={r.url}
                 age={r.age}
@@ -174,7 +174,7 @@ function TimelineNode({
               />
             ) : (
               <ResultRow
-                key={`${record.id}-${idx}`}
+                key={`${record.id}-${r.url}`}
                 title={r.title}
                 url={r.url}
                 description={r.description}
@@ -274,8 +274,8 @@ function MarketRow({
         {title}
       </Serif>
       <View style={styles.bars}>
-        {top.map((o, i) => (
-          <View key={i} style={styles.barRow}>
+        {top.map((o) => (
+          <View key={o.label} style={styles.barRow}>
             <Serif size={11} style={styles.barLabel} numberOfLines={1}>
               {o.label}
             </Serif>

@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { Link, router } from "expo-router";
 
 import { Display, DoubleRule, KeyboardForm, Sans, Serif, TapEffect } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { login, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
@@ -36,7 +37,7 @@ export default function LoginScreen() {
         expires_at: res.session.expires_at,
         user: res.user,
       });
-      router.replace("/(tabs)/inbox");
+      router.replace("/(tabs)/caizhi");
     } catch (err) {
       setError(await readErrorMessage(err));
     } finally {
@@ -59,34 +60,28 @@ export default function LoginScreen() {
           <Sans size={11} weight="600" style={styles.label}>
             邮箱
           </Sans>
-          <TextInput
+          <NativeField
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={theme.color.muted2}
             keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
             autoComplete="email"
             textContentType="emailAddress"
-            style={styles.input}
+            returnKeyType="next"
           />
 
           <Sans size={11} weight="600" style={styles.label}>
             密码
           </Sans>
-          <TextInput
+          <NativeField
             value={password}
             onChangeText={setPassword}
             placeholder="至少 8 位"
-            placeholderTextColor={theme.color.muted2}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
+            secure
             autoComplete="current-password"
             textContentType="password"
-            style={styles.input}
-            onSubmitEditing={handleSubmit}
+            returnKeyType="go"
+            onSubmit={handleSubmit}
           />
 
           {error ? (

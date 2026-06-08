@@ -1,0 +1,8 @@
+{
+  "$schema": "https://react.doctor/schema/config.json",
+  "textComponents": ["Display", "Serif", "Sans", "Mono", "RNText", "T"],
+  "ignore": {
+    "comment": "TabContextMenu.tsx 是非 iOS 平台兜底文件 (真正实现在 TabContextMenu.ios.tsx). 死代码分析按 iOS 解析时, 看不到本兜底导出被引用, 误报 unused-export —— 故整体排除这个 16 行兜底文件.",
+    "files": ["src/shared/components/TabContextMenu.tsx"]
+  }
+}

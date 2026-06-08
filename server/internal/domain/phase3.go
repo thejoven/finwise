@@ -9,7 +9,7 @@ import (
 
 // Phase 3 payload structs.
 //
-// 对齐 docs/GOAL/phase-3-mirror/IMPLEMENTATION_PLAN.md § 2.1. JSON tag snake_case.
+// 对齐 docs/归档/GOAL/phase-3-mirror/IMPLEMENTATION_PLAN.md § 2.1. JSON tag snake_case.
 
 // ───── M9 · companion ─────
 

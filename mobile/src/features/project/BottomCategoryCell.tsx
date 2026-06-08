@@ -15,7 +15,7 @@
  * 下拉框 (CategoryDropdown) 会因锚点在屏幕下半部而自动向上弹.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
@@ -28,12 +28,25 @@ import { haptic } from "@/core/haptics";
 import { Icon } from "@/shared/components/Icon";
 import { Sans } from "@/shared/components/Text";
 import { TapEffect } from "@/shared/components/TapEffect";
-import { IslandGlass, PILL_HEIGHT, PILL_RADIUS, glassOverlay } from "@/shared/components/glass";
+import { IslandGlass, PILL_HEIGHT, PILL_RADIUS } from "@/shared/components/glass";
+import { glassOverlay } from "@/shared/components/glass-overlay";
 
 import { useActiveProject } from "./store";
 import { useEnsureCategory } from "./useEnsureCategory";
 import { CategoryDropdown, type DropdownAnchor } from "./CategoryDropdown";
 import { ProjectSelectModal } from "./ProjectSelectModal";
+
+// ProjectSelectModal 的一坨相关状态 (开关 + 编辑目标 + 初始 stage) 总是成组改动,
+// 用 patch reducer 攒成一个: setForm({...}) 局部更新, 替代散开的三个 setState.
+interface FormState {
+  open: boolean;
+  editingId: string | null;
+  stage: "list" | "create";
+}
+type FormAction = Partial<FormState>;
+function formReducer(s: FormState, patch: FormAction): FormState {
+  return { ...s, ...patch };
+}
 
 export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   // 保证始终停在一个真实分类里 (无分类则自动创建默认分类).
@@ -47,9 +60,11 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [anchor, setAnchor] = useState<DropdownAnchor | null>(null);
 
-  const [formOpen, setFormOpen] = useState(false);
-  const [formEditingId, setFormEditingId] = useState<string | null>(null);
-  const [formStage, setFormStage] = useState<"list" | "create">("list");
+  const [form, setForm] = useReducer(formReducer, {
+    open: false,
+    editingId: null,
+    stage: "list",
+  });
 
   const activeId = useActiveProject((s) => s.activeId);
   const setActive = useActiveProject((s) => s.setActive);
@@ -104,9 +119,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
     if (!intent) return;
     pendingFormRef.current = null;
     requestAnimationFrame(() => {
-      setFormEditingId(intent.editingId);
-      setFormStage(intent.stage);
-      setFormOpen(true);
+      setForm({ editingId: intent.editingId, stage: intent.stage, open: true });
     });
   };
 
@@ -115,30 +128,34 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
       <View
         ref={triggerRef}
         collapsable={false}
-        style={[styles.cell, { borderColor: overlay.border }]}
+        style={[styles.cellFrame, { borderColor: overlay.border }]}
       >
-        <IslandGlass isDark={isDark} />
-        <TapEffect
-          onPress={openDropdown}
-          disableEffect
-          style={styles.trigger}
-          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-          accessibilityLabel={`当前分类「${active?.name ?? "未选择"}」, 点击切换`}
-        >
-          {active?.emoji ? (
-            <Sans size={11} style={styles.emoji}>
-              {active.emoji}
-            </Sans>
-          ) : (
-            <View style={[styles.dot, active?.color ? { backgroundColor: active.color } : null]} />
-          )}
-          <RNText allowFontScaling={false} style={styles.name} numberOfLines={1}>
-            {active?.name ?? "选择分类"}
-          </RNText>
-          <Animated.View style={arrowStyle}>
-            <Icon name="chevronUp" size={11} color={theme.color.muted} strokeWidth={2} />
-          </Animated.View>
-        </TapEffect>
+        {/* 触发器嵌在玻璃内 (非铺在上面), 与右侧 tab 岛一致: 按压/长按时玻璃液态反应. */}
+        <IslandGlass isDark={isDark} isInteractive style={styles.cellGlass}>
+          <TapEffect
+            onPress={openDropdown}
+            disableEffect
+            style={styles.trigger}
+            hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+            accessibilityLabel={`当前分类「${active?.name ?? "未选择"}」, 点击切换`}
+          >
+            {active?.emoji ? (
+              <Sans size={11} style={styles.emoji}>
+                {active.emoji}
+              </Sans>
+            ) : (
+              <View
+                style={[styles.dot, active?.color ? { backgroundColor: active.color } : null]}
+              />
+            )}
+            <RNText allowFontScaling={false} style={styles.name} numberOfLines={1}>
+              {active?.name ?? "选择分类"}
+            </RNText>
+            <Animated.View style={arrowStyle}>
+              <Icon name="chevronUp" size={11} color={theme.color.muted} strokeWidth={2} />
+            </Animated.View>
+          </TapEffect>
+        </IslandGlass>
       </View>
 
       <CategoryDropdown
@@ -154,13 +171,13 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
       />
 
       <ProjectSelectModal
-        visible={formOpen}
-        editingId={formEditingId}
-        initialStage={formStage}
-        onClose={() => setFormOpen(false)}
+        visible={form.open}
+        editingId={form.editingId}
+        initialStage={form.stage}
+        onClose={() => setForm({ open: false })}
         onProjectCreated={(id) => {
           void setActive(id);
-          setFormOpen(false);
+          setForm({ open: false });
         }}
       />
     </>
@@ -168,13 +185,18 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  cell: {
+  // 外层"画框": 只描边 + 裁圆角; 尺寸由内层 GlassView 撑开 (与 tab 岛同构, 长成一对).
+  cellFrame: {
+    borderRadius: PILL_RADIUS, // 半高 = 左右两侧完全圆形
+    borderWidth: StyleSheet.hairlineWidth, // GlassView 不画 border, 故描边落在这层
+    overflow: "hidden", // 裁掉玻璃圆角外的极小溢出
+    // borderColor 走内联 overlay.border (随明暗手动给).
+  },
+  // 内层玻璃 (容器): 撑出胶囊高度 + 居中内容; 圆角交 GlassView 原生处理.
+  cellGlass: {
     height: PILL_HEIGHT,
     justifyContent: "center",
-    borderRadius: PILL_RADIUS, // 半高 = 左右两侧完全圆形
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden", // 把玻璃背景层裁进药丸形
-    // borderColor 走内联 overlay.border (随明暗手动给).
+    borderRadius: PILL_RADIUS,
   },
   trigger: {
     flexDirection: "row",

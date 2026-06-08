@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { api } from "./client";
 
-export const CompanionReason = z.enum(["anxiety_3x", "anxiety_5x", "manual"]);
+const CompanionReason = z.enum(["anxiety_3x", "anxiety_5x", "manual"]);
 export type CompanionReasonT = z.infer<typeof CompanionReason>;
 
 export const CompanionView = z.object({

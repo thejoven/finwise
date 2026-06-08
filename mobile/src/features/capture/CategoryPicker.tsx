@@ -42,9 +42,13 @@ export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
     [projects],
   );
 
-  // 默认带入的 active 若已不在可选列表 (被归档/删除), 清空选中, 强制重选.
+  // 默认带入的 active 若已不在可选列表 (被归档/删除), 清空选中, 强制重选. 这是对**异步加载**
+  // 的 items 的校验, 没有触发它的本地用户事件; selectedId 是父级本地 state, 为此上 Provider
+  // 属过度设计 —— 故 no-event-handler / no-prop-callback-in-effect 在此为误报.
   useEffect(() => {
+    // react-doctor-disable-next-line react-doctor/no-event-handler
     if (selectedId && !isLoading && !items.some((p) => p.id === selectedId)) {
+      // react-doctor-disable-next-line react-doctor/no-prop-callback-in-effect
       onSelect(null);
     }
   }, [selectedId, items, isLoading, onSelect]);
@@ -65,6 +69,8 @@ export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
             还没有分类，先建一个
           </Serif>
         ) : null}
+        {/* 行内分类条有界 (用户分类数), 横向 ScrollView+map 足够; rn-no-scrollview-mapped-list 针对长列表. */}
+        {/* react-doctor-disable-next-line react-doctor/rn-no-scrollview-mapped-list */}
         {items.map((p) => (
           <Chip
             key={p.id}

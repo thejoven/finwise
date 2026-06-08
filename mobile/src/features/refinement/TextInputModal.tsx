@@ -21,11 +21,12 @@
  *   - Android 硬件返回键 → 视同取消
  */
 
-import { useEffect, useState } from "react";
-import { KeyboardAvoidingView, Modal, Platform, StyleSheet, TextInput, View } from "react-native";
+import { useRef, useState } from "react";
+import { KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { Display, DoubleRule, Mono, Serif, TapEffect } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 
 interface Props {
@@ -51,12 +52,16 @@ export function TextInputModal({
   onSave,
   onCancel,
 }: Props) {
-  const [draft, setDraft] = useState(value);
+  const [draft, setDraft] = useState("");
 
-  // 打开时把外部 value 同步到 draft (防止上次未保存的 draft 残留)
-  useEffect(() => {
-    if (visible) setDraft(value);
-  }, [visible, value]);
+  // 打开瞬间 (visible false→true) 把外部 value 复制进 draft —— 渲染期 prev 比较, 不用 effect
+  // (见 react.dev "你可能不需要 effect"). 只在"开"的那一刻同步: 开着时不被 value 变化覆盖,
+  // 也防止上次未保存的 draft 残留.
+  const wasVisible = useRef(false);
+  if (visible && !wasVisible.current) {
+    setDraft(value);
+  }
+  wasVisible.current = visible;
 
   return (
     <Modal
@@ -95,23 +100,22 @@ export function TextInputModal({
             <DoubleRule />
             {hints && hints.length > 0 ? (
               <View style={styles.hintBlock}>
-                {hints.map((h, i) => (
-                  <Serif key={i} size={13} italic style={styles.hint}>
+                {hints.map((h) => (
+                  <Serif key={h} size={13} italic style={styles.hint}>
                     {h}
                   </Serif>
                 ))}
               </View>
             ) : null}
-            <TextInput
+            <NativeField
               value={draft}
               onChangeText={setDraft}
               placeholder={placeholder}
-              placeholderTextColor={theme.color.muted2}
               multiline
               autoFocus
-              scrollEnabled
-              textAlignVertical="top"
-              style={styles.input}
+              bare
+              containerStyle={styles.inputWrap}
+              inputStyle={styles.input}
             />
             <View style={styles.footRow}>
               <Mono size={9} style={styles.charCount}>
@@ -176,6 +180,7 @@ const styles = StyleSheet.create({
     color: theme.color.muted,
     lineHeight: 20,
   },
+  inputWrap: { flex: 1 },
   input: {
     flex: 1,
     fontFamily: "SourceSerif4-Regular",

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,9 +11,10 @@ import { useToast } from "@/components/ui/toaster";
 
 export function SettingsPage() {
   const { toast } = useToast();
+  const qc = useQueryClient();
   const me = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
 
-  const [base, setBase] = React.useState(getApiBase());
+  const [base, setBase] = React.useState(() => getApiBase());
   const [token, setLocalToken] = React.useState(getToken() ?? "");
 
   const [oldPw, setOldPw] = React.useState("");
@@ -37,6 +38,7 @@ export function SettingsPage() {
         description: "为安全起见, 已吊销所有会话, 请重新登录.",
         variant: "success",
       });
+      qc.invalidateQueries({ queryKey: ["me"] });
       clearToken();
       setTimeout(() => location.reload(), 800);
     },

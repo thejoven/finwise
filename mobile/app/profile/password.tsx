@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ScrollView, StyleSheet, TextInput, View } from "react-native";
+import { useReducer } from "react";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 
 import {
@@ -11,6 +11,7 @@ import {
   Serif,
   TapEffect,
 } from "@/shared/components";
+import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
 import { changePassword, readErrorMessage } from "@/core/api/account";
 import { useAuth } from "@/core/auth/store";
@@ -19,30 +20,49 @@ import { formFieldStyles } from "@/shared/styles/form";
 /**
  * 修改密码 modal. 改密码后 server 会吊销所有 session, 客户端清 store + 跳 login.
  */
+
+// 改密表单一组相关状态 (三个输入 + 提交态/错误), 用 patch reducer 攒成一个,
+// setForm({...}) 局部更新, 替代散开的多个 setState.
+interface FormState {
+  oldPassword: string;
+  newPassword: string;
+  confirm: string;
+  pending: boolean;
+  error: string | null;
+}
+type FormAction = Partial<FormState>;
+function formReducer(s: FormState, patch: FormAction): FormState {
+  return { ...s, ...patch };
+}
+
 export default function PasswordScreen() {
   const clear = useAuth((s) => s.clear);
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useReducer(formReducer, {
+    oldPassword: "",
+    newPassword: "",
+    confirm: "",
+    pending: false,
+    error: null,
+  });
 
   const canSubmit =
-    oldPassword.length > 0 && newPassword.length >= 8 && newPassword === confirm && !pending;
+    form.oldPassword.length > 0 &&
+    form.newPassword.length >= 8 &&
+    form.newPassword === form.confirm &&
+    !form.pending;
 
   async function handleSubmit() {
     if (!canSubmit) return;
-    setPending(true);
-    setError(null);
+    setForm({ pending: true, error: null });
     try {
-      await changePassword({ old_password: oldPassword, new_password: newPassword });
+      await changePassword({ old_password: form.oldPassword, new_password: form.newPassword });
       // server 已经吊销全部 session — 客户端清掉并跳 login.
       await clear();
       router.replace("/login");
     } catch (err) {
-      setError(await readErrorMessage(err));
+      setForm({ error: await readErrorMessage(err) });
     } finally {
-      setPending(false);
+      setForm({ pending: false });
     }
   }
 
@@ -62,55 +82,50 @@ export default function PasswordScreen() {
         <Sans size={11} weight="600" style={styles.label}>
           原密码
         </Sans>
-        <TextInput
-          value={oldPassword}
-          onChangeText={setOldPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
+        <NativeField
+          value={form.oldPassword}
+          onChangeText={(text) => setForm({ oldPassword: text })}
+          secure
           placeholder="当前密码"
-          placeholderTextColor={theme.color.muted2}
-          style={styles.input}
+          autoComplete="current-password"
+          textContentType="password"
         />
 
         <Sans size={11} weight="600" style={styles.label}>
           新密码
         </Sans>
-        <TextInput
-          value={newPassword}
-          onChangeText={setNewPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
+        <NativeField
+          value={form.newPassword}
+          onChangeText={(text) => setForm({ newPassword: text })}
+          secure
           placeholder="至少 8 位"
-          placeholderTextColor={theme.color.muted2}
-          style={styles.input}
+          autoComplete="new-password"
+          textContentType="newPassword"
         />
 
         <Sans size={11} weight="600" style={styles.label}>
           确认新密码
         </Sans>
-        <TextInput
-          value={confirm}
-          onChangeText={setConfirm}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
+        <NativeField
+          value={form.confirm}
+          onChangeText={(text) => setForm({ confirm: text })}
+          secure
           placeholder="再输一次"
-          placeholderTextColor={theme.color.muted2}
-          style={styles.input}
-          onSubmitEditing={handleSubmit}
+          autoComplete="new-password"
+          textContentType="newPassword"
+          returnKeyType="go"
+          onSubmit={handleSubmit}
         />
 
-        {confirm.length > 0 && confirm !== newPassword ? (
+        {form.confirm.length > 0 && form.confirm !== form.newPassword ? (
           <Serif size={12} italic style={styles.errorSoft}>
             两次输入不一致。
           </Serif>
         ) : null}
 
-        {error ? (
+        {form.error ? (
           <Serif size={12} italic style={styles.error}>
-            {error}
+            {form.error}
           </Serif>
         ) : null}
       </ScrollView>
@@ -123,7 +138,7 @@ export default function PasswordScreen() {
           disabled={!canSubmit}
         >
           <Sans size={11} weight="700" style={styles.signLabel}>
-            {pending ? "保存中…" : "保存并退出"}
+            {form.pending ? "保存中…" : "保存并退出"}
           </Sans>
         </TapEffect>
       </View>

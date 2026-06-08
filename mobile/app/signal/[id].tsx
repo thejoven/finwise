@@ -342,7 +342,7 @@ function PendingRetry({
   onRetry: () => void;
 }) {
   // 每秒自重渲 — 让"是否超过 60s"的判断实时
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
