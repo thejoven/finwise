@@ -90,7 +90,7 @@ export function InvitesPage() {
   const [form, setForm] = React.useReducer(formReducer, EMPTY_FORM);
   const { label, maxUses, expiresDays, created } = form;
 
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "invites"],
     queryFn: wiseflow.admin.invites.list,
   });
@@ -139,7 +139,7 @@ export function InvitesPage() {
     createMut.mutate(input);
   }
 
-  const rows = q.data?.invites ?? [];
+  const rows = data?.invites ?? [];
   const activeCount = rows.filter((r) => r.status === "active").length;
 
   const maxUsesInvalid =
@@ -158,10 +158,10 @@ export function InvitesPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => q.refetch()}
-              disabled={q.isFetching}
+              onClick={() => refetch()}
+              disabled={isFetching}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
               刷新
             </Button>
             <Button
@@ -190,14 +190,14 @@ export function InvitesPage() {
             </div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && rows.length === 0 && <EmptyBox label="还没有邀请码 — 点右上角新建一个" />}
-          {q.data && rows.length > 0 && (
+          {data && rows.length === 0 && <EmptyBox label="还没有邀请码 — 点右上角新建一个" />}
+          {data && rows.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>

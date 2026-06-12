@@ -17,7 +17,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 
-import { DoubleRule, Icon, Mono, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
+import { DoubleRule, Icon, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 
 import {
@@ -53,7 +53,7 @@ export default function DistilledScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <Header sessionId={sessionId} />
+      <Header />
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* ── 降噪综述 ── */}
@@ -86,7 +86,7 @@ export default function DistilledScreen() {
 
 // ─────────────────────── Header ───────────────────────
 
-function Header({ sessionId }: { sessionId?: string }) {
+function Header() {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
@@ -95,11 +95,8 @@ function Header({ sessionId }: { sessionId?: string }) {
       </TapEffect>
       <View style={styles.headerCenter}>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          VOL. I · 降噪
+          降噪
         </Sans>
-        <Mono size={9} style={styles.headerProgress}>
-          {sessionId ? sessionId.slice(0, 8).toUpperCase() : ""}
-        </Mono>
       </View>
       <View style={styles.headerRight} />
     </View>
@@ -183,10 +180,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: "uppercase",
     color: theme.color.muted,
-  },
-  headerProgress: {
-    color: theme.color.muted2,
-    letterSpacing: 1,
   },
   headerRight: {
     minWidth: 56,

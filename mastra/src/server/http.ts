@@ -8,6 +8,7 @@
  *   - POST /competence-check        (能力圈分析师 · 原 G4 能力圈)
  *   - POST /editor                  (M9 焦虑日陪伴文字)
  *   - POST /diagnostician           (M11 复盘 focus)
+ *   - POST /tweet-classify          (订阅模块 · 推文打标/总结)
  *   - GET  /healthz                 (探活)
  *
  * 认证: X-Internal-Token 必须匹配 INTERNAL_TOKEN env. 与 Go server 共用.
@@ -27,6 +28,7 @@ import { runDiagnostician } from "../agents/diagnostician.js";
 import { runThicknessJudge } from "../agents/thickness.js";
 import { runTimingCheck } from "../agents/timing.js";
 import { runCompetenceCheck } from "../agents/competence.js";
+import { runTweetClassifier } from "../agents/tweet-classifier.js";
 
 export interface HttpHandle {
   stop(): Promise<void>;
@@ -37,14 +39,19 @@ export async function startHttpServer(): Promise<HttpHandle> {
     try {
       await handle(req, res);
     } catch (err) {
-      writeJSON(res, 500, { error: err instanceof Error ? err.message : String(err) });
+      writeJSON(res, 500, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   });
 
   await new Promise<void>((resolve, reject) => {
     server.once("error", reject);
     server.listen(config.http.port, config.http.bind, () => {
-      log("info", "http listening", { bind: config.http.bind, port: config.http.port });
+      log("info", "http listening", {
+        bind: config.http.bind,
+        port: config.http.port,
+      });
       resolve();
     });
   });
@@ -58,7 +65,10 @@ export async function startHttpServer(): Promise<HttpHandle> {
   };
 }
 
-async function handle(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+async function handle(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+): Promise<void> {
   const url = req.url ?? "";
 
   if (req.method === "GET" && url === "/healthz") {
@@ -94,7 +104,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
     const start = Date.now();
     try {
       const result = await runConsensusCheck(input);
-      log("info", "consensus done", { asset: input.asset, score: result.score, dur_ms: Date.now() - start });
+      log("info", "consensus done", {
+        asset: input.asset,
+        score: result.score,
+        dur_ms: Date.now() - start,
+      });
       writeJSON(res, 200, result);
     } catch (err) {
       log("warn", "consensus failed", { asset: input.asset, err: String(err) });
@@ -110,17 +124,33 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       opens_today: number;
       reasons_for_future_self: string[];
     };
-    if (!input.user_id || !input.asset_name || !Array.isArray(input.reasons_for_future_self) || input.reasons_for_future_self.length === 0) {
-      writeJSON(res, 400, { error: "user_id + asset_name + reasons_for_future_self (non-empty) required" });
+    if (
+      !input.user_id ||
+      !input.asset_name ||
+      !Array.isArray(input.reasons_for_future_self) ||
+      input.reasons_for_future_self.length === 0
+    ) {
+      writeJSON(res, 400, {
+        error:
+          "user_id + asset_name + reasons_for_future_self (non-empty) required",
+      });
       return;
     }
     const start = Date.now();
     try {
       const result = await runEditor(input);
-      log("info", "editor done", { user_id: input.user_id, asset: input.asset_name, opens: input.opens_today, dur_ms: Date.now() - start });
+      log("info", "editor done", {
+        user_id: input.user_id,
+        asset: input.asset_name,
+        opens: input.opens_today,
+        dur_ms: Date.now() - start,
+      });
       writeJSON(res, 200, result);
     } catch (err) {
-      log("warn", "editor failed", { asset: input.asset_name, err: String(err) });
+      log("warn", "editor failed", {
+        asset: input.asset_name,
+        err: String(err),
+      });
       writeJSON(res, 502, { error: String(err) });
     }
     return;
@@ -137,8 +167,15 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       project_name?: string;
       project_guidance?: string;
     };
-    if (!input.user_id || !input.signal_id || !input.raw_text || !input.summary) {
-      writeJSON(res, 400, { error: "user_id + signal_id + raw_text + summary required" });
+    if (
+      !input.user_id ||
+      !input.signal_id ||
+      !input.raw_text ||
+      !input.summary
+    ) {
+      writeJSON(res, 400, {
+        error: "user_id + signal_id + raw_text + summary required",
+      });
       return;
     }
     const start = Date.now();
@@ -161,7 +198,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       });
       writeJSON(res, 200, result);
     } catch (err) {
-      log("warn", "thickness failed", { signal_id: input.signal_id, err: String(err) });
+      log("warn", "thickness failed", {
+        signal_id: input.signal_id,
+        err: String(err),
+      });
       writeJSON(res, 502, { error: String(err) });
     }
     return;
@@ -209,7 +249,9 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       project_guidance?: string;
     };
     if (!input.asset || !input.signal_text || !input.round1_text) {
-      writeJSON(res, 400, { error: "asset + signal_text + round1_text required" });
+      writeJSON(res, 400, {
+        error: "asset + signal_text + round1_text required",
+      });
       return;
     }
     const start = Date.now();
@@ -231,7 +273,10 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       });
       writeJSON(res, 200, result);
     } catch (err) {
-      log("warn", "competence failed", { asset: input.asset, err: String(err) });
+      log("warn", "competence failed", {
+        asset: input.asset,
+        err: String(err),
+      });
       writeJSON(res, 502, { error: String(err) });
     }
     return;
@@ -242,10 +287,23 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       user_id: string;
       commitment_asset: string;
       commitment_thesis_summary: string;
-      answers: Array<{ no: number; dim: string; question: string; choice: string; open_text?: string }>;
+      answers: Array<{
+        no: number;
+        dim: string;
+        question: string;
+        choice: string;
+        open_text?: string;
+      }>;
     };
-    if (!input.user_id || !input.commitment_asset || !Array.isArray(input.answers) || input.answers.length !== 4) {
-      writeJSON(res, 400, { error: "user_id + commitment_asset + answers (length 4) required" });
+    if (
+      !input.user_id ||
+      !input.commitment_asset ||
+      !Array.isArray(input.answers) ||
+      input.answers.length !== 4
+    ) {
+      writeJSON(res, 400, {
+        error: "user_id + commitment_asset + answers (length 4) required",
+      });
       return;
     }
     const start = Date.now();
@@ -259,7 +317,44 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
       });
       writeJSON(res, 200, result);
     } catch (err) {
-      log("warn", "diagnostician failed", { asset: input.commitment_asset, err: String(err) });
+      log("warn", "diagnostician failed", {
+        asset: input.commitment_asset,
+        err: String(err),
+      });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/tweet-classify") {
+    const input = body as {
+      tweet_text: string;
+      author_handle?: string;
+      lang?: string;
+    };
+    if (!input.tweet_text || !input.tweet_text.trim()) {
+      writeJSON(res, 400, { error: "tweet_text required" });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runTweetClassifier({
+        tweetText: input.tweet_text,
+        authorHandle: input.author_handle,
+        lang: input.lang,
+      });
+      log("info", "tweet-classify done", {
+        handle: input.author_handle,
+        category: result.category,
+        relevance: result.relevance,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "tweet-classify failed", {
+        handle: input.author_handle,
+        err: String(err),
+      });
       writeJSON(res, 502, { error: String(err) });
     }
     return;
@@ -268,7 +363,11 @@ async function handle(req: http.IncomingMessage, res: http.ServerResponse): Prom
   writeJSON(res, 404, { error: "not found" });
 }
 
-function writeJSON(res: http.ServerResponse, status: number, body: unknown): void {
+function writeJSON(
+  res: http.ServerResponse,
+  status: number,
+  body: unknown,
+): void {
   const json = JSON.stringify(body);
   res.writeHead(status, {
     "Content-Type": "application/json",
@@ -287,15 +386,30 @@ function readBody(req: http.IncomingMessage): Promise<unknown> {
       try {
         resolve(JSON.parse(raw));
       } catch (err) {
-        reject(new Error("invalid json: " + (err instanceof Error ? err.message : String(err))));
+        reject(
+          new Error(
+            "invalid json: " +
+              (err instanceof Error ? err.message : String(err)),
+          ),
+        );
       }
     });
     req.on("error", reject);
   });
 }
 
-function log(level: "info" | "warn" | "error", msg: string, fields: Record<string, unknown> = {}): void {
-  const entry = { ts: new Date().toISOString(), level, msg, src: "mastra-http", ...fields };
+function log(
+  level: "info" | "warn" | "error",
+  msg: string,
+  fields: Record<string, unknown> = {},
+): void {
+  const entry = {
+    ts: new Date().toISOString(),
+    level,
+    msg,
+    src: "mastra-http",
+    ...fields,
+  };
   const line = JSON.stringify(entry);
   if (level === "error") console.error(line);
   else if (level === "warn") console.warn(line);

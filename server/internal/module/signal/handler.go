@@ -76,6 +76,7 @@ type inferenceRequest struct {
 	RelatedAssets []domain.RelatedAsset `json:"related_assets"`
 	Layer         *string               `json:"cognitive_layer"`
 	Consensus     *string               `json:"consensus_check"`
+	ProjectID     *string               `json:"project_id"` // AI 判断的分类 (可空 = 弃权)
 }
 
 // ───────── Handlers ─────────
@@ -276,6 +277,14 @@ func (h *Handler) recordInference(c *gin.Context) {
 		consensus = &v
 	}
 
+	// AI 判断的分类 (可空). 解析失败按"未提供"处理 (当弃权), 不让一个坏字段毁掉整条推演回写.
+	var aiProjectID *uuid.UUID
+	if req.ProjectID != nil && *req.ProjectID != "" {
+		if pid, perr := uuid.Parse(*req.ProjectID); perr == nil {
+			aiProjectID = &pid
+		}
+	}
+
 	if err := h.svc.RecordInference(c.Request.Context(), InferenceCommand{
 		SignalID:      signalID,
 		UserID:        userID,
@@ -285,6 +294,7 @@ func (h *Handler) recordInference(c *gin.Context) {
 		RelatedAssets: req.RelatedAssets,
 		Layer:         layer,
 		Consensus:     consensus,
+		ProjectID:     aiProjectID,
 	}); err != nil {
 		if errors.Is(err, ErrNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "signal not found"})

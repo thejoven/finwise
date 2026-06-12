@@ -5,12 +5,12 @@ import { router } from "expo-router";
 
 import { Icon, Sans, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
-import { chineseMonthDay, chineseWeekday, isoWeekOfYear } from "@/shared/format";
+import { chineseMonthDay, chineseWeekday } from "@/shared/format";
 
 /**
  * 财知页固定报头 (不折叠版).
  *
- * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 book → 卷首语, 中 VOL 卷号戳,
+ * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 book → 卷首语, 中日期,
  * 右 ＋ → 记录) + 常驻刊名「财知」. 区别: 这里**始终固定**, 不随滚动折叠 (滚动折叠交给各子页
  * 自己的列表, host 的报头/分段栏常驻). 装饰性副线 (WiseFlow / slogan) 略去, 给三页腾出高度.
  *
@@ -21,7 +21,6 @@ import { chineseMonthDay, chineseWeekday, isoWeekOfYear } from "@/shared/format"
  */
 export function CaizhiHeader() {
   const today = useMemo(() => new Date(), []);
-  const edition = String(isoWeekOfYear(today));
   const date = chineseMonthDay(today);
   const weekday = chineseWeekday(today);
   const insets = useSafeAreaInsets();
@@ -37,7 +36,7 @@ export function CaizhiHeader() {
           <Icon name="book" size={18} color={theme.color.ink} strokeWidth={1.5} />
         </TapEffect>
         <Sans size={9} weight="600" style={styles.topStrip}>
-          VOL. I · NO. {edition} · {date} · {weekday}
+          {date} · {weekday}
         </Sans>
         <TapEffect
           onPress={() => router.push("/capture")}
@@ -76,8 +75,7 @@ const styles = StyleSheet.create({
   },
   topStrip: {
     flex: 1,
-    letterSpacing: 2,
-    textTransform: "uppercase",
+    letterSpacing: 1,
     color: theme.color.muted,
     textAlign: "center",
   },

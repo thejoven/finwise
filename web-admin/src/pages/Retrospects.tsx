@@ -36,12 +36,12 @@ export function RetrospectsPage() {
   const [filter, setFilter] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["retrospects"],
     queryFn: wiseflow.retrospects.list,
   });
 
-  const rows = q.data?.retrospects ?? [];
+  const rows = data?.retrospects ?? [];
   const filtered = filter
     ? rows.filter((r) =>
         (r.id + " " + r.commitment_id + " " + r.state + " " + (r.focus_dim ?? ""))
@@ -58,8 +58,8 @@ export function RetrospectsPage() {
         title="Retrospects"
         description="复盘训练 (M11). pending → answered → finalized. 点行看答题与训练重点."
         actions={
-          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -76,13 +76,13 @@ export function RetrospectsPage() {
             <div className="shrink-0 text-xs text-muted-foreground">共 {rows.length} 次复盘</div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && (
+          {data && filtered.length === 0 && (
             <EmptyBox label={filter ? "没有匹配的复盘" : "还没有复盘记录"} />
           )}
           {filtered.length > 0 && (

@@ -48,7 +48,11 @@ export default function SignalDetailScreen() {
   const { start: startRefinement, isStarting } = useStartRefinement();
 
   const queryClient = useQueryClient();
-  const query = useQuery({
+  const {
+    data: signal,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["signal", id],
     queryFn: () => getSignal(id!),
     enabled: !!id && !pendingItem,
@@ -86,7 +90,7 @@ export default function SignalDetailScreen() {
   const distillationQuery = useDistillation(refinementCompleted ? history?.id : undefined);
   const distillation = distillationQuery.data ?? null;
 
-  const canRefine = !pendingItem && query.data?.inference_status === "done";
+  const canRefine = !pendingItem && signal?.inference_status === "done";
 
   const handleStartRefinement = async () => {
     if (!id) return;
@@ -113,15 +117,15 @@ export default function SignalDetailScreen() {
     );
   }
 
-  const rawText = pendingItem?.raw_text ?? query.data?.raw_text;
-  const capturedAt = pendingItem?.captured_at ?? query.data?.captured_at;
-  const inferenceStatus = pendingItem ? "pending" : query.data?.inference_status;
-  const summary = query.data?.inference_summary ?? null;
-  const tags = query.data?.inference_tags ?? [];
+  const rawText = pendingItem?.raw_text ?? signal?.raw_text;
+  const capturedAt = pendingItem?.captured_at ?? signal?.captured_at;
+  const inferenceStatus = pendingItem ? "pending" : signal?.inference_status;
+  const summary = signal?.inference_summary ?? null;
+  const tags = signal?.inference_tags ?? [];
   // Analyst 第一层推演出的相关标的 (金融分析).
-  const relatedAssets = query.data?.related_assets ?? [];
+  const relatedAssets = signal?.related_assets ?? [];
   // 该信号所属分类: 本地 pending 或服务端返回的 project_id (未分类 → null)
-  const projectId = pendingItem?.project_id ?? query.data?.project_id ?? null;
+  const projectId = pendingItem?.project_id ?? signal?.project_id ?? null;
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
@@ -139,11 +143,11 @@ export default function SignalDetailScreen() {
           <Display size={22} style={styles.rawText}>
             {rawText}
           </Display>
-        ) : query.isLoading ? (
+        ) : isLoading ? (
           <Serif size={13} italic style={styles.muted}>
             正在加载…
           </Serif>
-        ) : query.isError ? (
+        ) : isError ? (
           <Serif size={13} italic style={styles.error}>
             读取失败, 下拉刷新或稍后再试。
           </Serif>
@@ -392,7 +396,7 @@ function Header() {
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
-        VOL. I · NO. 1 · 信号
+        信号
       </Sans>
       <View style={styles.headerSpacer} />
     </View>

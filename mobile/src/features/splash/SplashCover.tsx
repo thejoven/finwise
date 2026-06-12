@@ -7,7 +7,7 @@
  *   · 英文副线 "WiseFlow" (Playfair Display italic)
  *   · slogan "以智驭财 · 行远致富"
  *   · 双横线分隔
- *   · 底部刊号小字
+ *   · 顶部小字
  *
  * 动画节奏 (总约 2.4s, 全部 native-driven via Reanimated 4):
  *   0.10s  双横线 scaleX 0 → 1 (从中心向两端展开)
@@ -117,7 +117,7 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
       <View style={styles.topMeta}>
         <Animated.View style={taglineStyle}>
           <Sans size={9} weight="600" style={styles.topMetaText}>
-            VOL. I · NO. 0 · 创刊号
+            财知 · 创刊号
           </Sans>
         </Animated.View>
       </View>

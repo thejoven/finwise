@@ -16,7 +16,8 @@
   ],
   "cognitive_layer": "second",
   "consensus_check": "aligned",
-  "one_line_summary": "computer-use 让 agent 吞并 SaaS, API token 量级跃迁"
+  "one_line_summary": "computer-use 让 agent 吞并 SaaS, API token 量级跃迁",
+  "chosen_project_id": null
 }
 ```
 

@@ -12,7 +12,8 @@
   "related_assets": [],
   "cognitive_layer": "first",
   "consensus_check": "aligned",
-  "one_line_summary": "未具体化的情绪观察, 不足以推演"
+  "one_line_summary": "未具体化的情绪观察, 不足以推演",
+  "chosen_project_id": null
 }
 ```
 

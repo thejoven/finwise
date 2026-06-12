@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toaster";
 export function SettingsPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const me = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
 
   const [base, setBase] = React.useState(() => getApiBase());
   const [token, setLocalToken] = React.useState(getToken() ?? "");
@@ -61,10 +61,10 @@ export function SettingsPage() {
           <CardDescription>已登录的管理员身份.</CardDescription>
         </CardHeader>
         <CardContent>
-          {me.data ? (
+          {me ? (
             <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium">{me.data.email}</span>
-              {me.data.is_admin ? (
+              <span className="font-medium">{me.email}</span>
+              {me.is_admin ? (
                 <Badge variant="success">管理员</Badge>
               ) : (
                 <Badge variant="outline">用户</Badge>

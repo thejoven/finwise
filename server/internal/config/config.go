@@ -40,6 +40,13 @@ type Config struct {
 	// Mastra HTTP 服务 (G2 ConsensusCheck / M9 Editor / M11 Diagnostician).
 	// 空 → 走 stub (Go 侧的启发式 fallback), 不阻塞主流程.
 	MastraHTTPURL string
+
+	// TwtAPIKey — twtapi.com 的 X-API-Key (订阅模块采集推文用).
+	// 空 → poller 不启动, 订阅 REST 仍可读历史数据 (优雅降级).
+	TwtAPIKey string
+
+	// SubscriptionPollEnabled — 显式关闭采集 worker (调试/省配额), 默认 true.
+	SubscriptionPollEnabled bool
 }
 
 func Load() (*Config, error) {
@@ -91,6 +98,13 @@ func Load() (*Config, error) {
 	c.OutboxMaxAttempts = maxAttempts
 
 	c.MastraHTTPURL = os.Getenv("MASTRA_HTTP_URL") // optional
+	c.TwtAPIKey = os.Getenv("TWTAPI_API_KEY")      // optional
+
+	if v := os.Getenv("SUBSCRIPTION_POLL_ENABLED"); v != "" {
+		c.SubscriptionPollEnabled = strings.EqualFold(v, "true") || v == "1"
+	} else {
+		c.SubscriptionPollEnabled = true
+	}
 
 	var missing []string
 	if c.DatabaseURL == "" {

@@ -15,14 +15,14 @@ export function Topbar({ onSignOut }: Props) {
     document.documentElement.classList.contains("dark"),
   );
 
-  const health = useQuery({
+  const { data: health, isError: healthError } = useQuery({
     queryKey: ["healthz"],
     queryFn: wiseflow.health,
     refetchInterval: 15_000,
     retry: 0,
   });
 
-  const me = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
 
   const toggleTheme = () => {
     const next = !dark;
@@ -31,9 +31,9 @@ export function Topbar({ onSignOut }: Props) {
     localStorage.setItem(THEME_KEY, next ? "dark" : "light");
   };
 
-  const status = health.isError
+  const status = healthError
     ? { label: "API down", tone: "bg-destructive" }
-    : health.data?.status === "ok"
+    : health?.status === "ok"
     ? { label: "API ok", tone: "bg-emerald-500" }
     : { label: "checking…", tone: "bg-muted-foreground" };
 
@@ -48,9 +48,9 @@ export function Topbar({ onSignOut }: Props) {
         </span>
       </div>
       <div className="flex items-center gap-2">
-        {me.data && (
+        {me && (
           <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:flex">
-            <span className="font-medium text-foreground">{me.data.email}</span>
+            <span className="font-medium text-foreground">{me.email}</span>
             <span className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
               管理员
             </span>

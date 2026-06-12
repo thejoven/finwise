@@ -25,6 +25,9 @@ export const InferenceSchema = z.object({
   cognitive_layer: CognitiveLayer,
   consensus_check: ConsensusCheck,
   one_line_summary: z.string().min(1).max(60),
+  // 信号归属判断: 仅当下发了候选分类 (未分类/provisional) 时有意义 —— analyst 从候选 id
+  // 里选最匹配的一个; 都不匹配 / 未下发候选 → null. workflow 与 Go 端都按 null = 弃权处理.
+  chosen_project_id: z.string().uuid().nullable(),
 });
 
 export type Inference = z.infer<typeof InferenceSchema>;
@@ -43,6 +46,19 @@ export const SignalCapturedPayload = z.object({
   project_id: z.string().uuid().optional().nullable(),
   project_name: z.string().optional().nullable(),
   project_guidance: z.string().optional().nullable(),
+  // 系统临时归类标记 (promote 兜底). 仅作镜像; 回写决策在 Go 端.
+  project_auto_assigned: z.boolean().optional(),
+  // 候选分类集: 信号未分类 / provisional 时下发, analyst 据此判断 chosen_project_id.
+  candidate_projects: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        name: z.string(),
+        guidance: z.string().optional().nullable(),
+      }),
+    )
+    .optional()
+    .nullable(),
 });
 
 export type SignalCaptured = z.infer<typeof SignalCapturedPayload>;

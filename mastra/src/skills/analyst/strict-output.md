@@ -13,7 +13,7 @@
 正确示例:
 
 ```
-{"tags":["..."],"related_assets":[...],"cognitive_layer":"second","consensus_check":"leading","one_line_summary":"..."}
+{"tags":["..."],"related_assets":[...],"cognitive_layer":"second","consensus_check":"leading","one_line_summary":"...","chosen_project_id":null}
 ```
 
 错误示例 (会导致 schema 校验失败, 重试 3 次后死信):

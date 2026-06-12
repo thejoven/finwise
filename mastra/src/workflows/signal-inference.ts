@@ -46,10 +46,12 @@ export async function runSignalInference(
   // Step 2: analyze (含 grounding + 分类指引)
   let inference;
   try {
-    inference = await runAnalyst(input.raw_text, research, {
-      name: input.project_name,
-      guidance: input.project_guidance,
-    });
+    inference = await runAnalyst(
+      input.raw_text,
+      research,
+      { name: input.project_name, guidance: input.project_guidance },
+      input.candidate_projects ?? undefined,
+    );
   } catch (err) {
     return {
       signal_id: input.signal_id,
@@ -84,7 +86,8 @@ export async function runSignalInference(
     summary: inference.one_line_summary,
     tags: inference.tags ?? [],
     captured_at: new Date().toISOString(),
-    project_id: input.project_id ?? undefined, // null/未分类 → 不写入 metadata
+    // AI re-home 后用最终分类索引 (chosen 优先), 否则用 capture 时的; 都无则不写 metadata.
+    project_id: inference.chosen_project_id ?? input.project_id ?? undefined,
   }).catch((err) => {
     logWarn("index signal to vector store failed (continuing)", {
       signal_id: input.signal_id,

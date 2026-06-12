@@ -43,11 +43,15 @@ remote() {
 
 do_rsync() {
   echo "→ rsync $repo_root → $REMOTE_HOST:$REMOTE_DIR"
+  # 注: '/bin/' (前导 / 锚定到传输根) 是 Go 编译产物目录, 由 do_build_restart 写入,
+  # 本地仓库里并不存在. 必须排除 —— 否则 --delete 会在 --no-build 时删掉远端正在用的
+  # 二进制 (运行中的进程不受影响, 但下次 systemctl restart 会找不到二进制而启动失败).
   rsync -avz --delete \
     --exclude '.git/' \
     --exclude '.DS_Store' \
     --exclude '.env' \
     --exclude '*.log' \
+    --exclude '/bin/' \
     --exclude 'mobile/node_modules/' \
     --exclude 'mobile/.expo/' \
     --exclude 'mobile/dist/' \
@@ -64,6 +68,7 @@ do_build_restart() {
   echo "→ build + restart wiseflow-api on $REMOTE_HOST"
   remote 'set -e
     cd /opt/wiseflow/server
+    mkdir -p /opt/wiseflow/bin
     /usr/local/go/bin/go build -o /opt/wiseflow/bin/wiseflow-api ./cmd/api
     systemctl restart wiseflow-api
     sleep 1

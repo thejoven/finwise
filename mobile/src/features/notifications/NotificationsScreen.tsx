@@ -2,7 +2,7 @@
  * NotificationsScreen — 消息通知中心.
  *
  * 视觉布局 (报刊风):
- *   ── Masthead "VOL.I · 消息通知"
+ *   ── Masthead "消息通知"
  *   ── 工具行: N 未读 · [全部已读] · [清空]
  *   ── 时间分组列表: 今天 / 昨天 / 更早, 每组 SectionHeader, item 报刊摘录
  *
@@ -67,7 +67,7 @@ export function NotificationsScreen() {
           <Serif size={13}>返回</Serif>
         </TapEffect>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          VOL. I · 消息通知
+          消息通知
         </Sans>
         <View style={styles.headerSpacer} />
       </View>

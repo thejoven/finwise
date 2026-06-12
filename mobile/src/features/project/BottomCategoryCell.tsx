@@ -89,6 +89,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   }));
 
   const openDropdown = () => {
+    void haptic.light(); // 下拉弹起 ≈ "ActionSheet 弹起", 走 light (06-haptic-grammar §2)
     // measureInWindow 拿胶囊的屏幕坐标, 让下拉框贴着它弹 (在屏幕下半部会自动向上).
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       setAnchor({ x, y, width, height });
@@ -140,7 +141,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
             accessibilityLabel={`当前分类「${active?.name ?? "未选择"}」, 点击切换`}
           >
             {active?.emoji ? (
-              <Sans size={11} style={styles.emoji}>
+              <Sans size={12} style={styles.emoji}>
                 {active.emoji}
               </Sans>
             ) : (
@@ -152,7 +153,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
               {active?.name ?? "选择分类"}
             </RNText>
             <Animated.View style={arrowStyle}>
-              <Icon name="chevronUp" size={11} color={theme.color.muted} strokeWidth={2} />
+              <Icon name="chevronUp" size={12} color={theme.color.muted} strokeWidth={2} />
             </Animated.View>
           </TapEffect>
         </IslandGlass>
@@ -201,8 +202,9 @@ const styles = StyleSheet.create({
   trigger: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: theme.spacing.sm,
+    gap: theme.spacing.xs,
+    // 胶囊端部是真半圆 (radius 28), 内容须退过弧线才不顶着弧边 —— base(16) 是标准胶囊水平内边距.
+    paddingHorizontal: theme.spacing.base,
   },
   emoji: {
     marginRight: 1,
@@ -217,7 +219,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     maxWidth: 72, // 窄屏兜底: 名字太长则省略, 不挤坏右侧 tab 岛
     fontFamily: theme.fontFamily.cjkBold, // 与报头主名"财知"同款 (NotoSerifSC Bold), 字体样式一致
-    fontSize: 12,
+    fontSize: 13, // iOS 紧凑控件的标准字号档 (12 在胶囊里偏小一号)
     color: theme.color.ink2,
     letterSpacing: 0.5,
   },

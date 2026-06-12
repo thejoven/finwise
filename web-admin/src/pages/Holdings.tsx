@@ -43,12 +43,12 @@ export function HoldingsPage() {
   const [filter, setFilter] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["holdings", "list"],
     queryFn: wiseflow.holdings.list,
   });
 
-  const rows = q.data?.holdings ?? [];
+  const rows = data?.holdings ?? [];
   const filtered = filter
     ? rows.filter((h) =>
         ((h.ticker ?? "") + " " + h.status + " " + h.id)
@@ -65,8 +65,8 @@ export function HoldingsPage() {
         title="Holdings"
         description="陪伴中持仓 (M9). 由 commitment 签字翻面而来 (holding.id == commitment.id). 点行看详情."
         actions={
-          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -83,13 +83,13 @@ export function HoldingsPage() {
             <div className="shrink-0 text-xs text-muted-foreground">共 {rows.length} 个</div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && (
+          {data && filtered.length === 0 && (
             <EmptyBox label={filter ? "没有匹配的持仓" : "还没有持仓"} />
           )}
           {filtered.length > 0 && (
@@ -140,7 +140,7 @@ export function HoldingsPage() {
 
 function HoldingDetail({ h }: { h: HoldingRow }) {
   // holding.id == commitment.id → 拉对应承诺书拿完整 thesis.
-  const commit = useQuery({
+  const { data: commit, isLoading: commitLoading, isError: commitError } = useQuery({
     queryKey: ["commitments", "detail", h.id],
     queryFn: () => wiseflow.commitments.get(h.id),
     retry: 0,
@@ -176,19 +176,19 @@ function HoldingDetail({ h }: { h: HoldingRow }) {
 
         <Separator />
         <p className="text-xs text-muted-foreground">关联承诺书</p>
-        {commit.isLoading && <Loading label="加载承诺书…" />}
-        {commit.isError && (
+        {commitLoading && <Loading label="加载承诺书…" />}
+        {commitError && (
           <p className="text-xs text-muted-foreground">无法加载承诺书.</p>
         )}
-        {commit.data?.thesis && (
+        {commit?.thesis && (
           <div className="rounded-md border bg-muted/30 p-3">
             <p className="text-sm font-medium">
-              {commit.data.thesis.asset_ticker} · {commit.data.thesis.action} ·{" "}
-              {commit.data.thesis.position_pct}% · {commit.data.thesis.duration_months} 个月
+              {commit.thesis.asset_ticker} · {commit.thesis.action} ·{" "}
+              {commit.thesis.position_pct}% · {commit.thesis.duration_months} 个月
             </p>
-            {(commit.data.thesis.reasons_for_future_self ?? []).length > 0 && (
+            {(commit.thesis.reasons_for_future_self ?? []).length > 0 && (
               <ul className="mt-2 list-disc space-y-0.5 pl-5 text-xs text-muted-foreground">
-                {commit.data.thesis.reasons_for_future_self.map((r) => (
+                {commit.thesis.reasons_for_future_self.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
               </ul>

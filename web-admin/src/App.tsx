@@ -59,7 +59,7 @@ export default function App() {
   }, [qc]);
 
   // 引导查询: 有 token 才查当前用户身份 (含 is_admin).
-  const meQ = useQuery({
+  const { data: me, isLoading, isError } = useQuery({
     queryKey: ["me"],
     queryFn: wiseflow.me,
     enabled: hasToken,
@@ -83,7 +83,7 @@ export default function App() {
     return <AuthGate onSignedIn={handleSignedIn} />;
   }
 
-  if (meQ.isLoading) {
+  if (isLoading) {
     return (
       <FullScreen>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -94,12 +94,12 @@ export default function App() {
   }
 
   // token 失效/网络错: 401 已被 api 层处理回登录; 其它错误也退回登录页重试.
-  if (meQ.isError || !meQ.data) {
+  if (isError || !me) {
     return <AuthGate onSignedIn={handleSignedIn} />;
   }
 
-  if (!meQ.data.is_admin) {
-    return <AdminOnly email={meQ.data.email} onSignOut={handleSignOut} />;
+  if (!me.is_admin) {
+    return <AdminOnly email={me.email} onSignOut={handleSignOut} />;
   }
 
   return (

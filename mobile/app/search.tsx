@@ -42,15 +42,15 @@ export default function SearchScreen() {
     return () => clearTimeout(t);
   }, [raw]);
 
-  const query = useQuery({
+  const { data, error, isFetching } = useQuery({
     queryKey: ["signals", "search", debounced],
     queryFn: () => listSignals({ q: debounced, limit: 30 }),
     enabled: debounced.length > 0,
   });
 
   const items = useMemo<MergedSignal[]>(() => {
-    if (!query.data) return [];
-    return query.data.signals.map((s) => ({
+    if (!data) return [];
+    return data.signals.map((s) => ({
       id: s.id,
       raw_text: s.raw_text,
       captured_at: s.captured_at,
@@ -58,19 +58,19 @@ export default function SearchScreen() {
       inference_summary: s.inference_summary,
       inference_tags: s.inference_tags,
     }));
-  }, [query.data]);
+  }, [data]);
 
-  // errorMsg 是从 query.error **异步**解析出的可读文案 (readErrorMessage 读 response body),
-  // 无法在渲染期同步派生, 故用 effect 跟 query.error —— no-chain-state-updates 在此为误报.
+  // errorMsg 是从 error **异步**解析出的可读文案 (readErrorMessage 读 response body),
+  // 无法在渲染期同步派生, 故用 effect 跟 error —— no-chain-state-updates 在此为误报.
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   useEffect(() => {
-    if (query.error) {
-      void readErrorMessage(query.error).then(setErrorMsg);
+    if (error) {
+      void readErrorMessage(error).then(setErrorMsg);
     } else {
       // react-doctor-disable-next-line react-doctor/no-chain-state-updates
       setErrorMsg(null);
     }
-  }, [query.error]);
+  }, [error]);
 
   return (
     <KeyboardForm>
@@ -113,7 +113,7 @@ export default function SearchScreen() {
               <Serif size={13} italic style={styles.emptyText}>
                 在原文或推演摘要里搜索关键词。
               </Serif>
-            ) : query.isFetching ? (
+            ) : isFetching ? (
               <Serif size={13} italic style={styles.emptyText}>
                 搜索中…
               </Serif>

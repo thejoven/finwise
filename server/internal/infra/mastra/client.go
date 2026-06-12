@@ -241,6 +241,33 @@ func (c *Client) Diagnostician(ctx context.Context, req DiagnosticianRequest) (*
 
 // ───── internal ─────
 
+// ───── ClassifyTweet (订阅模块 · 推文打标/总结) ─────
+
+type TweetClassifyRequest struct {
+	TweetText    string `json:"tweet_text"`
+	AuthorHandle string `json:"author_handle,omitempty"`
+	Lang         string `json:"lang,omitempty"`
+}
+
+type TweetClassifyResponse struct {
+	Tags      []string `json:"tags"`
+	Summary   string   `json:"summary"`
+	Category  string   `json:"category"`
+	Relevance float64  `json:"relevance"`
+}
+
+func (c *Client) ClassifyTweet(ctx context.Context, req TweetClassifyRequest) (*TweetClassifyResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("tweet_classify", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp TweetClassifyResponse
+	if err := c.post(ctx, "/tweet-classify", "tweet_classify", req, &resp, 20*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) post(ctx context.Context, path, metricLabel string, body, out any, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

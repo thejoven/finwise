@@ -16,7 +16,8 @@
   ],
   "cognitive_layer": "second",
   "consensus_check": "leading",
-  "one_line_summary": "HYPE 回购模型对投顾\"好卖\", ETF 通道之外的传统资金入口"
+  "one_line_summary": "HYPE 回购模型对投顾\"好卖\", ETF 通道之外的传统资金入口",
+  "chosen_project_id": null
 }
 ```
 

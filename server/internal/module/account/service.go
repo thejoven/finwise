@@ -53,15 +53,22 @@ func (g InviteGateFuncs) RefundInvite(ctx context.Context, code string) error {
 	return g.Refund(ctx, code)
 }
 
+// ProvisionDefaultsFn 在注册成功建好用户后被调用, 为新用户预置默认资源 (当前: 一个默认分类).
+// 由 main.go 注入闭包 (避免 account 反向 import project, 形式同 InviteGate / signal 的 firstActive).
+// 约定 best-effort: 返回的 error 仅供闭包内部记录, 不影响注册结果. nil = 未装配 (admin CLI / 测试跳过).
+type ProvisionDefaultsFn func(ctx context.Context, userID uuid.UUID) error
+
 type Service struct {
 	repo *Repository
 	// invites 门禁注册的邀请码. nil 表示未配置 —— 此时 Register 一律拒绝 (fail closed).
 	// cmd/admin 不走 Register (用 EnsureAdmin), 所以那边传 nil 无碍.
 	invites InviteGate
+	// provisionDefaults 注册建好用户后为其预置默认分类 (best-effort). nil = 不预置.
+	provisionDefaults ProvisionDefaultsFn
 }
 
-func NewService(repo *Repository, invites InviteGate) *Service {
-	return &Service{repo: repo, invites: invites}
+func NewService(repo *Repository, invites InviteGate, provisionDefaults ProvisionDefaultsFn) *Service {
+	return &Service{repo: repo, invites: invites, provisionDefaults: provisionDefaults}
 }
 
 // ────── DTO ──────
@@ -167,6 +174,13 @@ func (s *Service) Register(ctx context.Context, cmd RegisterCommand) (*PublicUse
 	if err != nil {
 		_ = s.invites.RefundInvite(ctx, cmd.InviteCode) // best-effort 补偿
 		return nil, nil, err
+	}
+	// (3) 预置默认分类 (best-effort). 让新用户从注册即刻就有一个归属分类, 使服务端
+	// "信号未分类 → 落 firstActive" 兜底立即可用 (如自动订阅 promote 出来的信号), 不必等
+	// 用户首次进收件箱由 mobile useEnsureCategory 补建. 失败不阻断注册 —— 分类只是便利,
+	// mobile 端兜底 + firstActive 仍在; 闭包内部已记日志.
+	if s.provisionDefaults != nil {
+		_ = s.provisionDefaults(ctx, u.ID)
 	}
 	tok, err := s.issueSession(ctx, u.ID)
 	if err != nil {

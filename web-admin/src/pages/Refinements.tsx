@@ -48,7 +48,7 @@ export function RefinementsPage() {
   const [newSignalId, setNewSignalId] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  const list = useQuery({
+  const { data: list, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["refinement", "list"],
     queryFn: wiseflow.refinement.list,
   });
@@ -69,7 +69,7 @@ export function RefinementsPage() {
       }),
   });
 
-  const sessions = list.data?.sessions ?? [];
+  const sessions = list?.sessions ?? [];
   const filtered = filter
     ? sessions.filter((s) =>
         (
@@ -97,10 +97,10 @@ export function RefinementsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => list.refetch()}
-            disabled={list.isFetching}
+            onClick={() => refetch()}
+            disabled={isFetching}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${list.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -146,13 +146,13 @@ export function RefinementsPage() {
             </div>
           </div>
 
-          {list.isLoading && <Loading />}
-          {list.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={list.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {list.data && filtered.length === 0 && (
+          {list && filtered.length === 0 && (
             <EmptyBox label={filter ? "没有匹配的对话" : "还没有追问会话"} />
           )}
           {filtered.length > 0 && (
@@ -216,7 +216,7 @@ export function RefinementsPage() {
 
 // RefinementDetail 拉单个会话的完整问答, 逐轮渲染成"对话".
 function RefinementDetail({ sessionId }: { sessionId: string }) {
-  const q = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["refinement", "detail", sessionId],
     queryFn: () => wiseflow.refinement.get(sessionId),
     retry: 0,
@@ -231,33 +231,33 @@ function RefinementDetail({ sessionId }: { sessionId: string }) {
         </DialogDescription>
       </DialogHeader>
 
-      {q.isLoading && <Loading label="加载对话…" />}
-      {q.isError && <ErrorBox error={q.error} />}
-      {q.data && (
+      {isLoading && <Loading label="加载对话…" />}
+      {isError && <ErrorBox error={error} />}
+      {data && (
         <div className="space-y-4">
           {/* 会话头 */}
           <div className="rounded-md border bg-muted/30 p-3 text-sm">
-            <p className="whitespace-pre-wrap">{q.data.primary_signal_raw_text || "—"}</p>
-            {q.data.primary_signal_summary && (
+            <p className="whitespace-pre-wrap">{data.primary_signal_raw_text || "—"}</p>
+            {data.primary_signal_summary && (
               <p className="mt-1 text-xs text-muted-foreground">
-                {q.data.primary_signal_summary}
+                {data.primary_signal_summary}
               </p>
             )}
             <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-              <StatusBadge s={q.data.status} />
-              <span className="text-muted-foreground">{q.data.rounds_done}/5 轮</span>
-              <DecisionBadge d={q.data.decision} />
-              {q.data.project_name && (
-                <Badge variant="outline">分类: {q.data.project_name}</Badge>
+              <StatusBadge s={data.status} />
+              <span className="text-muted-foreground">{data.rounds_done}/5 轮</span>
+              <DecisionBadge d={data.decision} />
+              {data.project_name && (
+                <Badge variant="outline">分类: {data.project_name}</Badge>
               )}
             </div>
           </div>
 
           {/* 逐轮问答 */}
-          {q.data.rounds.length === 0 && (
+          {data.rounds.length === 0 && (
             <p className="text-sm text-muted-foreground">还没有已回答的轮次.</p>
           )}
-          {q.data.rounds.map((r) => {
+          {data.rounds.map((r) => {
             const chosen = new Set(r.user_answer.choice_ids ?? []);
             return (
               <div key={r.round} className="rounded-md border p-3">
@@ -323,9 +323,9 @@ function RefinementDetail({ sessionId }: { sessionId: string }) {
           })}
 
           {/* 待答题目 */}
-          {q.data.pending_question && (
+          {data.pending_question && (
             <p className="text-xs text-muted-foreground">
-              ⏳ 第 {q.data.pending_question.round} 轮题目已生成, 等待用户作答.
+              ⏳ 第 {data.pending_question.round} 轮题目已生成, 等待用户作答.
             </p>
           )}
         </div>

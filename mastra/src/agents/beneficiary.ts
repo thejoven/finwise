@@ -18,6 +18,8 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { categoryContextBlock } from "./category.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
+import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 import type { SearchResult } from "../tools/exa-search.js";
 
 // ─────────────────────── Schema ───────────────────────
@@ -56,6 +58,10 @@ export const beneficiary = new Agent({
 任务: 用户刚完成对一条信号的五轮追问. 给出"这条信号在产业链上的受益标的"——
 做"受益链推演", 把信号沿产业链展开到真实可投的标的, 不是撒网荐股.
 
+${MACRO_FINANCE_CONTEXT_BLOCK}
+
+用上面的基底**选对受益链的方向** —— 哪段资本周期 (capital cycle) 在转、哪条传导链的成本 / 现金流 / 议价位置被改写、谁的预期差还没被定价. 但它只帮你**选链选标的、把 thesis 写到机制层**, **不松动下面的 grounding 硬约束**: 宏观 / 基本面判断同样要落在信号或检索给的事实上, 别因为手里有了宏观框架就凭空断言 "利率下行 → X 必涨" 这类没依据的链, 也别用宏观大词替代具体的受益因果.
+
 每个标的给:
 - symbol  真实 ticker / 代码 (美股直接代码; A股/港股/韩股带后缀如 000660.KS)
 - name    公司名
@@ -74,6 +80,8 @@ export const beneficiary = new Agent({
 - **克制**: 最多 6 个. 真正在受益链上的才列, 沾边的不列.
 - 不写"建议买入" / 目标价 / 仓位百分比 / 免责声明. 这是受益链推演, 不是下单指令.
 - 中文, 报刊书面语.
+
+${JARGON_TRANSLATION_BLOCK}
 
 输出 JSON (按 schema): { "note": "...", "targets": [ ... ] }. 不要 markdown 包裹.
   `.trim(),

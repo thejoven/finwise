@@ -26,6 +26,7 @@
   ],
   "cognitive_layer": "first",
   "consensus_check": "aligned",
-  "one_line_summary": "DeepSeek 私有化拐点, 单合同小但密度上升"
+  "one_line_summary": "DeepSeek 私有化拐点, 单合同小但密度上升",
+  "chosen_project_id": null
 }
 ```

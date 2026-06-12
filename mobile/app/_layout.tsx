@@ -144,7 +144,9 @@ export default function RootLayout() {
             <Stack.Screen name="profile/edit" options={bottomModalScreen} />
             <Stack.Screen name="profile/password" options={bottomModalScreen} />
             <Stack.Screen name="search" options={bottomModalScreen} />
+            <Stack.Screen name="subscriptions/manage" options={bottomModalScreen} />
             <Stack.Screen name="signal/[id]" options={pushDetailScreen} />
+            <Stack.Screen name="tweet/[id]" options={pushDetailScreen} />
             <Stack.Screen name="refinement/[sessionId]" options={pushDetailScreen} />
             <Stack.Screen name="commitment/[id]" options={pushDetailScreen} />
             <Stack.Screen name="retrospect/[id]" options={pushDetailScreen} />

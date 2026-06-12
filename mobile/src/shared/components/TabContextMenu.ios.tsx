@@ -17,7 +17,7 @@ export type { TabMenuActions, TabContextMenuProps } from "./TabContextMenu.types
  *   ExpoUI 缺失时 UI/MODS 为 null, 本组件优雅降级成"无菜单"(原样渲染 tab); 装好原生后菜单
  *   自动生效, 无需再改 JS.
  *
- * 必须裹在 `<Host>` 里 (SwiftUI 视图宿主). Host 钉死 44×44 与 tab 同尺寸, 保持底栏等宽栅格
+ * 必须裹在 `<Host>` 里 (SwiftUI 视图宿主). Host 钉死 52×48 与 tab 同尺寸, 保持底栏等宽栅格
  *   (滑动高亮按 TAB_WIDTH 算落点, 见 DynamicIslandTabBar), 不靠 matchContents 量, 布局更确定.
  *
  * @see TabContextMenu.tsx — 非 iOS 兜底 (原样渲染, 无菜单)
@@ -25,7 +25,8 @@ export type { TabMenuActions, TabContextMenuProps } from "./TabContextMenu.types
  */
 
 /** 与 DynamicIslandTabBar 的 TAB_WIDTH / TAB_HEIGHT 对齐 (那边是局部常量, 不跨文件引以免环引用). */
-const TAB = 44;
+const TAB_W = 52;
+const TAB_H = 48;
 
 /** route name → 菜单项. 返回 null 表示该 tab 不挂菜单 (兜底原样渲染). */
 function itemsFor(routeName: string, a: TabMenuActions): ReactNode {
@@ -33,10 +34,6 @@ function itemsFor(routeName: string, a: TabMenuActions): ReactNode {
   const { Button, Divider } = UI;
   const { disabled } = MODS;
   switch (routeName) {
-    case "newspaper":
-      // 报纸尚是占位页, 暂无真实动作 —— 给一条禁用项, 长按仍出玻璃菜单 (与其它 tab 一致),
-      //   待功能上线再换成"刷新/今日"等真实项.
-      return <Button systemImage="newspaper" modifiers={[disabled(true)]} label="报纸功能开发中" />;
     case "caizhi":
       return (
         <>
@@ -102,5 +99,5 @@ export function TabContextMenu({ routeName, actions, icon, children }: TabContex
 }
 
 const styles = StyleSheet.create({
-  host: { width: TAB, height: TAB },
+  host: { width: TAB_W, height: TAB_H },
 });

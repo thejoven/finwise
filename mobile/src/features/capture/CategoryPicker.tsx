@@ -2,8 +2,8 @@
  * CaptureCategoryPicker — 录入时的行内"分类条" (B1, 必选).
  *
  * 与 masthead 上的 ProjectChipsRow 区别:
- *   - 选择只作用于"这一条待录入信号": 用父级本地 state, 不碰全局 useActiveProject,
- *     所以为某条记录选分类不会改 inbox 的筛选.
+ *   - 选择先作用于"这一条待录入信号": 用父级本地 state, 不在选择过程中改全局
+ *     useActiveProject; 提交成功后由录入页把首页筛选切到该分类.
  *   - 不含"全部": 录入要求必选一个真实分类 (空选时父级禁用"记下").
  *   - 末尾 + 打开 ProjectSelectModal 新建; 建好后经 onProjectCreated 自动选中并关回.
  *

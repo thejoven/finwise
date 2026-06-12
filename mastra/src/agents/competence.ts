@@ -21,6 +21,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
 import { ANALYSTS } from "./analysts.js";
 
@@ -44,6 +45,8 @@ export const competenceAgent = new Agent({
 任务: 看用户在这条信号上的追问表现, 判断他/她是不是真的站在能解释、知进退的位置上 — 而不是凑热闹、追 narrative.
 
 ${LENS_LIBRARY_BLOCK}
+
+${MACRO_FINANCE_CONTEXT_BLOCK}
 
 ## 你要判的两个认知项
 

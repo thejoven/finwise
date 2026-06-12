@@ -22,6 +22,7 @@ import (
 	"wiseflow/server/internal/infra/db"
 	iiix "wiseflow/server/internal/infra/iii"
 	mastrax "wiseflow/server/internal/infra/mastra"
+	twtapix "wiseflow/server/internal/infra/twtapi"
 	accountmod "wiseflow/server/internal/module/account"
 	attentionmod "wiseflow/server/internal/module/attention"
 	commitmentmod "wiseflow/server/internal/module/commitment"
@@ -35,6 +36,7 @@ import (
 	researchmod "wiseflow/server/internal/module/research"
 	retrospectmod "wiseflow/server/internal/module/retrospect"
 	signalmod "wiseflow/server/internal/module/signal"
+	subscriptionmod "wiseflow/server/internal/module/subscription"
 )
 
 func main() {
@@ -84,6 +86,11 @@ func run() error {
 	inviteSvc := invitemod.NewService(inviteRepo)
 	inviteHandler := invitemod.NewHandler(inviteSvc)
 
+	// project 先于 account 构建 —— account.Register 经闭包为新用户预置默认分类.
+	projectRepo := projectmod.NewRepository(pool)
+	projectSvc := projectmod.NewService(projectRepo)
+	projectHandler := projectmod.NewHandler(projectSvc)
+
 	accountRepo := accountmod.NewRepository(pool)
 	// 邀请码门禁: Redeem 把 invite.ErrNotRedeemable 翻成 account.ErrInviteInvalid,
 	// 让 account 不必 import invite 的 sentinel.
@@ -100,7 +107,21 @@ func run() error {
 		Refund: func(ctx context.Context, code string) error {
 			return inviteSvc.Refund(ctx, code)
 		},
-	})
+	},
+		// provisionDefaults: 注册建好用户后为其建默认分类 (与 mobile useEnsureCategory 同名),
+		// 使"信号未分类 → 落 firstActive"兜底从注册即生效. best-effort: 重复 (与 mobile 竞态)
+		// 当成功, 其他错误记日志但不阻断注册.
+		func(ctx context.Context, userID uuid.UUID) error {
+			if _, err := projectSvc.Create(ctx, projectmod.CreateCommand{
+				UserID: userID,
+				Name:   projectmod.DefaultName,
+			}); err != nil && !errors.Is(err, projectmod.ErrDuplicateName) {
+				logger.Warn("provision default project failed (ignored)",
+					zap.String("user_id", userID.String()), zap.Error(err))
+				return err
+			}
+			return nil
+		})
 	accountHandler := accountmod.NewHandler(accountSvc)
 
 	// dev bearer 兼容: 保证 DEV_USER_ID 在 users 表有占位行, 使 GET /v1/me 在
@@ -109,22 +130,28 @@ func run() error {
 		logger.Warn("ensure dev user failed (ignored)", zap.Error(err))
 	}
 
-	projectRepo := projectmod.NewRepository(pool)
-	projectSvc := projectmod.NewService(projectRepo)
-	projectHandler := projectmod.NewHandler(projectSvc)
-
 	signalRepo := signalmod.NewRepository(pool)
 	// projectOwnerCheck: signal.Capture 用它校验请求里的 project_id 属于 user 且未归档.
-	signalSvc := signalmod.NewService(signalRepo, func(ctx context.Context, userID, projectID uuid.UUID) error {
-		err := projectSvc.ValidateOwnership(ctx, userID, projectID)
-		if err != nil {
-			if errors.Is(err, projectmod.ErrNotFound) {
-				return signalmod.ErrInvalidProject
+	// firstActiveProject: signal.RecordInference 在"信号未分类且 AI 弃权"时兜底落到用户第一个
+	//   活跃分类 (与 mobile useEnsureCategory 同序), 保证信号永远有归属、可见.
+	signalSvc := signalmod.NewService(signalRepo,
+		func(ctx context.Context, userID, projectID uuid.UUID) error {
+			err := projectSvc.ValidateOwnership(ctx, userID, projectID)
+			if err != nil {
+				if errors.Is(err, projectmod.ErrNotFound) {
+					return signalmod.ErrInvalidProject
+				}
+				return err
 			}
-			return err
-		}
-		return nil
-	})
+			return nil
+		},
+		func(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error) {
+			actives, err := projectSvc.ListActive(ctx, userID)
+			if err != nil || len(actives) == 0 {
+				return nil, err
+			}
+			return &actives[0].ID, nil
+		})
 	signalHandler := signalmod.NewHandler(signalSvc)
 
 	refinementRepo := refinementmod.NewRepository(pool)
@@ -177,6 +204,33 @@ func run() error {
 	distillationSvc := distillationmod.NewService(distillationRepo)
 	distillationHandler := distillationmod.NewHandler(distillationSvc)
 
+	// subscription: 推文订阅 (采集 poller + 分类派发 + REST). 转信号经闭包走
+	// signal.Capture — 与 exit→retrospect 同样的 main.go 装配模式, 不反向 import.
+	twtClient := twtapix.New(cfg.TwtAPIKey)
+	subscriptionRepo := subscriptionmod.NewRepository(pool)
+	subscriptionSvc := subscriptionmod.NewService(subscriptionRepo, twtClient, mastraClient,
+		func(ctx context.Context, userID, clientEventID uuid.UUID, rawText string) (uuid.UUID, bool, error) {
+			// promote 兜底归类: 落到用户第一个活跃分类 (provisional, auto_assigned), 信号立即可见;
+			// 之后 mastra analyst 判好会覆盖到更合适的分类. AI 故障也不丢信号 (产品无未分类视图).
+			var pid *uuid.UUID
+			if actives, perr := projectSvc.ListActive(ctx, userID); perr == nil && len(actives) > 0 {
+				pid = &actives[0].ID
+			}
+			res, err := signalSvc.Capture(ctx, signalmod.CaptureCommand{
+				UserID:              userID,
+				ClientEventID:       clientEventID,
+				ProjectID:           pid,
+				ProjectAutoAssigned: pid != nil,
+				RawText:             rawText,
+				OccurredAt:          time.Now().UTC(),
+			})
+			if err != nil {
+				return uuid.Nil, false, err
+			}
+			return res.Signal.ID, res.Duplicate, nil
+		}, logger)
+	subscriptionHandler := subscriptionmod.NewHandler(subscriptionSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -199,6 +253,7 @@ func run() error {
 			researchHandler.Register(v1, internal)
 			attentionHandler.Register(v1, internal)
 			distillationHandler.Register(v1, internal)
+			subscriptionHandler.Register(v1)
 		},
 	})
 
@@ -239,6 +294,20 @@ func run() error {
 		defer workerWG.Done()
 		exitChecker.Run(workerCtx)
 	}()
+
+	// 订阅采集 + 分类派发 worker. key 缺失 / 显式关闭 → 不起 (REST 读历史照常).
+	if cfg.SubscriptionPollEnabled && twtClient.IsConfigured() {
+		subscriptionPoller := subscriptionmod.NewPoller(subscriptionSvc, logger)
+		workerWG.Add(1)
+		go func() {
+			defer workerWG.Done()
+			subscriptionPoller.Run(workerCtx)
+		}()
+	} else {
+		logger.Info("subscription poller disabled",
+			zap.Bool("enabled", cfg.SubscriptionPollEnabled),
+			zap.Bool("twtapi_configured", twtClient.IsConfigured()))
+	}
 
 	// ───── HTTP serve loop ─────
 	serveErr := make(chan error, 1)

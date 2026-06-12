@@ -12,6 +12,11 @@ import (
 
 var ErrInvalidInput = errors.New("invalid input")
 
+// DefaultName 是新用户注册时预置、以及 mobile 端分类列表为空时补建的默认分类名.
+// 与 mobile useEnsureCategory.ts 的 DEFAULT_CATEGORY_NAME 保持一致, 让两端兜底建出同一个分类
+// (配合 (user_id, name) 唯一约束, 即便注册与首次进收件箱竞态也只会留下一个).
+const DefaultName = "我的关注"
+
 type Service struct {
 	repo *Repository
 }

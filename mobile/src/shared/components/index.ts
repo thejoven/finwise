@@ -25,6 +25,8 @@ export { RomanList } from "./RomanList";
 export type { RomanListProps, RomanListItem } from "./RomanList";
 
 export { DynamicIslandTabBar } from "./DynamicIslandTabBar";
+// 各 tab 屏给悬浮岛让位的标准底部空隙 (paddingBottom = insets.bottom + TAB_BAR_CLEARANCE).
+export { TAB_BAR_CLEARANCE } from "./glass";
 
 export { KeyboardForm } from "./KeyboardForm";
 

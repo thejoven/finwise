@@ -32,6 +32,7 @@ const (
 type testEnv struct {
 	router    *gin.Engine
 	pool      *db.Pool
+	svc       *Service
 	devUserID uuid.UUID
 }
 
@@ -59,7 +60,26 @@ func newTestEnv(t *testing.T) *testEnv {
 
 	devUserID := uuid.New()
 	repo := NewRepository(pool)
-	svc := NewService(repo, nil) // projectCheck=nil: 测试不带 project_id, 不校验
+	// projectCheck / firstActive 走裸 SQL 命中 projects 表 (不 import project 模块, 测试自洽).
+	projectCheck := func(ctx context.Context, userID, projectID uuid.UUID) error {
+		var one int
+		if err := pool.QueryRow(ctx,
+			`SELECT 1 FROM projects WHERE user_id=$1 AND id=$2 AND archived_at IS NULL`,
+			userID, projectID).Scan(&one); err != nil {
+			return ErrInvalidProject // 不存在 / 不属于该 user → 当非法分类
+		}
+		return nil
+	}
+	firstActive := func(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error) {
+		var id uuid.UUID
+		if err := pool.QueryRow(ctx,
+			`SELECT id FROM projects WHERE user_id=$1 AND archived_at IS NULL ORDER BY sort_order, created_at LIMIT 1`,
+			userID).Scan(&id); err != nil {
+			return nil, nil // 无分类 → 不兜底
+		}
+		return &id, nil
+	}
+	svc := NewService(repo, projectCheck, firstActive)
 	handler := NewHandler(svc)
 
 	router := httpapi.NewRouter(httpapi.Deps{
@@ -74,7 +94,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		},
 	})
 
-	return &testEnv{router: router, pool: pool, devUserID: devUserID}
+	return &testEnv{router: router, pool: pool, svc: svc, devUserID: devUserID}
 }
 
 func (e *testEnv) do(method, path string, body any, headers map[string]string) *httptest.ResponseRecorder {
@@ -289,5 +309,158 @@ func TestInternalAuthRequires401(t *testing.T) {
 	})
 	if w2.Code != http.StatusUnauthorized {
 		t.Fatalf("want 401 (wrong internal token), got %d · body=%s", w2.Code, w2.Body.String())
+	}
+}
+
+// ───────── 分类回写 (AI 智能归类 + provisional 兜底) ─────────
+
+// seedProject 直接 INSERT 一行 projects (绕过 project 模块), 返回 id. projects.user_id 无 FK.
+func (e *testEnv) seedProject(t *testing.T, name string) uuid.UUID {
+	t.Helper()
+	var id uuid.UUID
+	if err := e.pool.QueryRow(context.Background(),
+		`INSERT INTO projects (user_id, name, sort_order) VALUES ($1, $2, 0) RETURNING id`,
+		e.devUserID, name).Scan(&id); err != nil {
+		t.Fatalf("seed project: %v", err)
+	}
+	return id
+}
+
+// recordInfRaw POST 一条推演回写; projectID 非空则带 project_id. 返回 HTTP code.
+func (e *testEnv) recordInfRaw(t *testing.T, signalID, projectID string) int {
+	t.Helper()
+	inf := map[string]any{
+		"signal_id": signalID,
+		"user_id":   e.devUserID.String(),
+		"summary":   "推演摘要",
+		"tags":      []string{"x"},
+		"model":     "test-model",
+	}
+	if projectID != "" {
+		inf["project_id"] = projectID
+	}
+	w := e.do(http.MethodPost, "/v1/internal/inferences", inf, map[string]string{
+		"X-Internal-Token": testInternalToken,
+		"Authorization":    "",
+	})
+	return w.Code
+}
+
+func (e *testEnv) recordInf(t *testing.T, signalID, projectID string) {
+	t.Helper()
+	if code := e.recordInfRaw(t, signalID, projectID); code != http.StatusOK {
+		t.Fatalf("record inference: want 200, got %d", code)
+	}
+}
+
+func (e *testEnv) getSignal(t *testing.T, signalID string) signalView {
+	t.Helper()
+	w := e.do(http.MethodGet, "/v1/signals/"+signalID, nil, nil)
+	if w.Code != http.StatusOK {
+		t.Fatalf("get signal: %d · %s", w.Code, w.Body.String())
+	}
+	var sig signalView
+	if err := json.Unmarshal(w.Body.Bytes(), &sig); err != nil {
+		t.Fatalf("decode signal: %v", err)
+	}
+	return sig
+}
+
+func ptrStr(p *string) string {
+	if p == nil {
+		return "<nil>"
+	}
+	return *p
+}
+
+// 用户手选的分类, AI 不许覆盖.
+func TestRecordInference_PreservesUserChosenProject(t *testing.T) {
+	env := newTestEnv(t)
+	projA := env.seedProject(t, "A-"+uuid.NewString())
+	projB := env.seedProject(t, "B-"+uuid.NewString())
+
+	body := map[string]any{
+		"client_event_id": uuid.NewString(),
+		"project_id":      projA.String(),
+		"raw_text":        "手选分类的信号",
+		"occurred_at":     time.Now().UTC().Format(time.RFC3339),
+	}
+	w := env.do(http.MethodPost, "/v1/signals", body, nil)
+	if w.Code != http.StatusAccepted {
+		t.Fatalf("capture: %d · %s", w.Code, w.Body.String())
+	}
+	var cap captureResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &cap)
+
+	env.recordInf(t, cap.SignalID, projB.String()) // AI 想改到 B
+	sig := env.getSignal(t, cap.SignalID)
+	if ptrStr(sig.ProjectID) != projA.String() {
+		t.Fatalf("want user-chosen %s preserved, got %s", projA, ptrStr(sig.ProjectID))
+	}
+}
+
+// 系统临时归类 (promote provisional, auto_assigned) 应被 AI 覆盖到更合适分类.
+func TestRecordInference_AIRehomesProvisional(t *testing.T) {
+	env := newTestEnv(t)
+	projA := env.seedProject(t, "A-"+uuid.NewString())
+	projB := env.seedProject(t, "B-"+uuid.NewString())
+
+	res, err := env.svc.Capture(context.Background(), CaptureCommand{
+		UserID: env.devUserID, ClientEventID: uuid.New(),
+		ProjectID: &projA, ProjectAutoAssigned: true,
+		RawText: "promote 兜底的信号", OccurredAt: time.Now().UTC(),
+	})
+	if err != nil {
+		t.Fatalf("provisional capture: %v", err)
+	}
+	env.recordInf(t, res.Signal.ID.String(), projB.String()) // AI 判到 B
+	sig := env.getSignal(t, res.Signal.ID.String())
+	if ptrStr(sig.ProjectID) != projB.String() {
+		t.Fatalf("want AI rehome to %s, got %s", projB, ptrStr(sig.ProjectID))
+	}
+}
+
+// 未分类信号 + AI 弃权 → 兜底落第一个活跃分类 (保证可见).
+func TestRecordInference_FallbackToFirstActiveWhenAIAbstains(t *testing.T) {
+	env := newTestEnv(t)
+	projFirst := env.seedProject(t, "First-"+uuid.NewString())
+	_ = env.seedProject(t, "Second-"+uuid.NewString())
+
+	body := map[string]any{
+		"client_event_id": uuid.NewString(),
+		"raw_text":        "未分类待兜底",
+		"occurred_at":     time.Now().UTC().Format(time.RFC3339),
+	}
+	w := env.do(http.MethodPost, "/v1/signals", body, nil)
+	var cap captureResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &cap)
+
+	env.recordInf(t, cap.SignalID, "") // AI 弃权 (不带 project_id)
+	sig := env.getSignal(t, cap.SignalID)
+	if ptrStr(sig.ProjectID) != projFirst.String() {
+		t.Fatalf("want fallback to first active %s, got %s", projFirst, ptrStr(sig.ProjectID))
+	}
+}
+
+// AI 给了不属于该 user 的分类 → 丢弃当弃权, 回写仍 200, 落兜底 (不报错以免 nak 整条推演).
+func TestRecordInference_InvalidAIProjectDropped(t *testing.T) {
+	env := newTestEnv(t)
+	projFirst := env.seedProject(t, "First-"+uuid.NewString())
+
+	body := map[string]any{
+		"client_event_id": uuid.NewString(),
+		"raw_text":        "AI 给了非法分类",
+		"occurred_at":     time.Now().UTC().Format(time.RFC3339),
+	}
+	w := env.do(http.MethodPost, "/v1/signals", body, nil)
+	var cap captureResponse
+	_ = json.Unmarshal(w.Body.Bytes(), &cap)
+
+	if code := env.recordInfRaw(t, cap.SignalID, uuid.NewString()); code != http.StatusOK {
+		t.Fatalf("record inference should still 200 (drop bad project), got %d", code)
+	}
+	sig := env.getSignal(t, cap.SignalID)
+	if ptrStr(sig.ProjectID) != projFirst.String() {
+		t.Fatalf("want fallback after dropping foreign project, got %s", ptrStr(sig.ProjectID))
 	}
 }

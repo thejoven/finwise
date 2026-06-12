@@ -1,0 +1,27 @@
+{
+  "tags": [
+    "GLP-1",
+    "健身行业",
+    "消费结构变化"
+  ],
+  "related_assets": [
+    {
+      "ticker": "Novo Nordisk",
+      "rationale": "GLP-1 主供, 注射人群扩大直接受益",
+      "order": "first"
+    },
+    {
+      "ticker": "Eli Lilly",
+      "rationale": "GLP-1 二供, 跟涨",
+      "order": "first"
+    },
+    {
+      "ticker": "高客单价健身/私教平台",
+      "rationale": "GLP-1 用户减重后转向增肌, 付费意愿从团课转向高单价私教, 客单价结构上移",
+      "order": "second"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "leading",
+  "one_line_summary": "GLP-1 用户从减重转向增肌, 健身消费从频次驱动转向客单价驱动"
+}

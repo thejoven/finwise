@@ -20,6 +20,7 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK, lensFocusBlock, type LensId } from "./lens.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
 import type { SearchResult } from "../tools/exa-search.js";
 
@@ -98,28 +99,32 @@ export const socratic = new Agent({
 
 ${LENS_LIBRARY_BLOCK}
 
+${MACRO_FINANCE_CONTEXT_BLOCK}
+
 ## 5 轮锚定的专业 lens (严格按 round 分配)
 
 每一轮**主导一个或两个 lens**, 题面与 distractor 都要可以被这条 lens 解释:
 
+⚠️ **下面每个 round 写的「题目目标」是出题方向 (要把用户引到哪条认知), 不是题面原话.** 题面必须由**这条信号的具体处境**重新起笔 —— 从这条信号里具体的 actor / 数字 / 机制切入, 每道题开场都不一样. **严禁**把目标描述里的句子 (尤其 "把表层信号反向还原一层" 这种) 当模板照抄进题面 —— 那是给你的方向, 不是给用户的话术; 用户只该看到一道**为这条信号量身写**的追问, 而不是每条信号都套同一个开场. 下面参考示例里的题面只是**一种**起题法, 别把它的句式 ("表面看 X 受益, 但先别停在'谁明显受益'…") 当成唯一模板 —— 换着开头: 可以从一个具体数字切入, 可以先抛一句反共识断言, 也可以从"如果这条信号不成立会怎样"切入. 句式雷同本身就是 死板.
+
 - **round 1 · single** — 主导 L1 (根因还原) + L6 (护城河/能力圈).
-  题目: 把表层信号 反向 还原一层, 谁的 enabling condition 真正被改变了?
+  题目目标:把表层信号 反向 还原一层, 谁的 enabling condition 真正被改变了?
   distractor 模板: "停在表层共识的受益方" / "把现象当原因" / "推到自己其实拿不住的标的".
   选项 3 个 LLM + 1 个用户自填.
 
 - **round 2 · multi** — 主导 L2 (多元思维栅格) + L7 (10x 拐点).
-  题目: 这条信号在**心理学 / 法律 / 历史 / 博弈论 / 生物学 / 工程 / 化学 / 物理 / 数学** 这些 lens 上, 还产生了哪些被忽略的二阶 / 三阶受益?
+  题目目标:这条信号在**心理学 / 法律 / 历史 / 博弈论 / 生物学 / 工程 / 化学 / 物理 / 数学** 这些 lens 上, 还产生了哪些被忽略的二阶 / 三阶受益?
   本轮 distractor 必须落在用户**习惯只用的 lens** 上 (通常是金融 / 商业), 让 漏掉某个非金融学科 lens 暴露出来.
   漏选 = 多元思维栅格不够宽.
   选项 3 个 LLM + 1 个用户自填.
 
 - **round 3 · ordering** — 主导 L3 (二阶思考) + L4 (反身性).
-  题目: 把以下事件按真实时序排 — "enabling 条件 → 表层信号 → 二阶反应 → 反身性反转" 这条链.
+  题目目标:把以下事件按真实时序排 — "enabling 条件 → 表层信号 → 二阶反应 → 反身性反转" 这条链.
   distractor 模板: "把表层信号排在最前" / "漏掉反身性自我强化的中段".
   选项 3 个 LLM + 1 个用户自填.
 
 - **round 4 · single** — 主导 L4 (反身性) + L5 (base rate) + L10 (叙事退潮).
-  题目: 主流市场**现在**的 narrative 是什么? 你愿不愿意 take 反共识 / leading 的位置?
+  题目目标:主流市场**现在**的 narrative 是什么? 你愿不愿意 take 反共识 / leading 的位置?
   distractor 模板: "跟随当前 narrative 的安全位置 (选这个 = 在 narrative 退潮时被反噬)" / "凭'这次不一样'的故事感跳过 base rate".
   选项 3 个 LLM + 1 个用户自填.
 
@@ -176,6 +181,7 @@ ${LENS_LIBRARY_BLOCK}
 
 严格约束:
 - 题目正文用第二人称"你"称呼用户, 像一封信的开头, 不是测验.
+- **由这条信号的真实处境出题, 不要套模板**: 先想清楚它落在哪个宏观象限 / 哪段资本周期 / 共识走到哪了, 再让题面从那条**具体机制**切入. 同一个 round 在不同信号上必须长得很不一样 —— 别每题都用 "把表层信号反向还原一层" 这类固定开场句式. 选项里要落到具体的 actor / 数字 / 链条 / 机制, 不是抽象判断.
 - 题面 / 选项里**不允许**出现 "Munger" "Soros" "Buffett" "Howard Marks" "Taleb" 等人名 — 用产品语言 (二阶思考 / 反身性 / 多元思维栅格 / 安全边际 / 凸性 / 叙事退潮 / 10x 拐点 / 根因还原).
 - 不写"正确答案". 前 3 个 LLM 选项里必须有 1-2 个**真实的、看起来合理但漏了某条 lens** 的 distractor (is_distractor=true). 在选项 text 末尾可以用括号提示该选项漏掉了哪个角度, 例: "(停在表层, 未追问 enabling)" — 这是给用户的诊断暗示.
 - 不写"建议关注 X" / "短期看多 Y" / "目标价" — 反模式词.
@@ -191,7 +197,7 @@ ${LENS_LIBRARY_BLOCK}
   "question_id": "r1-single-hbm-priceup-v1",
   "round": 1,
   "kind": "single",
-  "text": "你 1 月 8 日 听到 HBM 第三轮涨价. 把这条表层信号反向还原一层, 谁的真正 enabling condition 因此被改变 (而不是只是'明显受益')?",
+  "text": "HBM 又涨了第三轮, 三星还把 DRAM 产能往 HBM 挪 —— 表面看 SK Hynix 直接受益. 但先别停在'谁明显受益': 这轮涨价真正改写了谁的触发条件 (enabling condition), 谁的定价权护城河因此被重排?",
   "options": [
     { "id": "a", "text": "HBM 主供 SK Hynix: 直接受益, 但这只是表层结果, 不是 enabling 被改变 (停在表层共识)", "is_distractor": true, "is_required": false, "is_user_input": false },
     { "id": "b", "text": "AI 服务器代工厂 / ODM: BOM 锁价能力被改写 — 谁能签长约谁就赢, 这是 enabling 层 (定价权护城河被重排)", "is_distractor": false, "is_required": false, "is_user_input": false },
@@ -200,6 +206,23 @@ ${LENS_LIBRARY_BLOCK}
   ],
   "open_prompts": []
 }
+
+例 · round 1, single, **另一种起题法** (出口管制场景; 主导 L1 根因 + L6 能力圈) —— 开场和上面那道**刻意不一样**: 不套 "表面看 X 受益, 但先别停在…", 而是从一个反差数字 + 市场第一反应切入.
+{
+  "question_id": "r1-single-export-curb-v1",
+  "round": 1,
+  "kind": "single",
+  "text": "先进制程设备出口改逐案审批 —— 三个月前还能签的单子, 现在平均卡 90 天. 市场第一反应是'国产替代利好'. 可这条信号真正动的不是'谁替代谁', 是某一层的成本结构: 这 90 天把谁的现金流 / 产能节奏 / 议价位置改写了, 而且是它自己扛不掉的那种?",
+  "options": [
+    { "id": "a", "text": "国产设备龙头: 替代需求利好 —— 但这是市场喊了一年的表层共识, enabling 没变 (停在共识叙事)", "is_distractor": true, "is_required": false, "is_user_input": false },
+    { "id": "b", "text": "依赖进口设备的二线晶圆厂: 90 天审批打乱扩产节奏, 被迫预付 / 囤货, 营运资本被锁死 (现金流层 enabling 被改)", "is_distractor": false, "is_required": false, "is_user_input": false },
+    { "id": "c", "text": "审批窗口里抢到现货的设备分销 / 二手翻新商: 稀缺性把临时定价权拉满 (制度变量造出的临时护城河)", "is_distractor": false, "is_required": false, "is_user_input": false },
+    { "id": "self", "text": "我有自己的观察 — 写下你看到的那个角度", "is_distractor": false, "is_required": false, "is_user_input": true }
+  ],
+  "open_prompts": []
+}
+
+**对照上面两道 round 1**: 一道从"表面看谁受益"切入, 一道从"一个反差数字 + 市场第一反应"切入 —— 开场句式**完全不同**. 你出题时也要为每条信号找最自然的入口; 这两个示例都只是其中一种写法, 别把任何一个当固定模板照抄.
 
 例 · round 5, commitment_setup, HBM 涨价场景 (主导 L8 安全边际 + L9 凸性)
 {
@@ -381,6 +404,8 @@ export const diagnosisAgent = new Agent({
 任务: 给定一道题 (包含 options 的 is_distractor 标注 + round 主导 lens) 和用户的答案, 输出一段"诊断", 不是判对错.
 
 ${LENS_LIBRARY_BLOCK}
+
+${MACRO_FINANCE_CONTEXT_BLOCK}
 
 诊断 kind 含义:
 - correct: 用户选了非干扰项, 也没漏要选的 (is_required=true 的都选了)

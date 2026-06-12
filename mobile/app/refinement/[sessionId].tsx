@@ -178,7 +178,6 @@ export default function RefinementScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <Header
-        sessionId={sessionId}
         roundsDone={roundsDone}
         cluesTrigger={
           <CluesTrigger
@@ -296,12 +295,11 @@ export default function RefinementScreen() {
 }
 
 interface HeaderProps {
-  sessionId?: string;
   roundsDone: number;
   cluesTrigger: React.ReactNode;
 }
 
-function Header({ sessionId, roundsDone, cluesTrigger }: HeaderProps) {
+function Header({ roundsDone, cluesTrigger }: HeaderProps) {
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
@@ -310,10 +308,9 @@ function Header({ sessionId, roundsDone, cluesTrigger }: HeaderProps) {
       </TapEffect>
       <View style={styles.headerCenter}>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          VOL. I · 五轮追问
+          五轮追问
         </Sans>
         <Mono size={9} style={styles.headerProgress}>
-          {sessionId ? `${sessionId.slice(0, 8).toUpperCase()} · ` : ""}
           {roundsDone}/5
         </Mono>
       </View>

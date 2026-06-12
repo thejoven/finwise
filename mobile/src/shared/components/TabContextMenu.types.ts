@@ -22,7 +22,7 @@ export interface TabMenuActions {
 }
 
 export interface TabContextMenuProps {
-  /** 当前 tab 的 route name (newspaper / caizhi / attention / profile). */
+  /** 当前 tab 的 route name (caizhi / attention / profile). */
   routeName: string;
   actions: TabMenuActions;
   /** 该 tab 的 SF Symbol —— 用于长按"高亮预览"(玻璃卡片上居中的图标). */

@@ -29,18 +29,30 @@ import Animated from "react-native-reanimated";
 import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
 import { BlurView } from "expo-blur";
 
+import { theme } from "@/core/theme";
+
 /** 选中"透镜"要随 tab 滑动, 故包成可动画的原生玻璃视图 (reanimated 直接驱动其 transform). */
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
-/** 两颗胶囊统一高度. tab 岛: paddingV 4*2 + tab 44 = 52; 分类格也取此值, 视觉成对. */
-export const PILL_HEIGHT = 52;
+/** 两颗胶囊统一高度. tab 岛: tab 48 + 上下各 4 留白 = 56; 分类格也取此值, 视觉成对. */
+export const PILL_HEIGHT = 56;
+
+/** 岛悬浮在安全区之上的高度 (tab bar host 的 bottom = insets.bottom + 此值). */
+export const TAB_BAR_OFFSET = theme.spacing.sm; // 8
+
+/**
+ * 各 tab 屏内容底部该留的空隙: paddingBottom = insets.bottom + TAB_BAR_CLEARANCE.
+ * 账: 岛高 PILL_HEIGHT(56) + 悬浮 TAB_BAR_OFFSET(8) + 一档呼吸 base(16) —— 滚到底时
+ * 末行与岛顶仍隔 16. 收成常量是为了各屏别再手抄魔数; 改岛高/悬浮量只动这里.
+ */
+export const TAB_BAR_CLEARANCE = PILL_HEIGHT + TAB_BAR_OFFSET + theme.spacing.base;
 
 /**
  * 胶囊圆角 = 半高 —— 让左右两侧成**完全圆形**(真半圆), 两颗胶囊共用.
  *
  * 为什么钉成 PILL_HEIGHT/2 而非 radius.full(9999): 液态玻璃 GlassView 按 borderRadius 的
  *   字面值生成玻璃形状, 不像普通 CALayer 会把超大值夹到半高, 9999 下两端会渲染成圆角矩形
- *   而非正圆. 钉成半高 (= 26) 是 iOS capsule 的规范值, 左右两侧必为完整半圆.
+ *   而非正圆. 钉成半高 (= 28) 是 iOS capsule 的规范值, 左右两侧必为完整半圆.
  */
 export const PILL_RADIUS = PILL_HEIGHT / 2;
 

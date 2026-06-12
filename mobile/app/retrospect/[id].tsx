@@ -129,7 +129,7 @@ function Header({ step, finalized }: { step: number; finalized: boolean }) {
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
-        VOL. I · {label.toUpperCase()}
+        {label}
       </Sans>
       <View style={styles.headerSpacer} />
     </View>

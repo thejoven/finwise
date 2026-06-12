@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { SectionHeader, Serif } from "@/shared/components";
+import { SectionHeader, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 import {
   SignalRow,
   SilenceStamp,
@@ -14,17 +14,17 @@ import {
 // inbox/index ⇄ InboxView 的自引用 require cycle. 具体路径切断回边.
 import { InboxCallouts } from "@/features/inbox/Callouts";
 import { theme } from "@/core/theme";
-import { isSameLocalDay, isoWeekOfYear } from "@/shared/format";
+import { isSameLocalDay } from "@/shared/format";
 
 /**
  * 信箱 (原「收件箱」) · 财知页内的第一张子页.
  *
  * 内容与旧 inbox 屏一致 —— server + local-pending 合并列表, 顶部沉默戳 + callouts +
- * 「本周记录」段, 下拉刷新, 每 10s 轮询看 inference_status 回写. 唯一区别: 报头/卷号戳
+ * 「本周记录」段, 下拉刷新, 每 10s 轮询看 inference_status 回写. 唯一区别: 报头
  * /记录入口已上移到财知 host 的固定 CaizhiHeader, 本视图不再自带 CollapsibleMasthead.
  *
  * 布局: 作为 PagerView 的一页, 顶部紧接吸顶分段栏, 故只留一点呼吸 (spacing.md);
- *   底部仍留 insets.bottom + 64 给悬浮的灵动岛 tab bar 让位.
+ *   底部仍留 insets.bottom + TAB_BAR_CLEARANCE 给悬浮的灵动岛 tab bar 让位.
  */
 export function InboxView() {
   const insets = useSafeAreaInsets();
@@ -39,9 +39,6 @@ export function InboxView() {
     [data],
   );
 
-  const today = useMemo(() => new Date(), []);
-  const isoWeek = isoWeekOfYear(today);
-
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
@@ -51,7 +48,7 @@ export function InboxView() {
     }
   }, [refetch]);
 
-  const bottomPad = insets.bottom + 64;
+  const bottomPad = insets.bottom + TAB_BAR_CLEARANCE;
 
   // 提到 useMemo: 否则每次 render 都 new 一个 RefreshControl 元素 (jsx-no-jsx-as-prop).
   const refreshControl = useMemo(
@@ -74,7 +71,7 @@ export function InboxView() {
         ItemSeparatorComponent={Separator}
         ListHeaderComponent={
           <View>
-            <SilenceStamp todayCount={todayCount} edition={isoWeek} />
+            <SilenceStamp todayCount={todayCount} />
             <InboxCallouts />
             {data.length > 0 ? (
               <View style={styles.section}>

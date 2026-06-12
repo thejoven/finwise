@@ -25,17 +25,22 @@ var ErrInvalidProject = errors.New("invalid project")
 // 闭包形式避免 signal 模块反向 import project 模块.
 type ProjectOwnerCheck func(ctx context.Context, userID, projectID uuid.UUID) error
 
+// FirstActiveProjectFn — main.go 装配的闭包, 返回 user 第一个活跃分类 id (按 sort_order;
+// 无分类返回 nil). RecordInference 在"信号未分类且 AI 弃权"时用它兜底, 保证信号有归属可见.
+type FirstActiveProjectFn func(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
+
 // Service holds the business rules around signal capture / inference.
 // Kept thin: repository is the work-horse.
 type Service struct {
 	repo         *Repository
 	projectCheck ProjectOwnerCheck
+	firstActive  FirstActiveProjectFn
 }
 
-// NewService — projectCheck 可以传 nil, capture 时若有 project_id 入参会被忽略
-// (理论不该发生, 但测试场景方便).
-func NewService(repo *Repository, projectCheck ProjectOwnerCheck) *Service {
-	return &Service{repo: repo, projectCheck: projectCheck}
+// NewService — projectCheck / firstActive 可以传 nil (测试场景方便): projectCheck nil 时
+// 跳过 project 归属校验; firstActive nil 时不做未分类兜底.
+func NewService(repo *Repository, projectCheck ProjectOwnerCheck, firstActive FirstActiveProjectFn) *Service {
+	return &Service{repo: repo, projectCheck: projectCheck, firstActive: firstActive}
 }
 
 // CaptureCommand is the API-facing input to capture a signal.
@@ -43,8 +48,10 @@ type CaptureCommand struct {
 	UserID        uuid.UUID
 	ClientEventID uuid.UUID
 	ProjectID     *uuid.UUID // 可选; nil = 未分类
-	RawText       string
-	OccurredAt    time.Time
+	// ProjectAutoAssigned: true = 系统临时归类 (promote 兜底), AI 推演可覆盖; false = 用户手选.
+	ProjectAutoAssigned bool
+	RawText             string
+	OccurredAt          time.Time
 }
 
 // Validate enforces minimal sanity:
@@ -85,11 +92,12 @@ func (s *Service) Capture(ctx context.Context, cmd CaptureCommand) (*CaptureResu
 		}
 	}
 	return s.repo.Capture(ctx, CaptureInput{
-		UserID:        cmd.UserID,
-		ClientEventID: cmd.ClientEventID,
-		ProjectID:     cmd.ProjectID,
-		RawText:       cmd.RawText,
-		CapturedAt:    cmd.OccurredAt,
+		UserID:              cmd.UserID,
+		ClientEventID:       cmd.ClientEventID,
+		ProjectID:           cmd.ProjectID,
+		ProjectAutoAssigned: cmd.ProjectAutoAssigned,
+		RawText:             cmd.RawText,
+		CapturedAt:          cmd.OccurredAt,
 	})
 }
 
@@ -162,6 +170,7 @@ type InferenceCommand struct {
 	RelatedAssets []domain.RelatedAsset
 	Layer         *domain.CognitiveLayer
 	Consensus     *domain.ConsensusCheck
+	ProjectID     *uuid.UUID // AI 判断的分类 (可空 = 弃权); 经归属校验后参与 resolveInferenceProject.
 }
 
 func (c *InferenceCommand) Validate() error {
@@ -189,6 +198,9 @@ func (c *InferenceCommand) Validate() error {
 // RecordInference applies an analyst inference back into the system.
 // Looks up source_event_id from the signal row so the caller doesn't have to
 // know about events.id (an internal sequence we don't leak over the wire).
+//
+// 分类回写: AI 判断的 ProjectID 经归属校验 (非法当"弃权"丢弃, 绝不报错 —— 否则会 nak
+// 整条推演浪费 analyst 结果), 再经 resolveInferenceProject 得最终分类写回 (见该函数注释).
 func (s *Service) RecordInference(ctx context.Context, cmd InferenceCommand) error {
 	if err := cmd.Validate(); err != nil {
 		return err
@@ -197,6 +209,22 @@ func (s *Service) RecordInference(ctx context.Context, cmd InferenceCommand) err
 	if err != nil {
 		return err
 	}
+
+	aiPID := cmd.ProjectID
+	if aiPID != nil && s.projectCheck != nil {
+		if err := s.projectCheck(ctx, cmd.UserID, *aiPID); err != nil {
+			aiPID = nil // AI 给的分类不属于该 user / 已归档 → 当弃权, 走兜底
+		}
+	}
+	// 信号仍未分类且 AI 弃权时, 落第一个活跃分类兜底 (与 useEnsureCategory 同序), 保证可见.
+	var firstActive *uuid.UUID
+	if sig.ProjectID == nil && aiPID == nil && s.firstActive != nil {
+		if fp, ferr := s.firstActive(ctx, cmd.UserID); ferr == nil {
+			firstActive = fp
+		}
+	}
+	resolved := resolveInferenceProject(sig.ProjectID, sig.ProjectAutoAssigned, aiPID, firstActive)
+
 	payload := domain.SignalInferenceDonePayload{
 		SignalID:      cmd.SignalID,
 		UserID:        cmd.UserID,
@@ -206,6 +234,31 @@ func (s *Service) RecordInference(ctx context.Context, cmd InferenceCommand) err
 		RelatedAssets: cmd.RelatedAssets,
 		Layer:         cmd.Layer,
 		Consensus:     cmd.Consensus,
+		ProjectID:     resolved,
 	}
 	return s.repo.RecordInference(ctx, payload, sig.SourceEventID)
+}
+
+// resolveInferenceProject 决定推演回写后信号的最终分类. 纯函数, 无 DB 依赖, 便于 table-test.
+//
+//	existing     = 信号当前 project_id (nil = 未分类)
+//	autoAssigned = 当前归属是否"系统临时归类"(promote 兜底); 仅 existing 非 nil 时有意义
+//	aiChoice     = AI 判断的分类 (已校验归属; nil = AI 弃权/未判)
+//	firstActive  = 兜底分类 (用户第一个活跃分类; nil = 用户无分类)
+//
+// 规则:
+//   - 用户手选 (existing 非 nil 且 !autoAssigned) → 保留, AI 不覆盖.
+//   - 系统临时归类 (existing 非 nil 且 autoAssigned) → AI 有合法判断则覆盖, 否则保留临时归属.
+//   - 未分类 (existing nil) → AI 优先, 弃权则落 firstActive (用户无分类时仍可能 nil).
+func resolveInferenceProject(existing *uuid.UUID, autoAssigned bool, aiChoice, firstActive *uuid.UUID) *uuid.UUID {
+	if existing != nil {
+		if autoAssigned && aiChoice != nil {
+			return aiChoice
+		}
+		return existing
+	}
+	if aiChoice != nil {
+		return aiChoice
+	}
+	return firstActive
 }

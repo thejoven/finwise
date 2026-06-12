@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
 import { ANALYSTS } from "./analysts.js";
 
@@ -42,6 +43,8 @@ export const timingAgent = new Agent({
 任务: 给定一个资产和一段背景信号, 以及用户声明的持仓窗口, 判断这件事会不会在一个**合理的前瞻窗口**内被市场重新定价, 以及用户的时机判断是否成立.
 
 ${LENS_LIBRARY_BLOCK}
+
+${MACRO_FINANCE_CONTEXT_BLOCK}
 
 ## 判断维度 (主导 L1 根因时序 + L3 二阶链条 + L9 凸性时间窗)
 

@@ -90,12 +90,19 @@ export function chineseMonthDay(d: Date = new Date()): string {
   return `${d.getMonth() + 1}月${d.getDate()}日`;
 }
 
-/** ISO 8601 week-of-year (1-53), 本地时区. */
-export function isoWeekOfYear(d: Date = new Date()): number {
-  const target = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const dayNum = (target.getUTCDay() + 6) % 7;
-  target.setUTCDate(target.getUTCDate() - dayNum + 3);
-  const firstThursday = new Date(Date.UTC(target.getUTCFullYear(), 0, 4));
-  const diff = target.getTime() - firstThursday.getTime();
-  return 1 + Math.round(diff / (7 * 24 * 60 * 60 * 1000));
+/** 中文相对时间 — 列表 meta 行用; 超过一周退回日期. */
+export function relativeTimeZh(iso: string): string {
+  const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return "";
+  const diff = Date.now() - t;
+  const min = Math.floor(diff / 60_000);
+  if (min < 1) return "刚刚";
+  if (min < 60) return `${min} 分钟前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr} 小时前`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return "昨天";
+  if (day < 7) return `${day} 天前`;
+  const d = new Date(iso);
+  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
 }

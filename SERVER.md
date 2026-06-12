@@ -43,7 +43,7 @@
 | Mastra service | `systemctl status wiseflow-mastra` |
 | Mastra log | `/var/log/wiseflow-mastra.log` |
 | Mastra env | `/opt/wiseflow/mastra/.env` (含 LLM_API_KEY, 600 权限) |
-| Server .env | `/opt/wiseflow/.env` (gitignored, token 已生成) |
+| Server .env | `/opt/wiseflow/.env` (gitignored, token 已生成; 含 `TWTAPI_API_KEY` 推文订阅采集用 — 仅在 205, 不进 repo) |
 | iii engine | docker compose service `iii` (image `iiidev/iii:0.16.1`), config bind-mount `/opt/wiseflow/iii/config.yaml`, 数据 named volume `wiseflow_iiidata` |
 | iii 容器 user | `65532` (nonroot), volume mountpoint 必须 `chown 65532:65532` (见"灾难恢复") |
 | iii console (UI) | docker compose service `iii-console` (image `wiseflow/iii-console:0.16.1`, 自己用 [iii/Dockerfile.console](iii/Dockerfile.console) build, 上游没出 docker 镜像), 默认监听 `0.0.0.0:3113` |

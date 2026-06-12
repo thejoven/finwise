@@ -33,8 +33,8 @@ export function UsersPage() {
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<AdminUserRow | null>(null);
 
-  const me = useQuery({ queryKey: ["me"], queryFn: wiseflow.me });
-  const q = useQuery({
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me });
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: wiseflow.admin.users.list,
   });
@@ -60,7 +60,7 @@ export function UsersPage() {
     },
   });
 
-  const rows = q.data?.users ?? [];
+  const rows = data?.users ?? [];
   const filtered = filter
     ? rows.filter((r) =>
         (r.email + " " + (r.display_name ?? "") + " " + r.id)
@@ -80,10 +80,10 @@ export function UsersPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => q.refetch()}
-            disabled={q.isFetching}
+            onClick={() => refetch()}
+            disabled={isFetching}
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -103,14 +103,14 @@ export function UsersPage() {
             </div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && <EmptyBox label="没有用户" />}
-          {q.data && filtered.length > 0 && (
+          {data && filtered.length === 0 && <EmptyBox label="没有用户" />}
+          {data && filtered.length > 0 && (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -195,7 +195,7 @@ export function UsersPage() {
               </dl>
 
               <DialogFooter className="sm:justify-between">
-                {me.data?.id === selected.id ? (
+                {me?.id === selected.id ? (
                   <p className="text-xs text-muted-foreground">这是你自己的账号.</p>
                 ) : selected.is_admin ? (
                   <Button

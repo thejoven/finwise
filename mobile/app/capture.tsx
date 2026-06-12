@@ -16,7 +16,7 @@ import { useActiveProject } from "@/features/project";
  *   1) 打开 modal, TextInput 自动 focus
  *   2) 用户写一句话, 选一个分类 (必选, 默认带入当前 active 分类), 点 "记下"
  *   3) 立即写入本地 pending 队列 (UI 立刻看到), 后台 POST /v1/signals
- *   4) modal 关闭, 回 inbox; inbox 自动多出一条 "AI 推演中"
+ *   4) 切到本条记录所属分类, modal 关闭, 回 inbox; inbox 自动多出一条 "AI 推演中"
  *   5) POST 失败时, 条目留在 inbox 标 "未同步" (没有 toast, 没有 dialog)
  *
  * 反模式 (按 references/05):
@@ -39,9 +39,12 @@ export default function CaptureModal() {
     if (!canSubmit) return;
     const draft = text.trim();
     const category = projectId;
+    if (!category) return;
     setText("");
     // 不 await 网络结果 — pending 队列已经 upsert, UI 立刻关闭即可.
     void submit(draft, category);
+    // 录入页可临时改分类; 提交后让首页筛选主动跟到这条记录所属分类.
+    void useActiveProject.getState().setActive(category);
     router.back();
   }
 

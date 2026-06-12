@@ -384,7 +384,7 @@ function Header() {
         <Serif size={13}>返回</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
-        VOL. I · 承诺书
+        承诺书
       </Sans>
       <View style={styles.headerSpacer} />
     </View>

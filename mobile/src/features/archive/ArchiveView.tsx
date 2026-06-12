@@ -8,7 +8,7 @@
  *
  * 与旧 archive 屏唯一区别: 报头已上移到财知 host 的固定 CaizhiHeader, 本视图不再自带
  *   CollapsibleMasthead. 作为 PagerView 一页, 顶部紧接吸顶分段栏 (留一点呼吸), 底部留
- *   insets.bottom + 64 给悬浮的灵动岛 tab bar 让位.
+ *   insets.bottom + TAB_BAR_CLEARANCE 给悬浮的灵动岛 tab bar 让位.
  *
  * 视觉: 报刊感. 不弹 toast, 不显示 "no archives 😢". 空状态用 italic 文案接纳.
  */
@@ -18,7 +18,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Mono, SectionHeader, Serif } from "@/shared/components";
+import { Mono, SectionHeader, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 // 走具体文件而非 "@/features/archive" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
 // archive/index ⇄ ArchiveView 的自引用 require cycle. 具体路径切断回边.
 import { useGatePool, type GateEvaluation } from "@/features/archive/hooks";
@@ -68,7 +68,7 @@ export function ArchiveView() {
         contentContainerStyle={{
           // react-doctor-disable-next-line react-doctor/rn-scrollview-dynamic-padding
           paddingTop: theme.spacing.md,
-          paddingBottom: insets.bottom + 64,
+          paddingBottom: insets.bottom + TAB_BAR_CLEARANCE,
         }}
       >
         <View style={styles.section}>

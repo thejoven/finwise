@@ -32,14 +32,14 @@ function parseMetrics(text: string): { help: Record<string, string>; lines: Metr
 }
 
 export function MetricsPage() {
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["metrics"],
     queryFn: wiseflow.metrics,
     refetchInterval: 10_000,
   });
   const [filter, setFilter] = React.useState("");
 
-  const parsed = q.data ? parseMetrics(q.data) : null;
+  const parsed = data ? parseMetrics(data) : null;
   const filtered = parsed
     ? parsed.lines.filter((l) =>
         filter ? (l.name + l.labels).toLowerCase().includes(filter.toLowerCase()) : true,
@@ -52,8 +52,8 @@ export function MetricsPage() {
         title="Metrics"
         description="Prometheus exposition, /metrics 端点直读."
         actions={
-          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -73,8 +73,8 @@ export function MetricsPage() {
             aria-label="按 name 或 labels 过滤指标"
             className="mb-3 h-9 w-full max-w-sm rounded-md border bg-transparent px-3 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
           />
-          {q.isLoading && <Loading />}
-          {q.isError && <ErrorBox error={q.error} />}
+          {isLoading && <Loading />}
+          {isError && <ErrorBox error={error} />}
           {parsed && (
             <div className="max-h-[60vh] overflow-auto rounded-md border">
               <table className="w-full text-xs">

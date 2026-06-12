@@ -29,13 +29,14 @@
 
 ---
 
-## 三种运行方式
+## 四种运行方式
 
 | 场景 | 用什么 | 跑哪里 |
 |---|---|---|
 | 本地写代码 / 跑测试 | `docker compose up -d` (postgres+redis+iii+console) + `make run` | Mac |
 | 现行内网部署 | `./scripts/remote-sync.sh` (rsync + systemd restart) | `root@192.168.1.205` |
 | **Docker 全栈部署 (新)** | `docker compose --profile prod up -d --build` | 任意 Linux/Docker 主机 |
+| Mobile 本地启动 / 冒烟测试 | `cd mobile && npm start` + `npm run typecheck/lint/check:banned-deps` | Mac + iOS Simulator / Android / 真机 |
 
 下面分别讲.
 
@@ -262,6 +263,64 @@ NPM_REGISTRY=https://registry.npmmirror.com/
 | 重启某个组件 | `systemctl restart wiseflow-mastra` | `docker compose restart mastra` |
 
 两条路可以同机切换, 但不要同时跑 (iii queue 同名 consumer 多实例会争消息, mastra 会冲突).
+
+---
+
+## D. Mobile 启动与测试
+
+Mobile 是 Expo / React Native 客户端. 默认 API 指向内网 dev server
+`http://192.168.1.205:8080`; 如果要连本机后端, 先按上面的 A 段把 `make run` 跑起来,
+再改 `mobile/.env` 里的 `EXPO_PUBLIC_API_URL`.
+
+前置:
+
+- Node 20+
+- Xcode 16+ (跑 iOS Simulator 时需要)
+- Android Studio / Android Emulator (跑 Android 时需要)
+- 可选: `brew install watchman`
+
+首次安装:
+
+```bash
+cd mobile
+cp .env.example .env
+npm install
+```
+
+启动:
+
+```bash
+# 启动 Metro / Expo dev server
+npm start
+
+# Expo 终端里:
+#   按 i 进 iOS Simulator
+#   按 a 进 Android Emulator
+#   或用真机扫码, 但真机必须能访问 EXPO_PUBLIC_API_URL
+```
+
+需要重建原生壳时用:
+
+```bash
+npm run ios
+npm run android
+```
+
+当前 mobile 没有单独的 `npm test` / Jest / E2E 脚本. PR 前先跑这三个门禁:
+
+```bash
+npm run typecheck
+npm run lint
+npm run check:banned-deps
+```
+
+冒烟检查:
+
+- App 能过 SplashScreen, 进入登录页或自动登录后的首页.
+- 底部 tab 能切换, 主流程页面没有红屏.
+- 如果请求失败, 先确认 `EXPO_PUBLIC_API_URL` 对模拟器/真机可达, 再看 Go API 的 `/healthz`.
+
+更细的 mobile 约束见 [mobile/README.md](mobile/README.md).
 
 ---
 

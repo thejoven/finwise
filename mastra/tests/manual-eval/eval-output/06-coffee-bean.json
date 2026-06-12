@@ -1,0 +1,33 @@
+{
+  "tags": [
+    "咖啡生豆",
+    "巴西霜冻",
+    "罗布斯塔减产",
+    "原材料涨价"
+  ],
+  "related_assets": [
+    {
+      "ticker": "星巴克 (SBUX)",
+      "rationale": "全球最大采购方, 生豆成本占比低但绝对量大, 对冲能力最强, 相对受益于中小品牌成本承压",
+      "order": "first"
+    },
+    {
+      "ticker": "瑞幸咖啡 (LKNCY)",
+      "rationale": "罗布斯塔用量大 (平价豆), 越南减产直接推升其核心原料, 但品牌力可转嫁部分",
+      "order": "first"
+    },
+    {
+      "ticker": "JDE Peet's (JDEPF)",
+      "rationale": "大宗烘焙商, 生豆成本占比高, 涨价传导到终端有滞后, 短期利润承压",
+      "order": "first"
+    },
+    {
+      "ticker": "精品独立咖啡馆",
+      "rationale": "无对冲工具、无规模采购合同, 生豆涨价 40% 直接吃掉毛利, 改菜单或提价将流失价格敏感客群",
+      "order": "second"
+    }
+  ],
+  "cognitive_layer": "second",
+  "consensus_check": "aligned",
+  "one_line_summary": "巴西霜冻+越南减产推升咖啡生豆40%, 中小品牌毛利承压"
+}

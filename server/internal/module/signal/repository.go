@@ -27,11 +27,12 @@ func NewRepository(pool *db.Pool) *Repository {
 
 // CaptureInput is the data needed to record a new signal.
 type CaptureInput struct {
-	UserID        uuid.UUID
-	ClientEventID uuid.UUID
-	ProjectID     *uuid.UUID
-	RawText       string
-	CapturedAt    time.Time
+	UserID              uuid.UUID
+	ClientEventID       uuid.UUID
+	ProjectID           *uuid.UUID
+	ProjectAutoAssigned bool
+	RawText             string
+	CapturedAt          time.Time
 }
 
 // CaptureResult is what comes back from Capture.
@@ -49,15 +50,17 @@ type CaptureResult struct {
 func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResult, error) {
 	signalID := uuid.New()
 	payload := domain.SignalCapturedPayload{
-		SignalID:   signalID,
-		UserID:     in.UserID,
-		ProjectID:  in.ProjectID,
-		RawText:    in.RawText,
-		CapturedAt: in.CapturedAt,
+		SignalID:            signalID,
+		UserID:              in.UserID,
+		ProjectID:           in.ProjectID,
+		ProjectAutoAssigned: in.ProjectAutoAssigned,
+		RawText:             in.RawText,
+		CapturedAt:          in.CapturedAt,
 	}
-	// 带上分类名 + 分析指引 (best-effort), 供 mastra analyst 按分类推理.
+	// 用户手选 (project_id 非空且非系统临时归类): 注入该分类 name/guidance, analyst 顺着它推理.
+	// 其余 (未分类 / promote 兜底的 provisional): 下发候选集, 让 analyst 判断或 re-home 到最合适分类.
 	// 跨模块只读 projects 表; 失败不阻断捕获.
-	if in.ProjectID != nil {
+	if in.ProjectID != nil && !in.ProjectAutoAssigned {
 		var name string
 		var guidance *string
 		if err := r.pool.QueryRow(ctx,
@@ -66,6 +69,8 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 			payload.ProjectName = &name
 			payload.ProjectGuidance = guidance
 		}
+	} else {
+		payload.CandidateProjects = r.fetchCandidateProjects(ctx, in.UserID)
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -111,11 +116,11 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 	// 2) signals row
 	const insertSignal = `
 		INSERT INTO signals (
-			id, user_id, raw_text, captured_at, source_event_id, project_id
-		) VALUES ($1, $2, $3, $4, $5, $6)
+			id, user_id, raw_text, captured_at, source_event_id, project_id, project_auto_assigned
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 	if _, err := tx.Exec(ctx, insertSignal,
-		signalID, in.UserID, in.RawText, in.CapturedAt, eventID, in.ProjectID,
+		signalID, in.UserID, in.RawText, in.CapturedAt, eventID, in.ProjectID, in.ProjectAutoAssigned,
 	); err != nil {
 		return nil, fmt.Errorf("insert signal: %w", err)
 	}
@@ -137,13 +142,14 @@ func (r *Repository) Capture(ctx context.Context, in CaptureInput) (*CaptureResu
 
 	return &CaptureResult{
 		Signal: &domain.Signal{
-			ID:              signalID,
-			UserID:          in.UserID,
-			ProjectID:       in.ProjectID,
-			RawText:         in.RawText,
-			CapturedAt:      in.CapturedAt,
-			SourceEventID:   eventID,
-			InferenceStatus: domain.InferenceStatusPending,
+			ID:                  signalID,
+			UserID:              in.UserID,
+			ProjectID:           in.ProjectID,
+			ProjectAutoAssigned: in.ProjectAutoAssigned,
+			RawText:             in.RawText,
+			CapturedAt:          in.CapturedAt,
+			SourceEventID:       eventID,
+			InferenceStatus:     domain.InferenceStatusPending,
 		},
 		EventID:   eventID,
 		Duplicate: false,
@@ -157,7 +163,7 @@ type existingCapture struct {
 
 func (r *Repository) findByClientEventID(ctx context.Context, tx pgx.Tx, userID, cid uuid.UUID) (*existingCapture, error) {
 	const q = `
-		SELECT e.id, s.id, s.project_id, s.raw_text, s.captured_at, s.inference_status,
+		SELECT e.id, s.id, s.project_id, s.project_auto_assigned, s.raw_text, s.captured_at, s.inference_status,
 		       s.inference_summary, s.inference_tags, s.inference_model, s.inference_done_at,
 		       s.created_at, s.updated_at
 		FROM events e
@@ -171,7 +177,7 @@ func (r *Repository) findByClientEventID(ctx context.Context, tx pgx.Tx, userID,
 	)
 	sig.UserID = userID
 	err := tx.QueryRow(ctx, q, userID, cid).Scan(
-		&eventID, &sig.ID, &sig.ProjectID, &sig.RawText, &sig.CapturedAt, &statusStr,
+		&eventID, &sig.ID, &sig.ProjectID, &sig.ProjectAutoAssigned, &sig.RawText, &sig.CapturedAt, &statusStr,
 		&sig.InferenceSummary, &sig.InferenceTags, &sig.InferenceModel, &sig.InferenceDoneAt,
 		&sig.CreatedAt, &sig.UpdatedAt,
 	)
@@ -190,11 +196,16 @@ func (r *Repository) findByClientEventID(ctx context.Context, tx pgx.Tx, userID,
 // signal 重投给推演队列", 不是"信号被重新捕获".
 func (r *Repository) EnqueueReinferOutbox(ctx context.Context, sig *domain.Signal) error {
 	payload := domain.SignalCapturedPayload{
-		SignalID:   sig.ID,
-		UserID:     sig.UserID,
-		ProjectID:  sig.ProjectID,
-		RawText:    sig.RawText,
-		CapturedAt: sig.CapturedAt,
+		SignalID:            sig.ID,
+		UserID:              sig.UserID,
+		ProjectID:           sig.ProjectID,
+		ProjectAutoAssigned: sig.ProjectAutoAssigned,
+		RawText:             sig.RawText,
+		CapturedAt:          sig.CapturedAt,
+	}
+	// 未分类 / provisional 信号 reinfer 时下发候选, 让 analyst 补判或 re-home.
+	if sig.ProjectID == nil || sig.ProjectAutoAssigned {
+		payload.CandidateProjects = r.fetchCandidateProjects(ctx, sig.UserID)
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
@@ -235,7 +246,7 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 
 	// 动态拼 WHERE — 加一个 q 维度就 4 种组合, 用 args slice 比 fmt 模板清楚.
 	const baseSelect = `
-		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
+		SELECT id, user_id, project_id, project_auto_assigned, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
 		       inference_model, inference_done_at, inference_related_assets,
 		       created_at, updated_at
@@ -295,7 +306,7 @@ func (r *Repository) List(ctx context.Context, in ListInput) ([]domain.Signal, b
 // Get returns a single signal by id.
 func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (*domain.Signal, error) {
 	const q = `
-		SELECT id, user_id, project_id, raw_text, captured_at, source_event_id,
+		SELECT id, user_id, project_id, project_auto_assigned, raw_text, captured_at, source_event_id,
 		       inference_status, inference_summary, inference_tags,
 		       inference_model, inference_done_at, inference_related_assets,
 		       created_at, updated_at
@@ -369,12 +380,13 @@ func (r *Repository) RecordInference(ctx context.Context, payload domain.SignalI
 			inference_tags           = $2,
 			inference_model          = $3,
 			inference_related_assets = $4,
+			project_id               = COALESCE($5, project_id),
 			inference_done_at        = NOW(),
 			updated_at               = NOW()
-		WHERE id = $5 AND user_id = $6
+		WHERE id = $6 AND user_id = $7
 	`
 	tag, err := tx.Exec(ctx, updateSignal,
-		payload.Summary, payload.Tags, payload.Model, relatedBytes, payload.SignalID, payload.UserID,
+		payload.Summary, payload.Tags, payload.Model, relatedBytes, payload.ProjectID, payload.SignalID, payload.UserID,
 	)
 	if err != nil {
 		return fmt.Errorf("update signal: %w", err)
@@ -397,6 +409,44 @@ func (r *Repository) RecordInference(ctx context.Context, payload domain.SignalI
 	return tx.Commit(ctx)
 }
 
+// fetchCandidateProjects 拉某 user 的活跃分类作"候选集"快照, 下发给 mastra analyst 判断归属.
+// best-effort: 查询/scan 失败返回已得部分 (含 nil), 不阻断捕获. guidance 截断控制事件体积.
+// 跨模块只读 projects 表, 与 Capture 里读 name/guidance 同先例.
+func (r *Repository) fetchCandidateProjects(ctx context.Context, userID uuid.UUID) []domain.ProjectCandidate {
+	const q = `
+		SELECT id, name, guidance FROM projects
+		WHERE user_id = $1 AND archived_at IS NULL
+		ORDER BY sort_order ASC, created_at ASC
+	`
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []domain.ProjectCandidate
+	for rows.Next() {
+		var c domain.ProjectCandidate
+		if err := rows.Scan(&c.ID, &c.Name, &c.Guidance); err != nil {
+			return out
+		}
+		if c.Guidance != nil {
+			g := truncRunes(*c.Guidance, 200)
+			c.Guidance = &g
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// truncRunes 按 rune 截断 (非字节), 避免切坏多字节 UTF-8.
+func truncRunes(s string, max int) string {
+	r := []rune(s)
+	if len(r) <= max {
+		return s
+	}
+	return string(r[:max])
+}
+
 // escapeLike 把 LIKE wildcard 字符转义掉, 让用户输入按字面匹配.
 // pg 默认 escape 字符是 '\'. 不处理用户传 '\' 的边界 — 实在边缘.
 func escapeLike(s string) string {
@@ -417,7 +467,7 @@ func scanSignal(r rowScanner) (*domain.Signal, error) {
 		relatedRaw []byte
 	)
 	if err := r.Scan(
-		&s.ID, &s.UserID, &s.ProjectID, &s.RawText, &s.CapturedAt, &s.SourceEventID,
+		&s.ID, &s.UserID, &s.ProjectID, &s.ProjectAutoAssigned, &s.RawText, &s.CapturedAt, &s.SourceEventID,
 		&statusStr, &s.InferenceSummary, &tags,
 		&s.InferenceModel, &s.InferenceDoneAt, &relatedRaw,
 		&s.CreatedAt, &s.UpdatedAt,

@@ -16,6 +16,7 @@
   ],
   "cognitive_layer": "second",
   "consensus_check": "aligned",
-  "one_line_summary": "HBM 第三轮涨价, 推理侧 BOM 压力外溢到互连"
+  "one_line_summary": "HBM 第三轮涨价, 推理侧 BOM 压力外溢到互连",
+  "chosen_project_id": null
 }
 ```

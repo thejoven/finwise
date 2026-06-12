@@ -26,13 +26,20 @@ import { Agent } from "@mastra/core/agent";
 
 import { config } from "../../config/env.js";
 import { defaultModel } from "../../llm/model.js";
-import { InferenceSchema } from "../../agents/schema.js";
+import { InferenceSchema, type Inference } from "../../agents/schema.js";
 import { JARGON_TRANSLATION_BLOCK } from "../../agents/lens.js";
 import { categoryContextBlock } from "../../agents/category.js";
 import type { SearchResult } from "../../tools/exa-search.js";
 
 export interface CategoryContext {
   name?: string | null;
+  guidance?: string | null;
+}
+
+/** 候选分类 (未分类/provisional 信号下发给 analyst, 让它判断 chosen_project_id). */
+export interface ProjectCandidate {
+  id: string;
+  name: string;
   guidance?: string | null;
 }
 
@@ -93,8 +100,9 @@ export async function runAnalyst(
   rawText: string,
   searchContext?: SearchResult[],
   category?: CategoryContext,
+  candidates?: ProjectCandidate[],
 ) {
-  const userContent = buildAnalystPrompt(rawText, searchContext, category);
+  const userContent = buildAnalystPrompt(rawText, searchContext, category, candidates);
   const messages = [{ role: "user" as const, content: userContent }];
   let lastErr: unknown;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -104,7 +112,7 @@ export async function runAnalyst(
         maxTokens: config.analyst.maxTokens,
         temperature: config.analyst.temperature,
       });
-      if (res?.object) return res.object;
+      if (res?.object) return normalizeChosenProject(res.object, candidates);
       lastErr = new Error("analyst returned no object");
     } catch (e) {
       lastErr = e;
@@ -113,14 +121,33 @@ export async function runAnalyst(
   throw lastErr ?? new Error("analyst failed without an error");
 }
 
+/**
+ * normalizeChosenProject — 防 LLM 幻觉:
+ *   - 没下发候选 → 强制 chosen_project_id = null (已分类信号不该自行改类).
+ *   - 下发了候选 → chosen 必须命中某个候选 id, 否则视为弃权置 null.
+ * Go 端 RecordInference 再据 null = 弃权走兜底, 双保险.
+ */
+function normalizeChosenProject(inference: Inference, candidates?: ProjectCandidate[]): Inference {
+  if (!candidates || candidates.length === 0) {
+    return { ...inference, chosen_project_id: null };
+  }
+  const hit =
+    inference.chosen_project_id != null &&
+    candidates.some((c) => c.id === inference.chosen_project_id);
+  return hit ? inference : { ...inference, chosen_project_id: null };
+}
+
 function buildAnalystPrompt(
   rawText: string,
   searchContext?: SearchResult[],
   category?: CategoryContext,
+  candidates?: ProjectCandidate[],
 ): string {
   const cat = categoryContextBlock(category?.name, category?.guidance);
   const catPrefix = cat ? cat + "\n\n" : "";
-  if (!searchContext || searchContext.length === 0) return catPrefix + rawText;
+  const candBlock = candidateSelectionBlock(candidates);
+  const candSuffix = candBlock ? "\n\n" + candBlock : "";
+  if (!searchContext || searchContext.length === 0) return catPrefix + rawText + candSuffix;
 
   // 按线索类型分流: 网页新闻 (Exa) 做背景 grounding; 预测市场 (Polymarket) 做 consensus 参照.
   const webItems = searchContext.filter((r) => r.kind !== "market");
@@ -166,7 +193,24 @@ function buildAnalystPrompt(
   sections.push(
     "用上面的真实材料校准你对信号的理解, 但严格按 schema 输出. 不要在 rationale 里出现 url / 来源名.",
   );
-  return catPrefix + sections.join("\n");
+  return catPrefix + sections.join("\n") + candSuffix;
+}
+
+/**
+ * candidateSelectionBlock — 仅当下发候选分类 (未分类/provisional 信号) 时出现,
+ * 要求 analyst 从候选里择一填 chosen_project_id. 已分类信号不下发候选 → 此块为空.
+ */
+function candidateSelectionBlock(candidates?: ProjectCandidate[]): string {
+  if (!candidates || candidates.length === 0) return "";
+  const lines = candidates.map((c) => {
+    const g = (c.guidance ?? "").trim();
+    return g ? `- ${c.id} 「${c.name}」: ${g}` : `- ${c.id} 「${c.name}」`;
+  });
+  return [
+    "【分类归属判断】这条信号尚未归类。请结合信号内容与下列各分类的「分析指引」, 选出最匹配的一个分类, 把它的 id 原样填进 chosen_project_id:",
+    lines.join("\n"),
+    "规则: 只能填上面列出的某个 id; 只有一个候选时直接选它; 信号与所有分类都明显不相关时填 null (不要硬塞)。",
+  ].join("\n");
 }
 
 /** 0.62 → "62%"; 极小概率折成 "<1%". 与 polymarket.ts 同语义, 这里本地一份避免工具耦合. */

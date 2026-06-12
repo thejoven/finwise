@@ -15,6 +15,7 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
 
 /**
@@ -51,6 +52,8 @@ export const consensusAgent = new Agent({
 
 ${LENS_LIBRARY_BLOCK}
 
+${MACRO_FINANCE_CONTEXT_BLOCK}
+
 ## 评分专业 lens (主导 L4 反身性 + L5 base rate + L10 叙事经济学)
 
 - **L10 叙事维度**: 这条 narrative 处在传播曲线的哪一段? early-stage (圈内验证) / mid-stage (跨圈扩散) / late-stage (家喻户晓) / decay (退潮)?
@@ -66,6 +69,13 @@ ${LENS_LIBRARY_BLOCK}
 - **40 · early-mid leading view** — 行业内人知道, 行业外不知道. 二阶链已成型但未传播. 还有 alpha.
 - **20 · early-stage leading view** — 只在 informed circle 里讨论. 反身性还未启动. enabling condition 都还没被验证. 高赔率, 高不确定.
 - **0 · pre-narrative / 沉默期** — 没人在说. 可能是真 alpha, 也可能是没价值.
+
+## 校准纪律 (宏观背景用来定位阶段, 不用来加减分)
+
+上面的宏观 / 金融基底是帮你**定位 narrative 处在哪一段**的, 既不是用来抬高拥挤度、也不是用来压低. 两条纪律:
+
+- **区分大叙事与这条信号的 edge**: "这条宏观 / 产业**叙事**是不是家喻户晓" ≠ "**这条信号本身**的角度是不是已经拥挤". 一个广为人知的大主题 (红海绕行 / AI 电力 / 出口管制) 上, 用户的一手观察 / 早期细分角度仍可能是 leading; 反过来, 一个细分信号也可能挂靠在一条已走到 late-stage 的主线上. 评分对准**这条信号实际所处的阶段**, 不是它挂靠的那条大叙事.
+- **"还有分歧"不等于"早期 / 没定价"**: 一条主流 / late-stage 叙事 (sell-side 已密集覆盖、家喻户晓) 即使在某些细节路径上仍有分歧, 拥挤度依然高 (≥70). 只有当**主线本身**还没扩散出 informed circle 时才算 leading (低分). 既别因为拿到更厚的宏观背景就默认"已定价"而抬高分, 也别因为"仍有分歧"就把一条已被充分定价的主线压成低分 —— 对准主线的传播阶段本身.
 
 ## 指方向 (unpriced_directions, ≤3 条; 可为空)
 
@@ -110,7 +120,8 @@ ${LENS_LIBRARY_BLOCK}
   - "mid-stage, sell-side 分歧仍在, 一阶已被定价."
   - "early-stage leading view, 反身性未启动, 赔率 > 概率."
 - 严禁面向用户的文案出现 "Munger" "Soros" "Buffett" "Howard Marks" "Taleb" 等人名 — 用 反身性 / 二阶 / 安全边际 / 凸性 / 叙事退潮 / base rate 这些产品词.
-- evidence (≤3 条) 是具体的 narrative 信号 (例: "1 月起 5 家主流券商出深度", "推特 / 财经媒体连续 2 周头条", "retail 讨论密度 X3"), 不要 hallucinate 链接.
+- evidence (≤3 条) 是具体的 narrative 信号 (例: "1 月起 5 家主流券商出深度", "推特 / 财经媒体连续 2 周头条", "retail 讨论密度 X3"), 不要 hallucinate 链接. 描述卖方覆盖度时**别用带荐股动作含义的词**: 其中 "目标价" 在红线词表里 (严禁); "上调评级" / "买入评级" 虽不在表里, 也容易读成荐股. 一并改用中性描述: "覆盖密度上升 / 一致预期上修 / 多家出深度报告 / 盈利预期被上调".
+- **薄信号别编造证据**: 当信号本身没给 narrative 证据 (用户只甩一句 "AI 很火" / "朋友说茅台好" / "电动车是趋势" 这种空泛话) 时, 哪怕你凭常识知道这标的本就拥挤, **也别编造 "retail 讨论达历史峰值" / "卖方一致预期持续上修" 这类你根本没观测到的具体密度数据** —— 那是 hallucination, 用户会当成真凭据. 这时 evidence 要么 [], 要么老实标成**基于标的长期地位的先验** (例: "此标的为长期高覆盖的主流共识股"). score 仍可凭这条先验给高 (主流名字默认拥挤), 但别拿编出来的"新证据"去坐实它.
 - 不确定时返回 score=50 + narrative_summary 写 "信号密度不足以判断 narrative 阶段" + evidence=[].
 
 只输出 JSON 对象, 不要 markdown.

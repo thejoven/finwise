@@ -42,13 +42,13 @@ export function GatePage() {
   const [filter, setFilter] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["gate", "list"],
     queryFn: wiseflow.gate.listAll,
     retry: 0,
   });
 
-  const rows = q.data?.evaluations ?? [];
+  const rows = data?.evaluations ?? [];
   const filtered = filter
     ? rows.filter((e) =>
         (e.id + " " + e.refinement_id + " " + (e.archived_pool ?? "") + (e.passed ? " passed" : " failed"))
@@ -65,8 +65,8 @@ export function GatePage() {
         title="分析师评审"
         description="M6 投决会 · 四位分析师 (佐证 · 共识 · 时机 · 能力圈). 全部评估, 点行看明细."
         actions={
-          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -84,13 +84,13 @@ export function GatePage() {
             <div className="shrink-0 text-xs text-muted-foreground">共 {rows.length} 次评估</div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && (
+          {data && filtered.length === 0 && (
             <EmptyBox label={filter ? "没有匹配的评估" : "还没有评估"} />
           )}
           {filtered.length > 0 && (

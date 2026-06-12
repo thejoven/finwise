@@ -22,12 +22,12 @@ JetBrainsMono-Medium.ttf
 
 ## 下载源
 
-| 字族 | 来源 | License |
-|---|---|---|
-| Playfair Display | https://fonts.google.com/specimen/Playfair+Display | OFL |
-| Source Serif 4 | https://github.com/adobe-fonts/source-serif/releases | OFL |
-| Noto Serif SC | https://fonts.google.com/noto/specimen/Noto+Serif+SC | OFL |
-| JetBrains Mono | https://www.jetbrains.com/lp/mono/ | OFL |
+| 字族             | 来源                                                 | License |
+| ---------------- | ---------------------------------------------------- | ------- |
+| Playfair Display | https://fonts.google.com/specimen/Playfair+Display   | OFL     |
+| Source Serif 4   | https://github.com/adobe-fonts/source-serif/releases | OFL     |
+| Noto Serif SC    | https://fonts.google.com/noto/specimen/Noto+Serif+SC | OFL     |
+| JetBrains Mono   | https://www.jetbrains.com/lp/mono/                   | OFL     |
 
 ## 注意
 

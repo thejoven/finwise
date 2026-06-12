@@ -43,23 +43,40 @@ function CountCard({
 }
 
 export function DashboardPage() {
-  const signals = useQuery({
+  const {
+    data: signalsData,
+    isLoading: signalsLoading,
+    isError: signalsIsError,
+    error: signalsError,
+  } = useQuery({
     queryKey: ["signals"],
     queryFn: () => wiseflow.signals.list(),
   });
-  const commitments = useQuery({
+  const {
+    data: commitmentsData,
+    isLoading: commitmentsLoading,
+    isError: commitmentsIsError,
+  } = useQuery({
     queryKey: ["commitments-active"],
     queryFn: wiseflow.commitments.active,
   });
-  const holdings = useQuery({
+  const {
+    data: holdingsData,
+    isLoading: holdingsLoading,
+    isError: holdingsIsError,
+  } = useQuery({
     queryKey: ["holdings-active"],
     queryFn: wiseflow.holdings.active,
   });
-  const retrospects = useQuery({
+  const {
+    data: retrospectsData,
+    isLoading: retrospectsLoading,
+    isError: retrospectsIsError,
+  } = useQuery({
     queryKey: ["retrospects"],
     queryFn: wiseflow.retrospects.list,
   });
-  const health = useQuery({
+  const { data: healthData } = useQuery({
     queryKey: ["dashboard-health"],
     queryFn: wiseflow.health,
     refetchInterval: 10_000,
@@ -71,7 +88,7 @@ export function DashboardPage() {
         title="概览"
         description="wiseflow 后台. 数据走 /v1/* 端点, 实时透传 Postgres + NATS 状态."
         actions={
-          health.data?.status === "ok" ? (
+          healthData?.status === "ok" ? (
             <Badge variant="success">backend healthy</Badge>
           ) : (
             <Badge variant="destructive">backend issue</Badge>
@@ -83,11 +100,11 @@ export function DashboardPage() {
         <CountCard
           title="Signals 总数"
           count={
-            signals.isLoading
+            signalsLoading
               ? "…"
-              : signals.isError
+              : signalsIsError
               ? "—"
-              : (signals.data?.signals.length ?? 0)
+              : (signalsData?.signals.length ?? 0)
           }
           href="/signals"
           hint="原始信号事件"
@@ -96,11 +113,11 @@ export function DashboardPage() {
         <CountCard
           title="活跃 Commitments"
           count={
-            commitments.isLoading
+            commitmentsLoading
               ? "…"
-              : commitments.isError
+              : commitmentsIsError
               ? "—"
-              : commitments.data
+              : commitmentsData
               ? 1
               : 0
           }
@@ -111,11 +128,11 @@ export function DashboardPage() {
         <CountCard
           title="活跃 Holdings"
           count={
-            holdings.isLoading
+            holdingsLoading
               ? "…"
-              : holdings.isError
+              : holdingsIsError
               ? "—"
-              : holdings.data
+              : holdingsData
               ? 1
               : 0
           }
@@ -126,11 +143,11 @@ export function DashboardPage() {
         <CountCard
           title="复盘 Retrospects"
           count={
-            retrospects.isLoading
+            retrospectsLoading
               ? "…"
-              : retrospects.isError
+              : retrospectsIsError
               ? "—"
-              : (retrospects.data?.retrospects.length ?? 0)
+              : (retrospectsData?.retrospects.length ?? 0)
           }
           href="/retrospects"
           hint="所有训练"
@@ -145,10 +162,10 @@ export function DashboardPage() {
             <CardDescription>按 captured_at 倒序</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {signals.isLoading && <Loading />}
-            {signals.isError && <ErrorBox error={signals.error} />}
-            {signals.data &&
-              signals.data.signals.slice(0, 5).map((s) => (
+            {signalsLoading && <Loading />}
+            {signalsIsError && <ErrorBox error={signalsError} />}
+            {signalsData &&
+              signalsData.signals.slice(0, 5).map((s) => (
                 <Link
                   key={s.id}
                   to={`/signals/${s.id}`}
@@ -173,7 +190,7 @@ export function DashboardPage() {
                   <p className="mt-1 line-clamp-2 text-sm">{s.raw_text}</p>
                 </Link>
               ))}
-            {signals.data && signals.data.signals.length === 0 && (
+            {signalsData && signalsData.signals.length === 0 && (
               <p className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
                 暂无信号
               </p>
@@ -189,11 +206,11 @@ export function DashboardPage() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">backend status</span>
-              <span className="font-mono">{health.data?.status ?? "—"}</span>
+              <span className="font-mono">{healthData?.status ?? "—"}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">db</span>
-              <span className="font-mono">{health.data?.db ?? "ok"}</span>
+              <span className="font-mono">{healthData?.db ?? "ok"}</span>
             </div>
             <div className="mt-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
               <p>路线图: Phase 1 (安静) · M1 数据底座 → M4 端到端.</p>

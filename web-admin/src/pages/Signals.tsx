@@ -59,7 +59,17 @@ export function SignalsPage() {
   const [draft, setDraft] = React.useState("");
 
   // 游标分页: pageParam = 上一页最后一条的 captured_at (后端 captured_at < before).
-  const q = useInfiniteQuery({
+  const {
+    data,
+    refetch,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    isLoading,
+    isError,
+    error,
+  } = useInfiniteQuery({
     queryKey: ["signals", "list", debouncedSearch],
     queryFn: ({ pageParam }) =>
       wiseflow.signals.list({
@@ -96,7 +106,7 @@ export function SignalsPage() {
     },
   });
 
-  const rows = q.data?.pages.flatMap((p) => p.signals) ?? [];
+  const rows = data?.pages.flatMap((p) => p.signals) ?? [];
 
   return (
     <div>
@@ -108,10 +118,10 @@ export function SignalsPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => q.refetch()}
-              disabled={q.isFetching}
+              onClick={() => refetch()}
+              disabled={isFetching}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
               刷新
             </Button>
             <Dialog open={open} onOpenChange={setOpen}>
@@ -167,22 +177,22 @@ export function SignalsPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              {q.isFetching && !q.isFetchingNextPage && (
+              {isFetching && !isFetchingNextPage && (
                 <RefreshCw className="absolute right-2.5 top-2.5 h-3.5 w-3.5 animate-spin text-muted-foreground" />
               )}
             </div>
             <div className="shrink-0 text-xs text-muted-foreground">
-              已加载 {rows.length} 条{q.hasNextPage ? " · 还有更多" : ""}
+              已加载 {rows.length} 条{hasNextPage ? " · 还有更多" : ""}
             </div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {!q.isLoading && !q.isError && rows.length === 0 && (
+          {!isLoading && !isError && rows.length === 0 && (
             <EmptyBox label={debouncedSearch ? "没有匹配的信号" : "还没有信号"} />
           )}
           {rows.length > 0 && (
@@ -236,15 +246,15 @@ export function SignalsPage() {
             </Table>
           )}
 
-          {q.hasNextPage && (
+          {hasNextPage && (
             <div className="flex justify-center border-t p-3">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => q.fetchNextPage()}
-                disabled={q.isFetchingNextPage}
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
               >
-                {q.isFetchingNextPage ? "加载中…" : "加载更多"}
+                {isFetchingNextPage ? "加载中…" : "加载更多"}
               </Button>
             </div>
           )}

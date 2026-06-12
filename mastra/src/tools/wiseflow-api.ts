@@ -47,6 +47,8 @@ export async function postInference(args: PostInferenceArgs): Promise<void> {
     related_assets: args.inference.related_assets,
     cognitive_layer: args.inference.cognitive_layer,
     consensus_check: args.inference.consensus_check,
+    // AI 判断的分类 (可空). undefined → JSON.stringify 丢弃 → 服务端视作弃权走兜底.
+    project_id: args.inference.chosen_project_id ?? undefined,
   });
 
   let lastErr: unknown;

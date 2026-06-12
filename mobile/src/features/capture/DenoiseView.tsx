@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { DoubleRule, Serif } from "@/shared/components";
+import { DoubleRule, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 // 走具体文件而非 "@/features/capture" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
 // capture/index ⇄ DenoiseView 的自引用 require cycle. 具体路径切断回边.
 import { DenoisedRow } from "@/features/capture/DenoisedRow";
@@ -21,7 +21,7 @@ import { theme } from "@/core/theme";
  *
  * - useAllSignals: useInfiniteQuery, before 游标翻页 (每页 30)
  * - 翻页 / 拉取用文字态, 不用 spinner (跟信箱一致)
- * - paddingBottom = insets.bottom + 64, 给悬浮的灵动岛 tab bar 让位
+ * - paddingBottom = insets.bottom + TAB_BAR_CLEARANCE, 给悬浮的灵动岛 tab bar 让位
  */
 export function DenoiseView() {
   const insets = useSafeAreaInsets();
@@ -60,7 +60,7 @@ export function DenoiseView() {
     if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const bottomPad = insets.bottom + 64;
+  const bottomPad = insets.bottom + TAB_BAR_CLEARANCE;
 
   // 提到 useMemo: 否则每次 render 都 new 一个 RefreshControl 元素 (jsx-no-jsx-as-prop).
   const refreshControl = useMemo(

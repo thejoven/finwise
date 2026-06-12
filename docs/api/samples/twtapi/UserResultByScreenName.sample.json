@@ -1,0 +1,131 @@
+{
+  "data": {
+    "user_results": {
+      "rest_id": "44196397",
+      "result": {
+        "__typename": "User",
+        "action_counts": {
+          "favorites_count": 233098
+        },
+        "avatar": {
+          "image_url": "https://pbs.twimg.com/profile_images/2053244804520427520/m8mdWZCG_normal.jpg"
+        },
+        "banner": {
+          "image_url": "https://pbs.twimg.com/profile_banners/44196397/1774145451"
+        },
+        "business_account": {},
+        "core": {
+          "created_at": "Tue Jun 02 20:12:29 +0000 2009",
+          "name": "Elon Musk",
+          "screen_name": "elonmusk"
+        },
+        "creator_subscriptions_count": 244,
+        "dm_permissions": {
+          "can_dm": false
+        },
+        "exclusive_tweet_following": false,
+        "follow_request_sent": false,
+        "has_graduated_access": true,
+        "has_hidden_likes_on_profile": true,
+        "has_hidden_subscriptions_on_profile": true,
+        "highlights_info": {
+          "can_highlight_tweets": true,
+          "highlighted_tweets": "1004"
+        },
+        "identity_profile_labels_highlighted_label": {},
+        "is_profile_translatable": false,
+        "location": {
+          "location": ""
+        },
+        "media_permissions": {
+          "can_media_tag": false
+        },
+        "notifications_settings": {
+          "notifications_enabled": false
+        },
+        "pinned_items": {
+          "tweet_ids_str": [
+            "2064187087184650253"
+          ]
+        },
+        "privacy": {
+          "protected": false,
+          "suspended": false
+        },
+        "private_super_following": false,
+        "professional": {
+          "category": [],
+          "professional_type": "Creator",
+          "rest_id": "1679729435447275522"
+        },
+        "profile_bio": {
+          "description": "https://t.co/dDtDyVssfm",
+          "entities": {
+            "description": {
+              "urls": [
+                {
+                  "display_url": "Terafab.ai",
+                  "expanded_url": "http://Terafab.ai",
+                  "indices": [
+                    0,
+                    23
+                  ],
+                  "url": "https://t.co/dDtDyVssfm"
+                }
+              ]
+            }
+          }
+        },
+        "profile_image_shape": "Circle",
+        "profile_metadata": {
+          "profile_interstitial_type": "",
+          "profile_link_color": "0084B4"
+        },
+        "profile_translation": {
+          "translator_type_enum": "None"
+        },
+        "properties": {
+          "has_extended_profile": true,
+          "has_no_screen_name": false
+        },
+        "relationship_counts": {
+          "followers": 240246750,
+          "following": 1352
+        },
+        "relationship_perspectives": {
+          "blocked_by": false,
+          "blocking": false,
+          "followed_by": false,
+          "following": false,
+          "live_following": false,
+          "muting": false
+        },
+        "reply_device_following": false,
+        "rest_id": "44196397",
+        "smart_blocked_by": false,
+        "smart_blocking": false,
+        "super_follow_eligible": true,
+        "super_followed_by": false,
+        "super_following": false,
+        "tipjar": {
+          "is_enabled": false
+        },
+        "tweet_counts": {
+          "media_tweets": 4532,
+          "tweets": 103958
+        },
+        "user_seed_tweet_count": 0,
+        "verification": {
+          "is_blue_verified": true,
+          "verified": false
+        },
+        "verified_program_creator_features": {
+          "email_sharing_from_subscribers_enabled": true
+        },
+        "website": {
+          "url": ""
+        }
+      }
+    }
+  }
+}

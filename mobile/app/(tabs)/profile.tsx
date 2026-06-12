@@ -11,6 +11,7 @@ import {
   Sans,
   SectionHeader,
   Serif,
+  TAB_BAR_CLEARANCE,
   TapEffect,
 } from "@/shared/components";
 import { UI, MODS, hasNativeUI } from "@/shared/native";
@@ -24,7 +25,7 @@ import { useNotifications } from "@/features/notifications";
  * 个人资料 tab.
  *
  * 编排:
- *   · 上半「报刊头」(RN, 始终自绘): 卷号戳 + 标题 + 方形字母章 + 昵称/邮箱/加入日期 + bio.
+ *   · 上半「报刊头」(RN, 始终自绘): 档案标识 + 标题 + 方形字母章 + 昵称/邮箱/加入日期 + bio.
  *     ——这是 bespoke editorial 面, 按约定保持自绘 (见 memory: mobile-native-ui-conventions).
  *   · 下半「设置」: 原生 SwiftUI `Form` (@expo/ui) —— 真·原生 iOS 分组列表, 自带分组卡片 /
  *     分隔线 / 触感 / 动态明暗. 只两组:「账号」「偏好」+ 退出登录, 不再四组零散.
@@ -40,10 +41,10 @@ export default function ProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
-  // 悬浮"灵动岛" tab 顶 ≈ insets.bottom + 64 (见 DynamicIslandTabBar). 自绘回退路径用 ScrollView,
-  // 末尾退出登录是按钮, 须整条在岛上方可点 — 故在 64 之上再加一档留白. 原生 Form 路径内容顶对齐 +
-  // 屏底大片留白, 行本就不会落到岛下, 无需此 pad.
-  const bottomPad = insets.bottom + 64 + theme.spacing.lg;
+  // 给悬浮"灵动岛"让位: 标准空隙 TAB_BAR_CLEARANCE (见 glass). 自绘回退路径用 ScrollView,
+  // 末尾退出登录是按钮, 须整条在岛上方可点 — 故在标准空隙之上再加一档. 原生 Form 路径内容
+  // 顶对齐 + 屏底大片留白, 行本就不会落到岛下, 无需此 pad.
+  const bottomPad = insets.bottom + TAB_BAR_CLEARANCE + theme.spacing.sm;
 
   // 进入时拉一次最新. 没 token (dev fallback 模式) 就不拉.
   useEffect(() => {
@@ -99,7 +100,7 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.root} edges={["top"]}>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
           <Mono size={9} style={styles.headStamp}>
-            VOL. I · 读者档案
+            读者档案
           </Mono>
           <Display size={28} italic style={styles.title}>
             个人资料.
@@ -141,7 +142,7 @@ export default function ProfileScreen() {
   );
 }
 
-/** 报刊头 — 卷号戳 / 标题 / 字母章 + 身份 / bio / 同步状态. 原生与回退两路共用 (始终 RN 自绘). */
+/** 报刊头 — 档案标识 / 标题 / 字母章 + 身份 / bio / 同步状态. 原生与回退两路共用 (始终 RN 自绘). */
 function ProfileHeader({
   user,
   error,
@@ -160,7 +161,7 @@ function ProfileHeader({
   return (
     <>
       <Mono size={9} style={styles.headStamp}>
-        VOL. I · 读者档案
+        读者档案
       </Mono>
       <Display size={28} italic style={styles.title}>
         个人资料.

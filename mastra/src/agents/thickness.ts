@@ -20,6 +20,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
 import { recallSimilar, type RecalledSignal } from "../memory/vector-store.js";
 import { getMemory } from "../memory/agent-memory.js";
@@ -47,6 +48,8 @@ export const thicknessAgent = new Agent({
 给两个维度评分, 综合给一个 0-100 score, score>=60 算 pass.
 
 ${LENS_LIBRARY_BLOCK}
+
+${MACRO_FINANCE_CONTEXT_BLOCK}
 
 ## 评分维度
 

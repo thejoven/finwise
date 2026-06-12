@@ -19,7 +19,15 @@ import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context"
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
 
-import { Display, DoubleRule, Mono, SectionHeader, Serif, TapEffect } from "@/shared/components";
+import {
+  Display,
+  DoubleRule,
+  Mono,
+  SectionHeader,
+  Serif,
+  TAB_BAR_CLEARANCE,
+  TapEffect,
+} from "@/shared/components";
 import { theme, useThemeColors } from "@/core/theme";
 import { formatShortDateTime } from "@/shared/format";
 import { getAttentionSummary, type WindowKey } from "@/core/api/attention";
@@ -37,9 +45,9 @@ export function AttentionScreen() {
   // chart 宽度 = 屏宽 - 2 * lg padding (用 hook 而非 Dimensions.get, 随旋转/分屏自适应)
   const { width } = useWindowDimensions();
   const chartWidth = width - 2 * theme.spacing.lg;
-  // NativeTabs glass bar ~49pt + home indicator (insets.bottom). 与 inbox 一致.
+  // 给悬浮的灵动岛 tab bar 让位 (标准空隙, 见 glass 的 TAB_BAR_CLEARANCE). 与 inbox 一致.
   const insets = useSafeAreaInsets();
-  const bottomPad = insets.bottom + 64;
+  const bottomPad = insets.bottom + TAB_BAR_CLEARANCE;
   const activeProjectID = useActiveProject((s) => s.activeId);
 
   const { data: projects } = useQuery({
@@ -68,10 +76,10 @@ export function AttentionScreen() {
 
   return (
     <SafeAreaView edges={["top"]} style={styles.root}>
-      {/* 报刊头: 卷号戳 · 标题 + 完成数 dateline · 时间窗 */}
+      {/* 报刊头: 档案标识 · 标题 + 完成数 dateline · 时间窗 */}
       <View style={styles.masthead}>
         <Mono size={9} style={styles.stamp}>
-          VOL. I · 注意力档案
+          注意力档案
           {activeProject ? ` · ${activeProject.emoji ?? ""}${activeProject.name}` : ""}
         </Mono>
         <View style={styles.titleRow}>
@@ -335,7 +343,7 @@ const styles = StyleSheet.create({
   scroll: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
-    // paddingBottom 在组件内用 insets.bottom + 64 动态算
+    // paddingBottom 在组件内用 insets.bottom + TAB_BAR_CLEARANCE 动态算
     gap: theme.spacing.md,
   },
   section: {

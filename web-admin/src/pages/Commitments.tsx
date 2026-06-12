@@ -46,12 +46,12 @@ export function CommitmentsPage() {
   const [filter, setFilter] = React.useState("");
   const [openId, setOpenId] = React.useState<string | null>(null);
 
-  const q = useQuery({
+  const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["commitments", "list"],
     queryFn: wiseflow.commitments.list,
   });
 
-  const rows = q.data?.commitments ?? [];
+  const rows = data?.commitments ?? [];
   const filtered = filter
     ? rows.filter((c) =>
         ((c.thesis?.asset_ticker ?? "") + " " + (c.thesis?.asset_name ?? "") + " " + c.status + " " + c.id)
@@ -68,8 +68,8 @@ export function CommitmentsPage() {
         title="Commitments"
         description="承诺书 (M7-8). drafted → signed / postponed → abandoned. 点行看正文."
         actions={
-          <Button variant="outline" size="sm" onClick={() => q.refetch()} disabled={q.isFetching}>
-            <RefreshCw className={`h-3.5 w-3.5 ${q.isFetching ? "animate-spin" : ""}`} />
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`} />
             刷新
           </Button>
         }
@@ -87,13 +87,13 @@ export function CommitmentsPage() {
             <div className="shrink-0 text-xs text-muted-foreground">共 {rows.length} 份</div>
           </div>
 
-          {q.isLoading && <Loading />}
-          {q.isError && (
+          {isLoading && <Loading />}
+          {isError && (
             <div className="p-4">
-              <ErrorBox error={q.error} />
+              <ErrorBox error={error} />
             </div>
           )}
-          {q.data && filtered.length === 0 && (
+          {data && filtered.length === 0 && (
             <EmptyBox label={filter ? "没有匹配的承诺" : "还没有承诺书"} />
           )}
           {filtered.length > 0 && (

@@ -7,7 +7,7 @@
  *   · 居中报刊头 (中文主名 + 英文副线 + slogan)
  *   · 双横线分隔
  *   · 三段正文 Serif 衬线
- *   · 底部小字刊号
+ *   · 底部小字
  *
  * 反模式 (按 docs/产品文档/06_产品哲学.md):
  *   · 不放"开始使用"CTA — 用户已经在用了
@@ -169,7 +169,7 @@ export default function ColophonScreen() {
 
         <View style={styles.footer}>
           <Mono size={9} style={styles.footMeta}>
-            VOL. I · 创刊号
+            创刊号
           </Mono>
           <Mono size={9} style={styles.footMeta}>
             WISEFLOW · 财知大道

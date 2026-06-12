@@ -13,7 +13,7 @@ import { formatDate } from "@/lib/utils";
 
 export function SignalDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const q = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["signal", id],
     queryFn: () => wiseflow.signals.get(id!),
     enabled: !!id,
@@ -33,9 +33,9 @@ export function SignalDetailPage() {
         }
       />
 
-      {q.isLoading && <Loading />}
-      {q.isError && <ErrorBox error={q.error} />}
-      {q.data && (
+      {isLoading && <Loading />}
+      {isError && <ErrorBox error={error} />}
+      {data && (
         <div className="grid gap-4 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
@@ -44,14 +44,14 @@ export function SignalDetailPage() {
             </CardHeader>
             <CardContent>
               <p className="whitespace-pre-wrap rounded-md bg-muted/50 p-4 text-sm">
-                {q.data.raw_text}
+                {data.raw_text}
               </p>
               <Separator className="my-4" />
               <div className="grid gap-2 text-sm sm:grid-cols-2">
-                <Field label="signal_id" value={q.data.id} mono />
-                <Field label="user_id" value={q.data.user_id} mono />
-                <Field label="captured_at" value={formatDate(q.data.captured_at)} />
-                <Field label="created_at" value={formatDate(q.data.created_at)} />
+                <Field label="signal_id" value={data.id} mono />
+                <Field label="user_id" value={data.user_id} mono />
+                <Field label="captured_at" value={formatDate(data.captured_at)} />
+                <Field label="created_at" value={formatDate(data.created_at)} />
               </div>
             </CardContent>
           </Card>
@@ -66,31 +66,31 @@ export function SignalDetailPage() {
                 <span className="text-muted-foreground">status</span>
                 <Badge
                   variant={
-                    q.data.inference_status === "done"
+                    data.inference_status === "done"
                       ? "success"
-                      : q.data.inference_status === "failed"
+                      : data.inference_status === "failed"
                       ? "destructive"
                       : "warning"
                   }
                 >
-                  {q.data.inference_status}
+                  {data.inference_status}
                 </Badge>
               </div>
               <div>
                 <p className="mb-1 text-muted-foreground">summary</p>
                 <p className="rounded-md border bg-muted/30 p-2 text-xs">
-                  {q.data.inference_summary || "—"}
+                  {data.inference_summary || "—"}
                 </p>
               </div>
               <div>
                 <p className="mb-1 text-muted-foreground">tags</p>
                 <div className="flex flex-wrap gap-1">
-                  {(q.data.inference_tags ?? []).map((t) => (
+                  {(data.inference_tags ?? []).map((t) => (
                     <Badge key={t} variant="outline">
                       {t}
                     </Badge>
                   ))}
-                  {(q.data.inference_tags ?? []).length === 0 && (
+                  {(data.inference_tags ?? []).length === 0 && (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
                 </div>
@@ -99,7 +99,7 @@ export function SignalDetailPage() {
           </Card>
 
           <div className="lg:col-span-3">
-            <SignalChain signalId={q.data.id} />
+            <SignalChain signalId={data.id} />
           </div>
         </div>
       )}
@@ -110,43 +110,43 @@ export function SignalDetailPage() {
 // SignalChain 顺着 signal → refinement → evaluation → commitment → holding → retrospect
 // 逐级查询, 每段展示关键详情. 任一段没有 (404) 就标"未产生", 链路到此为止.
 function SignalChain({ signalId }: { signalId: string }) {
-  const refine = useQuery({
+  const { data: refine, isLoading: refineLoading } = useQuery({
     queryKey: ["chain", "refine", signalId],
     queryFn: () => wiseflow.refinement.bySignal(signalId),
     retry: 0,
   });
-  const refId = refine.data?.id;
+  const refId = refine?.id;
 
-  const evalQ = useQuery({
+  const { data: evalData, isLoading: evalLoading } = useQuery({
     queryKey: ["chain", "eval", refId],
     queryFn: () => wiseflow.gate.byRefinement(refId!),
     enabled: !!refId,
     retry: 0,
   });
-  const evalId = evalQ.data?.id;
+  const evalId = evalData?.id;
 
-  const commitQ = useQuery({
+  const { data: commit, isLoading: commitLoading } = useQuery({
     queryKey: ["chain", "commit", evalId],
     queryFn: () => wiseflow.commitments.byEvaluation(evalId!),
     enabled: !!evalId,
     retry: 0,
   });
-  const commitId = commitQ.data?.id;
+  const commitId = commit?.id;
 
-  const holdingQ = useQuery({
+  const { data: holding, isLoading: holdingLoading } = useQuery({
     queryKey: ["chain", "holding", commitId],
     queryFn: () => wiseflow.holdings.get(commitId!),
     enabled: !!commitId,
     retry: 0,
   });
 
-  const retroQ = useQuery({
+  const { data: retroData, isLoading: retroLoading } = useQuery({
     queryKey: ["retrospects"],
     queryFn: wiseflow.retrospects.list,
     enabled: !!commitId,
   });
   const retro = commitId
-    ? retroQ.data?.retrospects.find((r) => r.commitment_id === commitId)
+    ? retroData?.retrospects.find((r) => r.commitment_id === commitId)
     : undefined;
 
   return (
@@ -161,18 +161,18 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Stage
           label="追问 Refinement"
           to="/refinements"
-          loading={refine.isLoading}
-          present={!!refine.data}
+          loading={refineLoading}
+          present={!!refine}
         >
-          {refine.data && (
+          {refine && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant={refine.data.status === "completed" ? "success" : "warning"}>
-                {refine.data.status}
+              <Badge variant={refine.status === "completed" ? "success" : "warning"}>
+                {refine.status}
               </Badge>
-              <span className="text-muted-foreground">{refine.data.rounds_done}/5 轮</span>
-              {refine.data.decision && <Badge variant="outline">{refine.data.decision}</Badge>}
+              <span className="text-muted-foreground">{refine.rounds_done}/5 轮</span>
+              {refine.decision && <Badge variant="outline">{refine.decision}</Badge>}
               <code className="ml-auto text-[11px] text-muted-foreground">
-                {refine.data.id.slice(0, 8)}…
+                {refine.id.slice(0, 8)}…
               </code>
             </div>
           )}
@@ -183,32 +183,32 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Stage
           label="投决会"
           to="/gate"
-          loading={evalQ.isLoading}
-          present={!!evalQ.data}
+          loading={evalLoading}
+          present={!!evalData}
           waiting={!refId}
         >
-          {evalQ.data && (
+          {evalData && (
             <div className="space-y-1.5 text-sm">
               <div className="flex items-center gap-2">
-                {evalQ.data.passed ? (
+                {evalData.passed ? (
                   <Badge variant="success">全票过会</Badge>
                 ) : (
-                  <Badge variant="destructive">第 {evalQ.data.failed_gate} 位否决</Badge>
+                  <Badge variant="destructive">第 {evalData.failed_gate} 位否决</Badge>
                 )}
-                {evalQ.data.archived_pool && (
-                  <Badge variant="outline">{evalQ.data.archived_pool}</Badge>
+                {evalData.archived_pool && (
+                  <Badge variant="outline">{evalData.archived_pool}</Badge>
                 )}
                 <code className="ml-auto text-[11px] text-muted-foreground">
-                  {evalQ.data.id.slice(0, 8)}…
+                  {evalData.id.slice(0, 8)}…
                 </code>
               </div>
-              {evalQ.data.gates && (
+              {evalData.gates && (
                 <div className="flex flex-wrap gap-2 text-xs">
                   {[
-                    ["佐证", evalQ.data.gates.g1_thickness.pass],
-                    ["共识", evalQ.data.gates.g2_anti_consensus.pass],
-                    ["时机", evalQ.data.gates.g3_window.pass],
-                    ["能力圈", evalQ.data.gates.g4_edge.pass],
+                    ["佐证", evalData.gates.g1_thickness.pass],
+                    ["共识", evalData.gates.g2_anti_consensus.pass],
+                    ["时机", evalData.gates.g3_window.pass],
+                    ["能力圈", evalData.gates.g4_edge.pass],
                   ].map(([l, ok]) => (
                     <span
                       key={l as string}
@@ -234,22 +234,22 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Stage
           label="承诺 Commitment"
           to="/commitments"
-          loading={commitQ.isLoading}
-          present={!!commitQ.data}
+          loading={commitLoading}
+          present={!!commit}
           waiting={!evalId}
         >
-          {commitQ.data?.thesis && (
+          {commit?.thesis && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <span className="font-medium">{commitQ.data.thesis.asset_ticker}</span>
+              <span className="font-medium">{commit.thesis.asset_ticker}</span>
               <span className="text-muted-foreground">
-                {commitQ.data.thesis.action} · {commitQ.data.thesis.position_pct}% ·{" "}
-                {commitQ.data.thesis.duration_months} 个月
+                {commit.thesis.action} · {commit.thesis.position_pct}% ·{" "}
+                {commit.thesis.duration_months} 个月
               </span>
-              <Badge variant={commitQ.data.status === "signed" ? "success" : "outline"}>
-                {commitQ.data.status}
+              <Badge variant={commit.status === "signed" ? "success" : "outline"}>
+                {commit.status}
               </Badge>
               <code className="ml-auto text-[11px] text-muted-foreground">
-                {commitQ.data.id.slice(0, 8)}…
+                {commit.id.slice(0, 8)}…
               </code>
             </div>
           )}
@@ -260,20 +260,20 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Stage
           label="持仓 Holding"
           to="/holdings"
-          loading={holdingQ.isLoading}
-          present={!!holdingQ.data}
+          loading={holdingLoading}
+          present={!!holding}
           waiting={!commitId}
         >
-          {holdingQ.data && (
+          {holding && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
-              <Badge variant={holdingQ.data.status === "active" ? "success" : "outline"}>
-                {holdingQ.data.status}
+              <Badge variant={holding.status === "active" ? "success" : "outline"}>
+                {holding.status}
               </Badge>
               <span className="text-muted-foreground">
-                到期 {formatDate(holdingQ.data.expires_at)}
+                到期 {formatDate(holding.expires_at)}
               </span>
               <code className="ml-auto text-[11px] text-muted-foreground">
-                {holdingQ.data.id.slice(0, 8)}…
+                {holding.id.slice(0, 8)}…
               </code>
             </div>
           )}
@@ -284,7 +284,7 @@ function SignalChain({ signalId }: { signalId: string }) {
         <Stage
           label="复盘 Retrospect"
           to="/retrospects"
-          loading={!!commitId && retroQ.isLoading}
+          loading={!!commitId && retroLoading}
           present={!!retro}
           waiting={!commitId}
         >

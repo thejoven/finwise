@@ -1,6 +1,6 @@
 # mobile/
 
-WiseFlow Engine 客户端 — Expo SDK 52 + React Native 0.76 + Expo Router 4 + TypeScript.
+WiseFlow Engine 客户端 — Expo SDK 54 + React Native 0.81 + Expo Router 6 + TypeScript.
 
 ```
 app/                      # Expo Router (文件路由)
@@ -30,6 +30,7 @@ scripts/
 ## 装
 
 前置:
+
 - Node 20+
 - Xcode 16+ (iOS Simulator)
 - (可选) Watchman: `brew install watchman`
@@ -48,21 +49,39 @@ npm install
 
 ---
 
-## 跑
+## 启动与测试
 
 ```bash
 npm start
-# 然后按 i 进 iOS Simulator (或扫码上真机)
+# 然后按 i 进 iOS Simulator, 按 a 进 Android Emulator, 或扫码上真机
+```
+
+如果改了原生依赖或需要重建 dev build:
+
+```bash
+npm run ios
+npm run android
 ```
 
 健康检查:
 
 ```bash
-# 1) Masthead 显示 "WiseFlow" 大斜体
-# 2) Tab 在底部, 收件箱 + 档案
-# 3) 没有任何 Loading spinner / Toast / 红点
+# 1) 能过 SplashScreen, 进入登录页或自动登录后的首页
+# 2) Tab 在底部, 主要页面能切换
+# 3) 没有红屏, 没有 Toast / 红点
 # 4) 字体加载完才显示 UI (SplashScreen 工作)
 ```
+
+当前没有单独的 `npm test` / Jest / E2E 脚本. PR 前先跑:
+
+```bash
+npm run typecheck
+npm run lint
+npm run check:banned-deps
+```
+
+默认 `EXPO_PUBLIC_API_URL` 指向 `http://192.168.1.205:8080`. 如果要连本机 Go API,
+先在仓库根目录按主 README 的 A 段启动后端, 再改 `.env`.
 
 ---
 
@@ -73,6 +92,7 @@ npm run typecheck            # tsc --noEmit
 npm run lint                 # prettier check
 npm run check:banned-deps    # 禁用库守门
 npm run ios                  # 真机/模拟器
+npm run android              # Android Emulator / 真机
 ```
 
 ---
@@ -95,6 +115,7 @@ npm run ios                  # 真机/模拟器
 ## 当前进度
 
 M3 完成的:
+
 - ✅ 工程脚手架 (Expo Router, TypeScript, theme token)
 - ✅ Text 四组件 (Display / Serif / Sans / Mono)
 - ✅ UI primitives (TapEffect, PaperCard, DoubleRule, SectionHeader, RomanList, Masthead)
@@ -102,9 +123,10 @@ M3 完成的:
 - ✅ 路由骨架 + 占位页 (inbox / archive / capture / +not-found)
 - ✅ banned-deps CI 守门
 - ⏳ 字体文件 (下到 assets/fonts/, 见 README)
-- ⏳ `npm install` (你来跑, 网络条件好时)
+- ✅ `npm install`
 
 M4 才填的:
+
 - B1 真实录入 (输入框 + 30 秒 + sync queue)
 - A1 真实信号列表
 - 离线同步 (expo-sqlite 或 WatermelonDB, M4 决定)

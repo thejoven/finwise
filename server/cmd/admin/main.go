@@ -61,9 +61,9 @@ func run() error {
 	}
 	defer pool.Close()
 
-	// nil invite gate: 本 CLI 走 EnsureAdmin 引导管理员, 不经 Register 注册路径,
-	// 所以不需要邀请码门禁.
-	svc := accountmod.NewService(accountmod.NewRepository(pool), nil)
+	// nil invite gate + nil provisioner: 本 CLI 走 EnsureAdmin 引导管理员, 不经 Register
+	// 注册路径, 所以既不需要邀请码门禁, 也不预置默认分类.
+	svc := accountmod.NewService(accountmod.NewRepository(pool), nil, nil)
 
 	if *revoke {
 		u, err := svc.SetAdmin(ctx, *email, false)

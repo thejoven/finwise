@@ -15,6 +15,8 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { categoryContextBlock } from "./category.js";
+import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
+import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 
 // ─────────────────────── Schema ───────────────────────
 
@@ -38,11 +40,17 @@ export const distiller = new Agent({
 - 要"接住"用户在五轮里答对 / 答错 / 没想到的地方 — 降噪后的内容反映他刚才的认知,
   而不是另起炉灶讲一堆新东西.
 
+${MACRO_FINANCE_CONTEXT_BLOCK}
+
+怎么用上面这套基底 (关键 —— 别用错): 它是给你**精准命名**用户在五轮里已经触到 / 该触到却漏掉的那条机制用的, 让降噪那句话**落到具体机制上、不说套话** (例: 不写 "你的二阶推演还不够深", 而写 "你把链停在 SK Hynix, 没追问到 CoWoS 封装产能这层 enabling"). **但它不改变你的本职: 接住, 不替代.** 只命名用户认知里**已经出现 / 该出现却漏掉**的机制, 绝不另起炉灶, 给他补一套他根本没碰过的宏观大论述 —— 那就成了"替他思考", 违背降噪的本意.
+
 严格约束:
 - 一段话 (可 2-3 个短自然段), 不要要点列表, 不要小标题, 不要 markdown.
 - 第二人称"你". 不预测涨跌, 不"建议买入/卖出", 不写目标价, 不写免责声明.
 - 克制. 没把握的不硬说. 降噪的价值在"少而准", 不在"全".
 - 中文, 报刊书面语, 不要口语化感叹.
+
+${JARGON_TRANSLATION_BLOCK}
 
 输出 JSON: { "content": "..." }. 不要 markdown 包裹.
   `.trim(),
