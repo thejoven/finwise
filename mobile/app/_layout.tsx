@@ -148,6 +148,7 @@ export default function RootLayout() {
             <Stack.Screen name="signal/[id]" options={pushDetailScreen} />
             <Stack.Screen name="tweet/[id]" options={pushDetailScreen} />
             <Stack.Screen name="refinement/[sessionId]" options={pushDetailScreen} />
+            <Stack.Screen name="archive/chat/[id]" options={pushDetailScreen} />
             <Stack.Screen name="commitment/[id]" options={pushDetailScreen} />
             <Stack.Screen name="retrospect/[id]" options={pushDetailScreen} />
             <Stack.Screen name="colophon" options={pushDetailScreen} />

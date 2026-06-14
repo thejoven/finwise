@@ -9,6 +9,7 @@
  *   - POST /editor                  (M9 焦虑日陪伴文字)
  *   - POST /diagnostician           (M11 复盘 focus)
  *   - POST /tweet-classify          (订阅模块 · 推文打标/总结)
+ *   - POST /analyst-chat            (归档页 · 与否决分析师继续对话)
  *   - GET  /healthz                 (探活)
  *
  * 认证: X-Internal-Token 必须匹配 INTERNAL_TOKEN env. 与 Go server 共用.
@@ -29,6 +30,7 @@ import { runThicknessJudge } from "../agents/thickness.js";
 import { runTimingCheck } from "../agents/timing.js";
 import { runCompetenceCheck } from "../agents/competence.js";
 import { runTweetClassifier } from "../agents/tweet-classifier.js";
+import { runAnalystChat, type AnalystChatInput } from "../agents/analyst-chat.js";
 
 export interface HttpHandle {
   stop(): Promise<void>;
@@ -353,6 +355,43 @@ async function handle(
     } catch (err) {
       log("warn", "tweet-classify failed", {
         handle: input.author_handle,
+        err: String(err),
+      });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/analyst-chat") {
+    const input = body as AnalystChatInput;
+    if (
+      !input.analyst ||
+      !input.asset ||
+      !input.signal_text ||
+      !input.verdict_detail ||
+      !input.user_message?.trim()
+    ) {
+      writeJSON(res, 400, {
+        error:
+          "analyst + asset + signal_text + verdict_detail + user_message required",
+      });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runAnalystChat(input);
+      log("info", "analyst-chat done", {
+        analyst: input.analyst,
+        asset: input.asset,
+        history_len: input.history?.length ?? 0,
+        reply_len: result.reply.length,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "analyst-chat failed", {
+        analyst: input.analyst,
+        asset: input.asset,
         err: String(err),
       });
       writeJSON(res, 502, { error: String(err) });

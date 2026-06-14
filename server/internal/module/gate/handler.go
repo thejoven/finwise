@@ -1,9 +1,12 @@
 package gate
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -28,6 +31,9 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	pub.GET("/by-refinement/:refinement_id", h.getByRefinement)
 	// 用户从降噪页手动触发投决会 ("前置于投决会" 流程). 校验 ownership 后 detached 跑.
 	pub.POST("/evaluate", h.evaluatePublic)
+	// 归档页 → 与否决分析师继续对话. POST 同步等 LLM 回复 (客户端长超时 + typewriter).
+	pub.GET("/evaluations/:id/chat", h.listChat)
+	pub.POST("/evaluations/:id/chat", h.postChat)
 
 	// 这个 endpoint 给运维 / 调试用 — 直接触发 Evaluate (不校验 ownership), 不走业务流.
 	internalV1.POST("/gate/evaluate", h.evaluate)
@@ -41,6 +47,30 @@ type evaluationResponse struct {
 	FailedGate   *int                `json:"failed_gate,omitempty"`
 	ArchivedPool *domain.ArchivePool `json:"archived_pool,omitempty"`
 	EvaluatedAt  string              `json:"evaluated_at"`
+	// Signal — 评估对应的信号上下文 (读取路径 JOIN 取得). 归档卡片 / 对话页展示用.
+	Signal *signalContextResponse `json:"signal,omitempty"`
+}
+
+type signalContextResponse struct {
+	ID      string  `json:"id"`
+	Asset   *string `json:"asset,omitempty"`
+	Summary string  `json:"summary,omitempty"`
+}
+
+type chatMessageResponse struct {
+	ID        string `json:"id"`
+	Role      string `json:"role"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}
+
+func toChatMessageResponse(m ChatMessage) chatMessageResponse {
+	return chatMessageResponse{
+		ID:        m.ID.String(),
+		Role:      m.Role,
+		Content:   m.Content,
+		CreatedAt: m.CreatedAt.UTC().Format("2006-01-02T15:04:05.000Z07:00"),
+	}
 }
 
 type evaluateRequest struct {
@@ -217,7 +247,7 @@ func (h *Handler) evaluatePublic(c *gin.Context) {
 }
 
 func toEvaluationResponse(ev *Evaluation) evaluationResponse {
-	return evaluationResponse{
+	out := evaluationResponse{
 		ID:           ev.ID.String(),
 		RefinementID: ev.RefinementID.String(),
 		Gates:        ev.Gates,
@@ -226,4 +256,101 @@ func toEvaluationResponse(ev *Evaluation) evaluationResponse {
 		ArchivedPool: ev.ArchivedPool,
 		EvaluatedAt:  ev.EvaluatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 	}
+	if ev.Signal != nil {
+		out.Signal = &signalContextResponse{
+			ID:      ev.Signal.ID.String(),
+			Asset:   ev.Signal.Asset,
+			Summary: ev.Signal.Summary,
+		}
+	}
+	return out
+}
+
+// ───── 分析师对话 ─────
+
+// listChat GET /v1/gate/evaluations/:id/chat — 该评估下的全部对话 (升序).
+func (h *Handler) listChat(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	msgs, err := h.svc.ListChat(c.Request.Context(), userID, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	out := make([]chatMessageResponse, len(msgs))
+	for i, m := range msgs {
+		out[i] = toChatMessageResponse(m)
+	}
+	c.JSON(http.StatusOK, gin.H{"messages": out})
+}
+
+type postChatRequest struct {
+	Content string `json:"content"`
+}
+
+// postChat POST /v1/gate/evaluations/:id/chat — 发一条消息, 同步等分析师回复.
+// 成功返回这次新增的 [用户消息, 分析师回复] 两条; LLM 失败时不落任何消息 (503),
+// 客户端保留输入原样重试.
+func (h *Handler) postChat(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	var req postChatRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json: " + err.Error()})
+		return
+	}
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content empty"})
+		return
+	}
+	if len([]rune(content)) > 1000 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "content too long (>1000)"})
+		return
+	}
+
+	// LLM 同步往返预算 80s (mastra client 内部 75s), 不受上游默认 ctx 影响.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 80*time.Second)
+	defer cancel()
+	msgs, err := h.svc.Chat(ctx, userID, id, content)
+	if err != nil {
+		switch {
+		case errors.Is(err, ErrNotFound):
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+		case errors.Is(err, ErrChatNotArchived):
+			c.JSON(http.StatusConflict, gin.H{"error": "evaluation passed; nothing to discuss"})
+		case errors.Is(err, ErrChatUnavailable):
+			c.JSON(http.StatusServiceUnavailable, gin.H{"error": "analyst unavailable, retry later"})
+		default:
+			c.Error(err) //nolint:errcheck
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		}
+		return
+	}
+	out := make([]chatMessageResponse, len(msgs))
+	for i, m := range msgs {
+		out[i] = toChatMessageResponse(m)
+	}
+	c.JSON(http.StatusOK, gin.H{"messages": out})
 }

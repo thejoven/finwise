@@ -49,6 +49,49 @@ type Evaluation struct {
 	FailedGate   *int
 	ArchivedPool *domain.ArchivePool
 	EvaluatedAt  time.Time
+	// Signal 是这条评估对应的信号上下文 (读取路径 JOIN refinement_sessions + signals
+	// 取得). 归档卡片 / 对话页要让用户知道"哪条信号被拦". Insert 返回时为 nil.
+	Signal *SignalContext
+}
+
+// SignalContext — 评估挂的信号摘要 (展示用, 不是完整 signal).
+type SignalContext struct {
+	ID      uuid.UUID
+	Asset   *string
+	Summary string
+}
+
+// evalSelectJoined 是所有读取路径共用的 SELECT 前缀: evaluation 全列 + 信号上下文.
+const evalSelectJoined = `
+	SELECT ge.id, ge.user_id, ge.refinement_id, ge.gates_detail, ge.passed, ge.failed_gate, ge.archived_pool, ge.evaluated_at,
+	       rs.primary_signal_id, rs.primary_asset, COALESCE(s.inference_summary, '')
+	FROM gate_evaluations ge
+	JOIN refinement_sessions rs ON rs.id = ge.refinement_id
+	JOIN signals s ON s.id = rs.primary_signal_id`
+
+// scanEvaluation 扫一行 evalSelectJoined 的结果 (pgx.Row / pgx.Rows 都满足).
+func scanEvaluation(row pgx.Row) (*Evaluation, error) {
+	var (
+		ev    Evaluation
+		gates json.RawMessage
+		pool  *string
+		sig   SignalContext
+	)
+	if err := row.Scan(
+		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
+		&sig.ID, &sig.Asset, &sig.Summary,
+	); err != nil {
+		return nil, err
+	}
+	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
+		return nil, fmt.Errorf("unmarshal gates_detail: %w", err)
+	}
+	if pool != nil {
+		p := domain.ArchivePool(*pool)
+		ev.ArchivedPool = &p
+	}
+	ev.Signal = &sig
+	return &ev, nil
 }
 
 // ───── Insert (transactional: event + view + outbox) ─────
@@ -203,76 +246,40 @@ func (r *Repository) Insert(ctx context.Context, in InsertInput) (*Evaluation, e
 // ───── reads ─────
 
 func (r *Repository) GetByID(ctx context.Context, userID, id uuid.UUID) (*Evaluation, error) {
-	const q = `
-		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
-		FROM gate_evaluations WHERE user_id = $1 AND id = $2
-	`
-	var (
-		ev    Evaluation
-		gates json.RawMessage
-		pool  *string
-	)
-	if err := r.pool.QueryRow(ctx, q, userID, id).Scan(
-		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
-	); err != nil {
+	const q = evalSelectJoined + ` WHERE ge.user_id = $1 AND ge.id = $2`
+	ev, err := scanEvaluation(r.pool.QueryRow(ctx, q, userID, id))
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("get evaluation: %w", err)
 	}
-	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
-		return nil, fmt.Errorf("unmarshal gates_detail: %w", err)
-	}
-	if pool != nil {
-		p := domain.ArchivePool(*pool)
-		ev.ArchivedPool = &p
-	}
-	return &ev, nil
+	return ev, nil
 }
 
 // GetByRefinementID 按 refinement_id 拿用户的 evaluation. 客户端 signal 详情页用,
 // 把"过会 / 哪位分析师否决"的结果展示在信号底部. 没有 → ErrNotFound.
 func (r *Repository) GetByRefinementID(ctx context.Context, userID, refinementID uuid.UUID) (*Evaluation, error) {
-	const q = `
-		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
-		FROM gate_evaluations WHERE user_id = $1 AND refinement_id = $2
-	`
-	var (
-		ev    Evaluation
-		gates json.RawMessage
-		pool  *string
-	)
-	if err := r.pool.QueryRow(ctx, q, userID, refinementID).Scan(
-		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
-	); err != nil {
+	const q = evalSelectJoined + ` WHERE ge.user_id = $1 AND ge.refinement_id = $2`
+	ev, err := scanEvaluation(r.pool.QueryRow(ctx, q, userID, refinementID))
+	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("get by refinement: %w", err)
 	}
-	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
-		return nil, fmt.Errorf("unmarshal gates_detail: %w", err)
-	}
-	if pool != nil {
-		p := domain.ArchivePool(*pool)
-		ev.ArchivedPool = &p
-	}
-	return &ev, nil
+	return ev, nil
 }
 
 func (r *Repository) ListByPool(ctx context.Context, userID uuid.UUID, pool domain.ArchivePool, limit int, projectID *uuid.UUID) ([]Evaluation, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	// 过滤分类时 JOIN 回 signals (project_id 真相只挂在 signals 上). projectID==nil
-	// 时不 JOIN, 查询与原来等价.
-	q := `
-		SELECT ge.id, ge.user_id, ge.refinement_id, ge.gates_detail, ge.passed, ge.failed_gate, ge.archived_pool, ge.evaluated_at
-		FROM gate_evaluations ge`
+	// 信号上下文常驻 JOIN (evalSelectJoined); 分类过滤只是多一个 WHERE 条件.
+	q := evalSelectJoined
 	where := " WHERE ge.user_id = $1 AND ge.archived_pool = $2"
 	args := []any{userID, string(pool)}
 	if projectID != nil {
-		q += " JOIN refinement_sessions rs ON rs.id = ge.refinement_id JOIN signals s ON s.id = rs.primary_signal_id"
 		args = append(args, *projectID)
 		where += fmt.Sprintf(" AND s.project_id = $%d", len(args))
 	}
@@ -286,22 +293,11 @@ func (r *Repository) ListByPool(ctx context.Context, userID uuid.UUID, pool doma
 	defer rows.Close()
 	out := make([]Evaluation, 0, limit)
 	for rows.Next() {
-		var (
-			ev    Evaluation
-			gates json.RawMessage
-			p     *string
-		)
-		if err := rows.Scan(&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &p, &ev.EvaluatedAt); err != nil {
+		ev, err := scanEvaluation(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
-		if err := json.Unmarshal(gates, &ev.Gates); err != nil {
-			return nil, fmt.Errorf("unmarshal: %w", err)
-		}
-		if p != nil {
-			ap := domain.ArchivePool(*p)
-			ev.ArchivedPool = &ap
-		}
-		out = append(out, ev)
+		out = append(out, *ev)
 	}
 	return out, rows.Err()
 }
@@ -312,9 +308,7 @@ func (r *Repository) ListAll(ctx context.Context, userID uuid.UUID, limit int) (
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	const q = `
-		SELECT ge.id, ge.user_id, ge.refinement_id, ge.gates_detail, ge.passed, ge.failed_gate, ge.archived_pool, ge.evaluated_at
-		FROM gate_evaluations ge
+	const q = evalSelectJoined + `
 		WHERE ge.user_id = $1
 		ORDER BY ge.evaluated_at DESC
 		LIMIT $2
@@ -326,49 +320,22 @@ func (r *Repository) ListAll(ctx context.Context, userID uuid.UUID, limit int) (
 	defer rows.Close()
 	out := make([]Evaluation, 0, limit)
 	for rows.Next() {
-		var (
-			ev    Evaluation
-			gates json.RawMessage
-			p     *string
-		)
-		if err := rows.Scan(&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &p, &ev.EvaluatedAt); err != nil {
+		ev, err := scanEvaluation(rows)
+		if err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
-		if err := json.Unmarshal(gates, &ev.Gates); err != nil {
-			return nil, fmt.Errorf("unmarshal: %w", err)
-		}
-		if p != nil {
-			ap := domain.ArchivePool(*p)
-			ev.ArchivedPool = &ap
-		}
-		out = append(out, ev)
+		out = append(out, *ev)
 	}
 	return out, rows.Err()
 }
 
 func (r *Repository) getByRefinement(ctx context.Context, tx pgx.Tx, userID, refinementID uuid.UUID) (*Evaluation, error) {
-	const q = `
-		SELECT id, user_id, refinement_id, gates_detail, passed, failed_gate, archived_pool, evaluated_at
-		FROM gate_evaluations WHERE user_id = $1 AND refinement_id = $2
-	`
-	var (
-		ev    Evaluation
-		gates json.RawMessage
-		pool  *string
-	)
-	if err := tx.QueryRow(ctx, q, userID, refinementID).Scan(
-		&ev.ID, &ev.UserID, &ev.RefinementID, &gates, &ev.Passed, &ev.FailedGate, &pool, &ev.EvaluatedAt,
-	); err != nil {
+	const q = evalSelectJoined + ` WHERE ge.user_id = $1 AND ge.refinement_id = $2`
+	ev, err := scanEvaluation(tx.QueryRow(ctx, q, userID, refinementID))
+	if err != nil {
 		return nil, fmt.Errorf("get by refinement: %w", err)
 	}
-	if err := json.Unmarshal(gates, &ev.Gates); err != nil {
-		return nil, err
-	}
-	if pool != nil {
-		p := domain.ArchivePool(*pool)
-		ev.ArchivedPool = &p
-	}
-	return &ev, nil
+	return ev, nil
 }
 
 func insertOutbox(ctx context.Context, tx pgx.Tx, eventID int64, et domain.EventType, payload []byte) error {

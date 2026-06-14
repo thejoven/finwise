@@ -54,6 +54,14 @@ const GateDetail = z.object({
 });
 export type GateDetail = z.infer<typeof GateDetail>;
 
+// 评估对应的信号上下文 (server 读取路径 JOIN 取得). 老缓存/旧 server 没有 → undefined.
+const GateSignalContext = z.object({
+  id: z.string().uuid(),
+  asset: z.string().nullable().optional(),
+  summary: z.string().optional().default(""),
+});
+export type GateSignalContext = z.infer<typeof GateSignalContext>;
+
 export const GateEvaluation = z.object({
   id: z.string().uuid(),
   refinement_id: z.string().uuid(),
@@ -62,6 +70,7 @@ export const GateEvaluation = z.object({
   failed_gate: z.number().int().nullable().optional(),
   archived_pool: ArchivePool.nullable().optional(),
   evaluated_at: z.string(),
+  signal: GateSignalContext.optional(),
 });
 export type GateEvaluation = z.infer<typeof GateEvaluation>;
 
@@ -100,9 +109,66 @@ export async function listGatePool(
   return PoolListResponse.parse(json).evaluations;
 }
 
-async function getGateEvaluation(id: string): Promise<GateEvaluation> {
+export async function getGateEvaluation(id: string): Promise<GateEvaluation> {
   const json = await api.get(`v1/gate/evaluations/${id}`).json();
   return GateEvaluation.parse(json);
+}
+
+// ───── 分析师对话 (归档页 → 与否决分析师继续聊) ─────
+
+export const GateChatMessage = z.object({
+  id: z.string().uuid(),
+  role: z.enum(["user", "analyst"]),
+  content: z.string(),
+  created_at: z.string(),
+});
+export type GateChatMessage = z.infer<typeof GateChatMessage>;
+
+const ChatListResponse = z.object({ messages: z.array(GateChatMessage) });
+
+export async function listGateChat(evaluationId: string): Promise<GateChatMessage[]> {
+  const json = await api.get(`v1/gate/evaluations/${evaluationId}/chat`).json();
+  return ChatListResponse.parse(json).messages;
+}
+
+/**
+ * 发一条消息, 同步等分析师回复 (server → mastra → LLM 全文). 返回这次新增的
+ * [用户消息, 分析师回复] 两条.
+ *
+ * 长超时 + 不重试: LLM 往返常态 5-30s; 全局 retry 会在 5xx 时重发 POST,
+ * 对话消息不幂等, 必须关掉.
+ */
+export async function sendGateChat(
+  evaluationId: string,
+  content: string,
+): Promise<GateChatMessage[]> {
+  const json = await api
+    .post(`v1/gate/evaluations/${evaluationId}/chat`, {
+      json: { content },
+      timeout: 90_000,
+      retry: 0,
+    })
+    .json();
+  return ChatListResponse.parse(json).messages;
+}
+
+/**
+ * 失败评估的"分析师否决一句话" — 归档卡气泡 + 对话页开场白共用.
+ * g2 的 detail 是工程口径 ("Mastra score=72 (阈值<70). lagging. summary: ...")
+ * — 取 summary 之后的自然语句; 其余门的 detail 本身就是 LLM reasoning.
+ */
+export function gateVerdictText(ev: GateEvaluation): string {
+  const g = ev.failed_gate;
+  if (g === 1) return ev.gates.g1_thickness.detail ?? "目前看到的独立证据还不够厚.";
+  if (g === 2) {
+    const d = ev.gates.g2_anti_consensus.detail ?? "";
+    const m = d.match(/summary:\s*([\s\S]+)$/);
+    if (m?.[1]) return m[1].trim();
+    return d || "这件事市场已经讨论得很热了, 你看见的不算 leading.";
+  }
+  if (g === 3) return ev.gates.g3_window.detail ?? "时机不在你的窗口里.";
+  if (g === 4) return ev.gates.g4_edge.detail ?? "这一条超出你目前的能力圈半径.";
+  return "";
 }
 
 /**

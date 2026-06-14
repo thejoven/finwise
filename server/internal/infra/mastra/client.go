@@ -33,6 +33,9 @@ type Client struct {
 	baseURL       string
 	internalToken string
 	hc            *http.Client
+	// hcLong 给对话类调用 (analyst-chat). 普通 check 30s 上限不变;
+	// 对话回复是同步等 LLM 全文, 偶发 30s+ — 单独放宽, 不影响其它调用.
+	hcLong *http.Client
 }
 
 func New(baseURL, internalToken string) *Client {
@@ -40,6 +43,7 @@ func New(baseURL, internalToken string) *Client {
 		baseURL:       baseURL,
 		internalToken: internalToken,
 		hc:            &http.Client{Timeout: 30 * time.Second}, // 单次 call 上限
+		hcLong:        &http.Client{Timeout: 90 * time.Second},
 	}
 }
 
@@ -239,6 +243,46 @@ func (c *Client) Diagnostician(ctx context.Context, req DiagnosticianRequest) (*
 	return &resp, nil
 }
 
+// ───── AnalystChat (归档页 · 与否决分析师继续对话) ─────
+
+// AnalystChatMessage 一条对话历史. Role: "user" | "analyst".
+type AnalystChatMessage struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+}
+
+type AnalystChatRequest struct {
+	// Analyst: thickness | consensus | timing | competence (按 failed_gate 映射)
+	Analyst         string               `json:"analyst"`
+	Asset           string               `json:"asset"`
+	SignalText      string               `json:"signal_text"`
+	SignalSummary   string               `json:"signal_summary,omitempty"`
+	VerdictDetail   string               `json:"verdict_detail"`
+	GatesBrief      string               `json:"gates_brief,omitempty"`
+	ArchivedPool    string               `json:"archived_pool,omitempty"`
+	DistilledText   string               `json:"distilled_text,omitempty"`
+	ProjectName     string               `json:"project_name,omitempty"`
+	ProjectGuidance string               `json:"project_guidance,omitempty"`
+	History         []AnalystChatMessage `json:"history,omitempty"`
+	UserMessage     string               `json:"user_message"`
+}
+
+type AnalystChatResponse struct {
+	Reply string `json:"reply"`
+}
+
+func (c *Client) AnalystChat(ctx context.Context, req AnalystChatRequest) (*AnalystChatResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("analyst_chat", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp AnalystChatResponse
+	if err := c.postWith(ctx, c.hcLong, "/analyst-chat", "analyst_chat", req, &resp, 75*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 // ───── internal ─────
 
 // ───── ClassifyTweet (订阅模块 · 推文打标/总结) ─────
@@ -269,6 +313,10 @@ func (c *Client) ClassifyTweet(ctx context.Context, req TweetClassifyRequest) (*
 }
 
 func (c *Client) post(ctx context.Context, path, metricLabel string, body, out any, timeout time.Duration) error {
+	return c.postWith(ctx, c.hc, path, metricLabel, body, out, timeout)
+}
+
+func (c *Client) postWith(ctx context.Context, hc *http.Client, path, metricLabel string, body, out any, timeout time.Duration) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	start := time.Now()
@@ -290,7 +338,7 @@ func (c *Client) post(ctx context.Context, path, metricLabel string, body, out a
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Internal-Token", c.internalToken)
 
-	resp, err := c.hc.Do(req)
+	resp, err := hc.Do(req)
 	if err != nil {
 		metrics.MastraCalls.WithLabelValues(metricLabel, "err").Inc()
 		return fmt.Errorf("mastra %s: %w", path, err)

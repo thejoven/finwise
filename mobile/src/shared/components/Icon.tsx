@@ -1,6 +1,7 @@
 import { Platform, type ColorValue, type StyleProp, type ViewStyle } from "react-native";
 import { SymbolView, type SFSymbol, type SymbolWeight } from "expo-symbols";
 import {
+  ArrowUp,
   ArrowUpRight,
   BookOpen,
   Check,
@@ -49,6 +50,7 @@ export type IconName =
   | "chevronUp"
   | "pencil"
   | "close"
+  | "arrowUp"
   | "arrowUpRight"
   | "book";
 
@@ -62,6 +64,7 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   chevronUp: { sf: "chevron.up", lucide: ChevronUp },
   pencil: { sf: "pencil", lucide: Pencil },
   close: { sf: "xmark", lucide: X },
+  arrowUp: { sf: "arrow.up", lucide: ArrowUp },
   arrowUpRight: { sf: "arrow.up.right", lucide: ArrowUpRight },
   // BookOpen → `book` (iOS 13+, 全版本可用). 若只跑 iOS 16+ 想要"翻开"感可换 `book.pages`.
   book: { sf: "book", lucide: BookOpen },

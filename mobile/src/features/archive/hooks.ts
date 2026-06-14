@@ -4,12 +4,16 @@
  * 4 个池并行拉. RT 不要太频, 30s 一次足够 (用户从 inbox 切过来时新数据已经在了).
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   getGateByRefinement,
+  getGateEvaluation,
+  listGateChat,
   listGatePool,
+  sendGateChat,
   type ArchivePoolT,
+  type GateChatMessage,
   type GateEvaluation,
 } from "@/core/api/gate";
 import { useActiveProject } from "@/features/project/store";
@@ -55,4 +59,50 @@ const POOLS: Array<{ id: ArchivePoolT; label: string; meta: string }> = [
   { id: "discard", label: "已弃池", meta: "市场已定价, 不进" },
 ];
 
-export type { GateEvaluation };
+// ───── 分析师对话 (归档卡 → 对话页) ─────
+
+/** 单条评估 (含信号上下文). 对话页头部 + 开场白用. */
+export function useGateEvaluation(id: string | undefined) {
+  return useQuery({
+    ...byIdQuery(["gate-evaluation"], id, getGateEvaluation),
+    staleTime: 60_000,
+  });
+}
+
+const CHAT_KEY = (id: string) => ["gate-chat", id] as const;
+
+/** 该评估下的对话消息 (升序). */
+export function useGateChat(evaluationId: string | undefined) {
+  return useQuery({
+    queryKey: evaluationId ? CHAT_KEY(evaluationId) : ["gate-chat", "none"],
+    queryFn: () => listGateChat(evaluationId!),
+    enabled: !!evaluationId,
+    staleTime: 30_000,
+  });
+}
+
+/**
+ * 发消息给否决分析师. 成功把返回的 [用户消息, 回复] 追加进缓存 (不整列重拉).
+ * 失败不落任何消息 (server 同样不落) — 调用方保留输入原样重试.
+ */
+export function useSendGateChat(evaluationId: string | undefined) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: (content: string) => sendGateChat(evaluationId!, content),
+    onSuccess: (pair) => {
+      if (!evaluationId) return;
+      queryClient.setQueryData<GateChatMessage[]>(CHAT_KEY(evaluationId), (old) => [
+        ...(old ?? []),
+        ...pair,
+      ]);
+    },
+  });
+  return {
+    send: mutation.mutateAsync,
+    isSending: mutation.isPending,
+    sendError: mutation.isError,
+    resetError: mutation.reset,
+  };
+}
+
+export type { GateChatMessage, GateEvaluation };
