@@ -1,4 +1,5 @@
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -14,11 +15,12 @@ interface SilenceStampProps {
  * 沉默是好状态; 不显示数字角标, 不催促用户.
  */
 export function SilenceStamp({ todayCount }: SilenceStampProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.row}>
       <View style={styles.left}>
         <Serif size={11} style={styles.statusLabel}>
-          今日状态
+          {t("capture.silence.label")}
         </Serif>
       </View>
       <View style={styles.right}>
@@ -26,12 +28,12 @@ export function SilenceStamp({ todayCount }: SilenceStampProps) {
           <>
             <View style={styles.check} />
             <Serif size={12} italic style={styles.silent}>
-              沉默
+              {t("capture.silence.silent")}
             </Serif>
           </>
         ) : (
           <Serif size={12} italic style={styles.active}>
-            {todayCount} 条新记录
+            {t("capture.silence.count", { count: todayCount })}
           </Serif>
         )}
       </View>

@@ -12,6 +12,7 @@
 import { useEffect, useRef } from "react";
 
 import { notify } from "@/shared/toast";
+import i18n from "@/core/i18n";
 
 interface SignalLike {
   id: string;
@@ -43,12 +44,12 @@ export function useInferenceDoneToast(signals: SignalLike[]) {
         const preview =
           (s.inference_summary && s.inference_summary.slice(0, 40)) ||
           (s.raw_text && s.raw_text.slice(0, 40)) ||
-          "你的信号已推演完成";
+          i18n.t("capture.toast.fallbackTitle");
         notify({
           type: "inference_done",
-          stamp: "AI 推演完成",
+          stamp: i18n.t("capture.toast.stamp"),
           title: preview,
-          subtitle: "点开看完整推演 ↗",
+          subtitle: i18n.t("capture.toast.subtitle"),
           href: `/signal/${s.id}`,
         });
       }

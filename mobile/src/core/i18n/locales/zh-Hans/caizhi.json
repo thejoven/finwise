@@ -1,0 +1,31 @@
+{
+  "nameplate": "财知",
+  "header": {
+    "colophon": "卷首语 · 关于本刊",
+    "capture": "记录新观察"
+  },
+  "tabs": {
+    "inbox": "信箱",
+    "distill": "降噪",
+    "archive": "归档"
+  },
+  "inbox": {
+    "thisWeek": "本周记录",
+    "thisWeekMeta": "{{count}} 条 · 全部已归档",
+    "loading": "正在拉取记录…",
+    "empty": "这里会显示你的观察记录。\n它们不需要立即写下来。",
+    "callout": {
+      "letterSuffix": "一封信",
+      "retrospect": {
+        "stamp": "复盘",
+        "title": "持仓到期 · 一起复盘",
+        "subtitle": "四个问题, 不打分, 看见自己."
+      },
+      "commitment": {
+        "stamp": "承诺书",
+        "title": "AI 给你写了一份承诺书",
+        "subtitle": "{{asset}} · {{pct}}% · {{months}} 个月"
+      }
+    }
+  }
+}

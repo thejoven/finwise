@@ -52,13 +52,6 @@ export function useGateByRefinement(refinementId: string | undefined) {
   });
 }
 
-const POOLS: Array<{ id: ArchivePoolT; label: string; meta: string }> = [
-  { id: "observation", label: "观察池", meta: "信号还不够厚, 再看看" },
-  { id: "lesson", label: "课堂池", meta: "能力圈外, 记下来" },
-  { id: "calendar", label: "日历池", meta: "时机不在窗口, 等" },
-  { id: "discard", label: "已弃池", meta: "市场已定价, 不进" },
-];
-
 // ───── 分析师对话 (归档卡 → 对话页) ─────
 
 /** 单条评估 (含信号上下文). 对话页头部 + 开场白用. */

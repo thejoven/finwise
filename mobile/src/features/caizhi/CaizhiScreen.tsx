@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { StyleSheet, View, type NativeSyntheticEvent } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 import PagerView, {
   type PagerViewOnPageScrollEventData,
   type PagerViewOnPageSelectedEventData,
@@ -30,11 +31,15 @@ import { useCaizhiNav } from "./store";
  * 初始落在第 0 页「信箱」(原收件箱), 与 app 启动落 caizhi 一致.
  */
 
-const TABS = ["信箱", "降噪", "归档"] as const;
-
 export default function CaizhiScreen() {
+  const { t } = useTranslation();
   const pagerRef = useRef<PagerView>(null);
   const progress = useSharedValue(0);
+
+  const tabs = useMemo(
+    () => [t("caizhi.tabs.inbox"), t("caizhi.tabs.distill"), t("caizhi.tabs.archive")],
+    [t],
+  );
 
   const onPageScroll = useCallback(
     (e: NativeSyntheticEvent<PagerViewOnPageScrollEventData>) => {
@@ -70,7 +75,7 @@ export default function CaizhiScreen() {
   return (
     <View style={styles.root}>
       <CaizhiHeader />
-      <SegmentedTabs tabs={TABS} progress={progress} onSelect={handleSelect} />
+      <SegmentedTabs tabs={tabs} progress={progress} onSelect={handleSelect} />
       <PagerView
         ref={pagerRef}
         style={styles.pager}

@@ -14,6 +14,7 @@ const UserSchema = z.object({
   display_name: z.string().nullable().optional(),
   avatar_url: z.string().nullable().optional(),
   bio: z.string().nullable().optional(),
+  language: z.string().nullable().optional(),
   created_at: z.string(),
 });
 export type UserDTO = z.infer<typeof UserSchema>;
@@ -79,6 +80,14 @@ export interface UpdateMeInput {
 export async function updateMe(input: UpdateMeInput): Promise<UserDTO> {
   const json = await api.patch("v1/me", { json: input }).json();
   return UserSchema.parse(json);
+}
+
+/**
+ * 单独推送语言偏好 —— 与 updateMe 分开, 因为它不是用户在"编辑资料"里改的,
+ * 而是切语言时静默同步(见 @/core/i18n/sync). 走同一个 PATCH /v1/me.
+ */
+export async function updateLanguage(language: string): Promise<void> {
+  await api.patch("v1/me", { json: { language } });
 }
 
 export interface ChangePasswordInput {

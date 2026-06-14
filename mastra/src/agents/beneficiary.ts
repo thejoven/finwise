@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 import type { SearchResult } from "../tools/exa-search.js";
@@ -29,15 +30,15 @@ export const BeneficiaryTarget = z.object({
   symbol: z.string().min(1).max(24),
   name: z.string().min(1).max(48),
   /** 受益链位置短标签, 例 核心 / 二阶 / 隐形 / 重估. */
-  role: z.string().min(1).max(16),
+  role: z.string().min(1).max(48),
   /** 因果链: 为什么受益. judgment, 落在检索到的事实上. */
   thesis: z.string().min(10).max(320),
   /** 估值锚. 只用检索材料里出现的数字; 没有就定性或留空. */
-  valuation: z.string().max(140),
+  valuation: z.string().max(420),
   /** 催化剂 / 时间窗. */
-  catalyst: z.string().max(140),
+  catalyst: z.string().max(420),
   /** 风险 / bear case. 必填, 不只报喜. */
-  risk: z.string().min(1).max(140),
+  risk: z.string().min(1).max(420),
 });
 export type BeneficiaryTargetT = z.infer<typeof BeneficiaryTarget>;
 
@@ -96,6 +97,8 @@ export interface BeneficiaryInput {
   primaryAsset?: string;
   projectName?: string;
   projectGuidance?: string;
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
   /** 用户五轮里关注/暴露的点 (一行摘要), 让推演接住他的认知. */
   roundsBrief: string;
   /** Exa.ai (+ Polymarket) 实时检索材料, grounding 用. 可空. */
@@ -126,6 +129,8 @@ export async function runBeneficiary(
 function buildPrompt(input: BeneficiaryInput): string {
   const cat = categoryContextBlock(input.projectName, input.projectGuidance);
   const sections: string[] = [];
+  const lang = languageDirective(input.language).trimEnd();
+  if (lang) sections.push(lang, "");
   if (cat) sections.push(cat, "");
   sections.push(
     `信号 (本次追问基于这条):`,

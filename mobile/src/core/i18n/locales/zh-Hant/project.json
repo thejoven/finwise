@@ -1,0 +1,38 @@
+{
+  "cell": {
+    "activeLabel": "目前分類「{{name}}」, 點擊切換",
+    "noneSelected": "未選擇",
+    "placeholder": "選擇分類"
+  },
+  "dropdown": {
+    "switchTo": "切到分類「{{name}}」",
+    "editCategory": "編輯分類「{{name}}」"
+  },
+  "badge": {
+    "filterBy": "依分類「{{name}}」篩選"
+  },
+  "modal": {
+    "title": {
+      "list": "分類",
+      "create": "新建分類",
+      "edit": "編輯分類"
+    },
+    "switchSection": "切換分類"
+  },
+  "field": {
+    "name": "名稱",
+    "namePlaceholder": "例如：泡泡瑪特",
+    "icon": "圖示（可選）",
+    "color": "顏色（可選）",
+    "none": "無",
+    "guidance": "分析指引（可選）",
+    "guidanceHint": "給這個分類的 AI 推理寫一句偏好，例如「關注通路動銷與海外擴張」。留空則不影響。",
+    "guidancePlaceholder": "這個分類要 AI 特別留意什麼…"
+  },
+  "actions": {
+    "newCategory": "新建分類",
+    "create": "建立",
+    "archive": "歸檔此分類"
+  },
+  "defaultCategoryName": "我的關注"
+}

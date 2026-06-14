@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -19,6 +20,7 @@ import { theme, useThemeColors } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
 import { useAuth, type AuthUser } from "@/core/auth/store";
 import { useAppearance, type AppearancePref } from "@/core/theme/store";
+import { useLanguage, LANGUAGE_ENDONYMS, type LanguagePref } from "@/core/i18n";
 import { useNotifications } from "@/features/notifications";
 
 /**
@@ -38,6 +40,7 @@ export default function ProfileScreen() {
   const setUser = useAuth((s) => s.setUser);
   const clear = useAuth((s) => s.clear);
   const token = useAuth((s) => s.token);
+  const { t } = useTranslation();
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const insets = useSafeAreaInsets();
@@ -76,10 +79,10 @@ export default function ProfileScreen() {
   }, [token, setUser]);
 
   const handleLogout = useCallback(() => {
-    Alert.alert("退出登录", "确认退出当前账号?", [
-      { text: "再想想", style: "cancel" },
+    Alert.alert(t("profile.logout.action"), t("profile.logout.confirm"), [
+      { text: t("profile.logout.cancel"), style: "cancel" },
       {
-        text: "退出",
+        text: t("profile.logout.confirmAction"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -92,7 +95,7 @@ export default function ProfileScreen() {
         },
       },
     ]);
-  }, [clear]);
+  }, [clear, t]);
 
   // 没登录但 dev fallback 在用 — 显示 "调试模式" 占位.
   if (!user && !token) {
@@ -100,16 +103,16 @@ export default function ProfileScreen() {
       <SafeAreaView style={styles.root} edges={["top"]}>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
           <Mono size={9} style={styles.headStamp}>
-            读者档案
+            {t("profile.archiveStamp")}
           </Mono>
           <Display size={28} italic style={styles.title}>
-            个人资料.
+            {t("profile.title")}
           </Display>
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
-            当前为调试 dev token 模式, 未登录任何账号。
+            {t("profile.devMode.notice")}
           </Serif>
-          <RowLink label="登录账号" onPress={() => router.push("/login")} />
+          <RowLink label={t("profile.devMode.login")} onPress={() => router.push("/login")} />
         </ScrollView>
       </SafeAreaView>
     );
@@ -152,6 +155,7 @@ function ProfileHeader({
   error: string | null;
   refreshing: boolean;
 }) {
+  const { t } = useTranslation();
   const displayName = user?.display_name?.trim() || user?.email || "—";
   const initial = displayName.charAt(0).toUpperCase();
   const createdLabel = user?.created_at
@@ -161,10 +165,10 @@ function ProfileHeader({
   return (
     <>
       <Mono size={9} style={styles.headStamp}>
-        读者档案
+        {t("profile.archiveStamp")}
       </Mono>
       <Display size={28} italic style={styles.title}>
-        个人资料.
+        {t("profile.title")}
       </Display>
       <DoubleRule />
 
@@ -185,7 +189,7 @@ function ProfileHeader({
             </Mono>
           ) : null}
           <Mono size={9} style={styles.metaLine}>
-            加入于 {createdLabel}
+            {t("profile.joinedOn", { date: createdLabel })}
           </Mono>
         </View>
       </View>
@@ -199,7 +203,7 @@ function ProfileHeader({
       ) : (
         <View style={styles.bioBlock}>
           <Serif size={12} italic style={styles.bioMuted}>
-            还没写个人签名。
+            {t("profile.bioEmpty")}
           </Serif>
         </View>
       )}
@@ -211,18 +215,20 @@ function ProfileHeader({
       ) : null}
       {refreshing ? (
         <Mono size={9} style={styles.metaLine}>
-          同步中…
+          {t("profile.syncing")}
         </Mono>
       ) : null}
     </>
   );
 }
 
-const APPEARANCE_OPTIONS: { key: AppearancePref; label: string }[] = [
-  { key: "light", label: "光亮" },
-  { key: "dark", label: "暗黑" },
-  { key: "system", label: "跟随系统" },
-];
+const APPEARANCE_KEYS = ["light", "dark", "system"] as const satisfies readonly AppearancePref[];
+const LANGUAGE_KEYS = ["system", "zh-Hans", "zh-Hant", "en"] as const satisfies readonly LanguagePref[];
+
+/** 语言行/选项的展示名: system 走翻译, 具体语言用本族写法(endonym). */
+function languageLabel(key: LanguagePref, systemLabel: string): string {
+  return key === "system" ? systemLabel : LANGUAGE_ENDONYMS[key];
+}
 
 /**
  * 原生 iOS 设置表 —— 真·原生 SwiftUI `Form` (@expo/ui). 仅在 `hasNativeUI` 时渲染, 故内部
@@ -237,8 +243,11 @@ const APPEARANCE_OPTIONS: { key: AppearancePref; label: string }[] = [
  */
 function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogout: () => void }) {
   const c = useThemeColors();
+  const { t } = useTranslation();
   const pref = useAppearance((s) => s.pref);
   const setPref = useAppearance((s) => s.setAppearance);
+  const langPref = useLanguage((s) => s.pref);
+  const setLang = useLanguage((s) => s.setLanguage);
   const items = useNotifications((s) => s.items);
   const unread = items.filter((n) => !n.read).length;
 
@@ -269,31 +278,43 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
   return (
     <Host style={styles.nativeHost}>
       <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
-        <Section title="账号" modifiers={[listRowBackground(c.paper2)]}>
-          {navRow("编辑资料", () => router.push("/profile/edit"))}
-          {navRow("修改密码", () => router.push("/profile/password"))}
+        <Section title={t("profile.sections.account")} modifiers={[listRowBackground(c.paper2)]}>
+          {navRow(t("profile.account.editProfile"), () => router.push("/profile/edit"))}
+          {navRow(t("profile.account.changePassword"), () => router.push("/profile/password"))}
           {navRow(
-            "消息通知",
+            t("profile.account.notifications"),
             () => router.push("/notifications"),
             unread > 0 ? <T modifiers={[foregroundStyle(c.red)]}>{String(unread)}</T> : undefined,
           )}
         </Section>
 
-        <Section title="偏好" modifiers={[listRowBackground(c.paper2)]}>
+        <Section title={t("profile.sections.preferences")} modifiers={[listRowBackground(c.paper2)]}>
           <Picker
-            label="外观"
+            label={t("settings.appearance.title")}
             selection={pref}
             onSelectionChange={(value) => void setPref(value as AppearancePref)}
             modifiers={[pickerStyle("menu")]}
           >
-            {APPEARANCE_OPTIONS.map((o) => (
-              <T key={o.key} modifiers={[tag(o.key)]}>
-                {o.label}
+            {APPEARANCE_KEYS.map((k) => (
+              <T key={k} modifiers={[tag(k)]}>
+                {t(`settings.appearance.${k}`)}
               </T>
             ))}
           </Picker>
-          {navRow("卷首语 · 关于", () => router.push("/colophon"))}
-          {navRow("搜索观察记录", () => router.push("/search"))}
+          <Picker
+            label={t("settings.language.title")}
+            selection={langPref}
+            onSelectionChange={(value) => void setLang(value as LanguagePref)}
+            modifiers={[pickerStyle("menu")]}
+          >
+            {LANGUAGE_KEYS.map((k) => (
+              <T key={k} modifiers={[tag(k)]}>
+                {languageLabel(k, t("settings.language.system"))}
+              </T>
+            ))}
+          </Picker>
+          {navRow(t("profile.preferences.colophon"), () => router.push("/colophon"))}
+          {navRow(t("profile.preferences.search"), () => router.push("/search"))}
         </Section>
 
         {token ? (
@@ -307,7 +328,7 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
             >
               <HStack>
                 <Spacer />
-                <T modifiers={[foregroundStyle(c.red), bold()]}>退出登录</T>
+                <T modifiers={[foregroundStyle(c.red), bold()]}>{t("profile.logout.action")}</T>
                 <Spacer />
               </HStack>
             </Button>
@@ -322,27 +343,32 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
  * 自绘回退设置 (Android / Expo Go / 未 rebuild) —— 与原生路径同样两组, 维持报刊式行.
  */
 function FallbackSettings({ token, onLogout }: { token: string | null; onLogout: () => void }) {
+  const { t } = useTranslation();
   return (
     <>
       <View style={styles.section}>
-        <SectionHeader label="账号" />
-        <RowLink label="编辑资料" onPress={() => router.push("/profile/edit")} />
-        <RowLink label="修改密码" onPress={() => router.push("/profile/password")} />
+        <SectionHeader label={t("profile.sections.account")} />
+        <RowLink label={t("profile.account.editProfile")} onPress={() => router.push("/profile/edit")} />
+        <RowLink
+          label={t("profile.account.changePassword")}
+          onPress={() => router.push("/profile/password")}
+        />
         <NotificationRow />
       </View>
 
       <View style={styles.section}>
-        <SectionHeader label="偏好" />
+        <SectionHeader label={t("profile.sections.preferences")} />
         <FallbackAppearanceRows />
-        <RowLink label="卷首语 · 关于" onPress={() => router.push("/colophon")} />
-        <RowLink label="搜索观察记录" onPress={() => router.push("/search")} />
+        <FallbackLanguageRows />
+        <RowLink label={t("profile.preferences.colophon")} onPress={() => router.push("/colophon")} />
+        <RowLink label={t("profile.preferences.search")} onPress={() => router.push("/search")} />
       </View>
 
       {token ? (
         <View style={styles.section}>
           <TapEffect style={styles.dangerBtn} onPress={onLogout}>
             <Sans size={11} weight="700" style={styles.dangerLabel}>
-              退出登录
+              {t("profile.logout.action")}
             </Sans>
           </TapEffect>
         </View>
@@ -353,23 +379,50 @@ function FallbackSettings({ token, onLogout }: { token: string | null; onLogout:
 
 /** 外观选择器 (自绘回退) — 光亮 / 暗黑 / 跟随系统, 各一行带红菱形选中点. */
 function FallbackAppearanceRows() {
+  const { t } = useTranslation();
   const pref = useAppearance((s) => s.pref);
   const setPref = useAppearance((s) => s.setAppearance);
   return (
     <>
-      {APPEARANCE_OPTIONS.map((o) => (
+      {APPEARANCE_KEYS.map((k) => (
         <TapEffect
-          key={o.key}
+          key={k}
           style={styles.row}
           onPress={() => {
-            void setPref(o.key);
+            void setPref(k);
           }}
           pressedStyle={{ backgroundColor: theme.color.paperPressed }}
         >
           <Serif size={14} style={styles.rowLabel}>
-            {o.label}
+            {t(`settings.appearance.${k}`)}
           </Serif>
-          {pref === o.key ? <View style={styles.badgeDot} /> : null}
+          {pref === k ? <View style={styles.badgeDot} /> : null}
+        </TapEffect>
+      ))}
+    </>
+  );
+}
+
+/** 语言选择器 (自绘回退) — 跟随系统 / 简体 / 繁体 / English, 各一行带红菱形选中点. */
+function FallbackLanguageRows() {
+  const { t } = useTranslation();
+  const pref = useLanguage((s) => s.pref);
+  const setLang = useLanguage((s) => s.setLanguage);
+  return (
+    <>
+      {LANGUAGE_KEYS.map((k) => (
+        <TapEffect
+          key={k}
+          style={styles.row}
+          onPress={() => {
+            void setLang(k);
+          }}
+          pressedStyle={{ backgroundColor: theme.color.paperPressed }}
+        >
+          <Serif size={14} style={styles.rowLabel}>
+            {languageLabel(k, t("settings.language.system"))}
+          </Serif>
+          {pref === k ? <View style={styles.badgeDot} /> : null}
         </TapEffect>
       ))}
     </>
@@ -396,6 +449,7 @@ function RowLink({ label, onPress }: { label: string; onPress: () => void }) {
  * 未读 N > 0 → red diamond + Mono "N" 数字; 0 → 灰 "无";
  */
 function NotificationRow() {
+  const { t } = useTranslation();
   const items = useNotifications((s) => s.items);
   const unread = items.filter((n) => !n.read).length;
   const total = items.length;
@@ -411,7 +465,7 @@ function NotificationRow() {
     ) : (
       <View style={styles.badgeRow}>
         <Mono size={10} style={styles.badgeMuted}>
-          {total === 0 ? "无" : `${total}`}
+          {total === 0 ? t("profile.account.noNotifications") : `${total}`}
         </Mono>
         <Icon name="chevronRight" size={16} color={theme.color.muted2} strokeWidth={1.5} />
       </View>
@@ -423,7 +477,7 @@ function NotificationRow() {
       pressedStyle={{ backgroundColor: theme.color.paperPressed }}
     >
       <Serif size={14} style={styles.rowLabel}>
-        消息通知
+        {t("profile.account.notifications")}
       </Serif>
       {right}
     </TapEffect>

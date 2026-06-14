@@ -1,0 +1,31 @@
+{
+  "nameplate": "財知",
+  "header": {
+    "colophon": "卷首語 · 關於本刊",
+    "capture": "記錄新觀察"
+  },
+  "tabs": {
+    "inbox": "信箱",
+    "distill": "降噪",
+    "archive": "歸檔"
+  },
+  "inbox": {
+    "thisWeek": "本週記錄",
+    "thisWeekMeta": "{{count}} 條 · 全部已歸檔",
+    "loading": "正在擷取記錄…",
+    "empty": "這裡會顯示你的觀察記錄。\n它們不需要立即寫下來。",
+    "callout": {
+      "letterSuffix": "一封信",
+      "retrospect": {
+        "stamp": "復盤",
+        "title": "持倉到期 · 一起復盤",
+        "subtitle": "四個問題, 不打分, 看見自己."
+      },
+      "commitment": {
+        "stamp": "承諾書",
+        "title": "AI 給你寫了一份承諾書",
+        "subtitle": "{{asset}} · {{pct}}% · {{months}} 個月"
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "stamp": "Attention File",
+  "title": "Stats",
+  "completedCount": "{{count}} completed",
+  "window": {
+    "7d": "7d",
+    "30d": "30d",
+    "all": "All"
+  },
+  "error": "Couldn't load your stats. Pull to refresh or try again later.",
+  "loading": "Tallying…",
+  "empty": {
+    "header": "No data yet",
+    "meta": "Appears after your first five rounds",
+    "body": "After each set of five rounds, the system generates that session's attention file — four dimension scores, one insight, and one blind-spot note."
+  },
+  "scores": {
+    "stamp": "Four Dimensions · Recent Average"
+  },
+  "dimensions": {
+    "focus": "Focus",
+    "depth": "Depth",
+    "breadth": "Breadth",
+    "execution": "Execution"
+  },
+  "trend": {
+    "stamp": "Trend · Last {{count}}",
+    "stampPlain": "Trend",
+    "needMore": "Need at least 2 completed sessions to plot a trend — currently {{count}}."
+  },
+  "tags": {
+    "stamp": "Domain Spread",
+    "empty": "No taggable data recently."
+  },
+  "insight": {
+    "completedAt": "Completed {{when}} · {{ref}}",
+    "stamp": "This Session's Insight",
+    "blindspotStamp": "Blind Spot · Watch Next Time"
+  }
+}

@@ -15,6 +15,8 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 import { Display, Mono, RichText, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
 import type {
@@ -35,10 +37,11 @@ interface Props {
 
 export function QuestionCard(props: Props) {
   const { question } = props;
+  const { t } = useTranslation();
   return (
     <View style={styles.root}>
       <Mono size={9} style={styles.roundStamp}>
-        ROUND {question.round} · {kindLabel(question.kind)}
+        ROUND {question.round} · {kindLabel(question.kind, t)}
       </Mono>
       <Display size={20} style={styles.questionText}>
         <RichText text={question.text} />
@@ -250,6 +253,7 @@ function Ordering({ question, onAnswerChange }: Props) {
 // ───── open ─────
 
 function OpenText({ question, onAnswerChange }: Props) {
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const start = useMemo(() => Date.now(), []);
@@ -271,13 +275,13 @@ function OpenText({ question, onAnswerChange }: Props) {
       ))}
       <InputTrigger
         value={text}
-        placeholder="一句话写下你的回答"
+        placeholder={t("refinement.question.openPlaceholder")}
         onPress={() => setModalOpen(true)}
       />
       <TextInputModal
         visible={modalOpen}
         title={question.text.length > 60 ? question.text.slice(0, 60) + "…" : question.text}
-        placeholder="一句话写下你的回答"
+        placeholder={t("refinement.question.openPlaceholder")}
         value={text}
         hints={question.open_prompts}
         onSave={(t) => {
@@ -296,6 +300,7 @@ function OpenText({ question, onAnswerChange }: Props) {
 // 三块全部填齐才算"答完", 父组件按 onAnswerChange 推送当前状态.
 
 function CommitmentSetup({ question, onAnswerChange }: Props) {
+  const { t } = useTranslation();
   const [actionId, setActionId] = useState<string | null>(null);
   const [durationId, setDurationId] = useState<string | null>(null);
   const [text, setText] = useState("");
@@ -350,7 +355,7 @@ function CommitmentSetup({ question, onAnswerChange }: Props) {
   return (
     <View style={styles.commitWrap}>
       <Mono size={9} style={styles.groupLabel}>
-        A · 操作
+        {t("refinement.question.groupAction")}
       </Mono>
       <View style={styles.options}>
         {actionOpts.map((o, i) => (
@@ -366,7 +371,7 @@ function CommitmentSetup({ question, onAnswerChange }: Props) {
       </View>
 
       <Mono size={9} style={[styles.groupLabel, styles.groupLabelSpaced]}>
-        B · 持仓时长
+        {t("refinement.question.groupDuration")}
       </Mono>
       <View style={styles.options}>
         {durationOpts.map((o, i) => (
@@ -382,7 +387,7 @@ function CommitmentSetup({ question, onAnswerChange }: Props) {
       </View>
 
       <Mono size={9} style={[styles.groupLabel, styles.groupLabelSpaced]}>
-        C · 你的理由 + 退出条件
+        {t("refinement.question.groupReason")}
       </Mono>
       {(question.open_prompts ?? []).map((p) => (
         <Serif key={p} size={13} italic style={styles.openPrompt}>
@@ -391,13 +396,13 @@ function CommitmentSetup({ question, onAnswerChange }: Props) {
       ))}
       <InputTrigger
         value={text}
-        placeholder="为什么是这个操作 + 时长? 写下退出条件 (价格 + 时间 + 一条外部信号)."
+        placeholder={t("refinement.question.commitmentPlaceholder")}
         onPress={() => setModalOpen(true)}
       />
       <TextInputModal
         visible={modalOpen}
-        title="你的理由 + 退出条件"
-        placeholder="为什么是这个操作 + 时长? 写下退出条件 (价格 + 时间 + 一条外部信号)."
+        title={t("refinement.question.commitmentModalTitle")}
+        placeholder={t("refinement.question.commitmentPlaceholder")}
         value={text}
         hints={question.open_prompts}
         onSave={(t) => {
@@ -433,6 +438,7 @@ function OptionRow({
   userText,
   onUserTextChange,
 }: OptionRowProps) {
+  const { t } = useTranslation();
   const isUserInput = !!option.is_user_input;
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -470,14 +476,14 @@ function OptionRow({
         <>
           <InputTrigger
             value={userText ?? ""}
-            placeholder="写下你看到的那条链 — 哪个被忽略的环节, 哪个角度被市场漏掉"
+            placeholder={t("refinement.question.userInputPlaceholder")}
             onPress={() => setModalOpen(true)}
             small
           />
           <TextInputModal
             visible={modalOpen}
-            title="你看到的那条链"
-            placeholder="哪个被忽略的环节, 哪个角度被市场漏掉"
+            title={t("refinement.question.userInputModalTitle")}
+            placeholder={t("refinement.question.userInputModalPlaceholder")}
             value={userText ?? ""}
             onSave={(t) => {
               onUserTextChange?.(t);
@@ -493,18 +499,18 @@ function OptionRow({
 
 // ───── helpers ─────
 
-function kindLabel(k: QuestionKindT): string {
+function kindLabel(k: QuestionKindT, t: TFunction): string {
   switch (k) {
     case "single":
-      return "推演 · 单选";
+      return t("refinement.kind.single");
     case "multi":
-      return "漏选 · 多选";
+      return t("refinement.kind.multi");
     case "ordering":
-      return "排序 · 哪个先发生";
+      return t("refinement.kind.ordering");
     case "open":
-      return "收尾 · 你自己写";
+      return t("refinement.kind.open");
     case "commitment_setup":
-      return "签字 · 承诺要素";
+      return t("refinement.kind.commitmentSetup");
   }
 }
 

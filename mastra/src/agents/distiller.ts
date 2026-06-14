@@ -15,6 +15,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 
@@ -74,6 +75,8 @@ export interface DistillerInput {
   primaryAsset?: string;
   projectName?: string;
   projectGuidance?: string;
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
   rounds: DistillerRound[];
 }
 
@@ -105,7 +108,9 @@ function buildPrompt(input: DistillerInput): string {
         (r.diagnosis_note ? `\n    诊断: ${r.diagnosis_note}` : ""),
     )
     .join("\n");
+  const lang = languageDirective(input.language).trimEnd();
   return [
+    ...(lang ? [lang, ""] : []),
     ...(cat ? [cat, ""] : []),
     `信号 (本次追问基于这条):`,
     `  ${input.signalRawText ?? input.signalSummary}`,

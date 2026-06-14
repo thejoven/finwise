@@ -1,0 +1,38 @@
+{
+  "cell": {
+    "activeLabel": "当前分类「{{name}}」, 点击切换",
+    "noneSelected": "未选择",
+    "placeholder": "选择分类"
+  },
+  "dropdown": {
+    "switchTo": "切到分类「{{name}}」",
+    "editCategory": "编辑分类「{{name}}」"
+  },
+  "badge": {
+    "filterBy": "按分类「{{name}}」筛选"
+  },
+  "modal": {
+    "title": {
+      "list": "分类",
+      "create": "新建分类",
+      "edit": "编辑分类"
+    },
+    "switchSection": "切换分类"
+  },
+  "field": {
+    "name": "名称",
+    "namePlaceholder": "例如：泡泡玛特",
+    "icon": "图标（可选）",
+    "color": "颜色（可选）",
+    "none": "无",
+    "guidance": "分析指引（可选）",
+    "guidanceHint": "给这个分类的 AI 推理写一句偏好，例如“关注渠道动销与海外扩张”。留空则不影响。",
+    "guidancePlaceholder": "这个分类要 AI 特别留意什么…"
+  },
+  "actions": {
+    "newCategory": "新建分类",
+    "create": "创建",
+    "archive": "归档此分类"
+  },
+  "defaultCategoryName": "我的关注"
+}

@@ -1,0 +1,13 @@
+{
+  "appearance": {
+    "title": "Appearance",
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "title": "Language",
+    "system": "System",
+    "footer": "Follows your phone's language by default. Also applied to AI-generated signals, summaries, and committee verdicts."
+  }
+}

@@ -1,0 +1,132 @@
+{
+  "header": {
+    "stamp": "Five Rounds",
+    "progress": "{{done}}/5"
+  },
+  "current": {
+    "stamp": "◆ NOW · ROUND {{round}}"
+  },
+  "waiting": {
+    "nextQuestion": "Got your answer. Drawing up the next question…",
+    "firstQuestion": "Preparing the first question…"
+  },
+  "error": {
+    "load": "Something went wrong loading this session. Pull to refresh or reopen later."
+  },
+  "footer": {
+    "submitting": "Saving…",
+    "submit": "Submit This Round",
+    "viewDistilled": "See This Signal Distilled"
+  },
+  "completed": {
+    "label": "Done",
+    "metaTraining": "Practice",
+    "metaEligible": "Eligible for analyst review",
+    "bodyTraining": "This one was mostly practice. You saw a few of your blind spots. Next, head to the Distilled view and see what's left of this signal once the noise is filtered out.",
+    "bodyEligible": "Five rounds done. What's left of this signal once the noise is filtered out is waiting for you in the Distilled view. After you read it, you decide whether to send it to the four analysts (Evidence · Consensus · Timing · Circle of Competence) for review."
+  },
+  "kind": {
+    "single": "Reason · Single choice",
+    "multi": "Omissions · Multiple choice",
+    "ordering": "Order · What happens first",
+    "orderingShort": "Order",
+    "open": "Closing · In your own words",
+    "commitmentSetup": "Sign-off · Commitment terms"
+  },
+  "answered": {
+    "stampSuffix": "Answered",
+    "empty": "(left blank)",
+    "groupAction": "A · Action",
+    "groupDuration": "B · Holding period",
+    "groupReason": "C · Your reasoning + exit conditions",
+    "youWrote": "You wrote:"
+  },
+  "question": {
+    "openPlaceholder": "Write your answer in a sentence",
+    "groupAction": "A · Action",
+    "groupDuration": "B · Holding period",
+    "groupReason": "C · Your reasoning + exit conditions",
+    "commitmentPlaceholder": "Why this action + duration? Write your exit conditions (price + time + one external signal).",
+    "commitmentModalTitle": "Your reasoning + exit conditions",
+    "userInputPlaceholder": "Write the chain you see — which overlooked link, which angle the market missed",
+    "userInputModalTitle": "The chain you see",
+    "userInputModalPlaceholder": "Which overlooked link, which angle the market missed"
+  },
+  "clues": {
+    "label": "Related Clues",
+    "triggerLabel": "Clues",
+    "triggerCount": "Clues · {{count}}",
+    "triggerLoading": "Clues · …",
+    "metaSources_one": "· {{count}} source",
+    "metaSources_other": "· {{count}} sources",
+    "metaLoading": "· Loading…",
+    "metaNone": "· None found",
+    "statusStamp": "STATUS · {{status}}",
+    "statusFetching": "FETCHING",
+    "statusEmpty": "EMPTY",
+    "drawerLoading": "Mastra is still pulling external sources, a second or two…",
+    "drawerEmpty": "No matching external news found for this signal — the reasoning will work straight from what you wrote."
+  },
+  "learning": {
+    "metaSources_one": "{{count}} source",
+    "metaSources_other": "{{count}} sources",
+    "metaLoading": "Loading…",
+    "metaNone": "No external sources found",
+    "nodeBackground": "Background research",
+    "nodeRound": "This round's clues · R{{round}}",
+    "emptyHint": "No matching external news found for this signal — the reasoning will work straight from what you wrote.",
+    "volume": "Volume {{amount}}"
+  },
+  "history": {
+    "label": "Five Rounds · Record",
+    "completedAt": "Completed {{date}}",
+    "metaRounds_one": "{{count}} round",
+    "metaRounds_other": "{{count}} rounds",
+    "yourAnswer": "Your answer",
+    "diagnosis": "Diagnosis",
+    "tagDistractor": "Decoy",
+    "tagRequired": "Required",
+    "tagUser": "Own words",
+    "decisionTraining": "Practice",
+    "decisionEligible": "Into analyst review"
+  },
+  "diagnosis": {
+    "correct": "On target",
+    "partialMiss": "Missed some",
+    "distractor": "Led astray",
+    "weak": "Too thin"
+  },
+  "input": {
+    "stamp": "Input",
+    "charCount_one": "{{count}} character",
+    "charCount_other": "{{count}} characters",
+    "tapToEdit_one": "Tap to edit · {{count}} character",
+    "tapToEdit_other": "Tap to edit · {{count}} characters",
+    "tapToExpand": "Tap to expand input"
+  },
+  "distilled": {
+    "header": "Distilled",
+    "label": "Distilled",
+    "meta": "This signal",
+    "distilling": "Filtering out the noise…",
+    "distillingStamp": "DISTILLING",
+    "beneficiaryLabel": "Beneficiaries",
+    "beneficiaryMeta": "Financial read",
+    "analysing": "Still tracing the financial beneficiary chain…",
+    "analysingStamp": "ANALYSING",
+    "silence": "This signal has no clear beneficiary mapping. The system chooses to stay silent.",
+    "proceeding": "Sending to Committee…",
+    "proceed": "Send to Committee",
+    "defer": "Leave it for now"
+  },
+  "beneficiary": {
+    "valuation": "Valuation",
+    "catalyst": "Catalyst",
+    "risk": "Risk"
+  },
+  "retry": {
+    "hint": "◆ Waiting over {{seconds}}s for the next question — likely a flaky Socratic output format. Let it try again.",
+    "busy": "Drawing up a new question…",
+    "action": "Try again"
+  }
+}

@@ -16,6 +16,7 @@
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { DoubleRule, Icon, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -32,6 +33,7 @@ import {
 import type { BeneficiaryTarget } from "@/core/api/distillation";
 
 export default function DistilledScreen() {
+  const { t } = useTranslation();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { data } = useDistillation(sessionId);
   const { proceed, isProceeding } = useProceedToGate();
@@ -57,20 +59,29 @@ export default function DistilledScreen() {
 
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         {/* ── 降噪综述 ── */}
-        <SectionHeader label="降噪" meta="这条信号" />
+        <SectionHeader label={t("refinement.distilled.label")} meta={t("refinement.distilled.meta")} />
         <DoubleRule />
         {distilled ? (
           <DistilledContent content={distilled} />
         ) : (
-          <WaitingForNext stamp="DISTILLING" text="正在把噪音滤掉…" />
+          <WaitingForNext
+            stamp={t("refinement.distilled.distillingStamp")}
+            text={t("refinement.distilled.distilling")}
+          />
         )}
 
         {/* ── 收益标的信号 (异步) ── */}
         <View style={styles.beneficiarySection}>
-          <SectionHeader label="收益标的" meta="金融推演" />
+          <SectionHeader
+            label={t("refinement.distilled.beneficiaryLabel")}
+            meta={t("refinement.distilled.beneficiaryMeta")}
+          />
           <DoubleRule />
           {beneficiaryPending ? (
-            <WaitingForNext stamp="ANALYSING" text="金融受益链还在推演…" />
+            <WaitingForNext
+              stamp={t("refinement.distilled.analysingStamp")}
+              text={t("refinement.distilled.analysing")}
+            />
           ) : beneficiary && beneficiary.length > 0 ? (
             <BeneficiarySignal note={note} targets={beneficiary} />
           ) : (
@@ -87,15 +98,16 @@ export default function DistilledScreen() {
 // ─────────────────────── Header ───────────────────────
 
 function Header() {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("common.back")}</Serif>
       </TapEffect>
       <View style={styles.headerCenter}>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          降噪
+          {t("refinement.distilled.header")}
         </Sans>
       </View>
       <View style={styles.headerRight} />
@@ -128,6 +140,7 @@ function BeneficiarySignal({
 // ─────────────────────── Footer ───────────────────────
 
 function Footer({ onProceed, isProceeding }: { onProceed: () => void; isProceeding: boolean }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.footer}>
       <TapEffect
@@ -137,7 +150,7 @@ function Footer({ onProceed, isProceeding }: { onProceed: () => void; isProceedi
         disabled={isProceeding}
       >
         <Sans size={11} weight="700" style={styles.primaryLabel}>
-          {isProceeding ? "正在上会…" : "上投决会"}
+          {isProceeding ? t("refinement.distilled.proceeding") : t("refinement.distilled.proceed")}
         </Sans>
       </TapEffect>
       <TapEffect
@@ -146,7 +159,7 @@ function Footer({ onProceed, isProceeding }: { onProceed: () => void; isProceedi
         disableEffect
       >
         <Serif size={13} style={styles.secondaryLabel}>
-          先放着
+          {t("refinement.distilled.defer")}
         </Serif>
       </TapEffect>
     </View>

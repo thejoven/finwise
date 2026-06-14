@@ -20,6 +20,7 @@ import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import { ANALYSTS } from "./analysts.js";
 
 // ─────────────────────────── Schema ───────────────────────────
@@ -29,9 +30,9 @@ export const TimingSchema = z.object({
   // 分析师判断的合理持仓 / 重定价窗口 (月). 用户已声明且自洽时沿用用户的; 否则给估计.
   months: z.number().min(0).max(120),
   // 当前处在时间轴哪一段, 例: "财报催化前 2-3 个月窗口" / "事件已落地, 窗口已过" / "窗口在 2 年以上, 太远"
-  window_phase: z.string().min(1).max(40),
+  window_phase: z.string().min(1).max(120),
   // 一句话给用户看 — gates_detail.g3_window.detail + (失败时) archived_pool.human_reason
-  reasoning: z.string().min(10).max(160),
+  reasoning: z.string().min(10).max(480),
 });
 export type Timing = z.infer<typeof TimingSchema>;
 
@@ -82,6 +83,7 @@ export interface TimingInput {
   plan_text?: string; // 第 5 轮 open_text (退出条件 / 计划原话)
   project_name?: string;
   project_guidance?: string;
+  language?: string;
 }
 
 export async function runTimingCheck(input: TimingInput): Promise<Timing> {
@@ -100,7 +102,7 @@ export async function runTimingCheck(input: TimingInput): Promise<Timing> {
   const messages = [
     {
       role: "user" as const,
-      content: `${catPrefix}资产: ${input.asset}
+      content: `${languageDirective(input.language)}${catPrefix}资产: ${input.asset}
 
 背景信号:
 ${input.signal_text.slice(0, 1200)}

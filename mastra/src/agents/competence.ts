@@ -23,6 +23,7 @@ import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import { ANALYSTS } from "./analysts.js";
 
 // ─────────────────────────── Schema ───────────────────────────
@@ -33,7 +34,7 @@ export const CompetenceSchema = z.object({
   // 有没有给出具体、可证伪的退出 / 止损条件
   exit_known: z.boolean(),
   // 一句话给用户看 — gates_detail.g4_edge.detail + (失败时) archived_pool.human_reason
-  reasoning: z.string().min(10).max(160),
+  reasoning: z.string().min(10).max(480),
 });
 export type Competence = z.infer<typeof CompetenceSchema>;
 
@@ -86,6 +87,7 @@ export interface CompetenceInput {
   exit_text?: string;
   project_name?: string;
   project_guidance?: string;
+  language?: string;
 }
 
 export async function runCompetenceCheck(input: CompetenceInput): Promise<Competence> {
@@ -95,7 +97,7 @@ export async function runCompetenceCheck(input: CompetenceInput): Promise<Compet
   const messages = [
     {
       role: "user" as const,
-      content: `${catPrefix}资产: ${input.asset}
+      content: `${languageDirective(input.language)}${catPrefix}资产: ${input.asset}
 是否亲历 (元数据, 仅参考): ${input.direct ? "是" : "否"}
 
 背景信号:

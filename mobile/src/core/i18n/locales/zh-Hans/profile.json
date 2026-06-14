@@ -1,0 +1,63 @@
+{
+  "archiveStamp": "读者档案",
+  "title": "个人资料.",
+  "sections": {
+    "account": "账号",
+    "preferences": "偏好"
+  },
+  "account": {
+    "editProfile": "编辑资料",
+    "changePassword": "修改密码",
+    "notifications": "消息通知",
+    "noNotifications": "无"
+  },
+  "preferences": {
+    "colophon": "卷首语 · 关于",
+    "search": "搜索观察记录"
+  },
+  "joinedOn": "加入于 {{date}}",
+  "bioEmpty": "还没写个人签名。",
+  "syncing": "同步中…",
+  "logout": {
+    "action": "退出登录",
+    "confirm": "确认退出当前账号?",
+    "cancel": "再想想",
+    "confirmAction": "退出"
+  },
+  "devMode": {
+    "notice": "当前为调试 dev token 模式, 未登录任何账号。",
+    "login": "登录账号"
+  },
+  "saving": "保存中…",
+  "edit": {
+    "topBar": "编辑资料 · PROFILE",
+    "title": "编辑资料.",
+    "hint": "邮箱不能从这里修改。\n昵称和签名是公开的, 但目前只有你能看见。",
+    "emailLabel": "邮箱 (只读)",
+    "nameLabel": "昵称",
+    "namePlaceholder": "想被怎么称呼",
+    "bioLabel": "签名",
+    "bioPlaceholder": "一句话介绍自己"
+  },
+  "password": {
+    "topBar": "修改密码 · PASSWORD",
+    "title": "修改密码.",
+    "hint": "修改后, 所有设备会被退出登录, 你需要用新密码重新登录。",
+    "oldLabel": "原密码",
+    "oldPlaceholder": "当前密码",
+    "newLabel": "新密码",
+    "newPlaceholder": "至少 8 位",
+    "confirmLabel": "确认新密码",
+    "confirmPlaceholder": "再输一次",
+    "mismatch": "两次输入不一致。",
+    "saveAndExit": "保存并退出"
+  },
+  "search": {
+    "topBar": "搜索 · SEARCH",
+    "title": "搜索观察记录.",
+    "placeholder": "输入关键词…",
+    "hint": "在原文或推演摘要里搜索关键词。",
+    "searching": "搜索中…",
+    "noMatch": "没有匹配 “{{query}}”。"
+  }
+}

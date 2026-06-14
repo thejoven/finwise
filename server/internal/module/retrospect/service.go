@@ -146,6 +146,7 @@ func (s *Service) runDiagnosticianWithFallback(ctx context.Context, retro *Retro
 	callCtx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
 	resp, err := s.mastra.Diagnostician(callCtx, mastra.DiagnosticianRequest{
+		Language:                db.UserLanguage(ctx, s.pool, retro.UserID),
 		UserID:                  retro.UserID.String(),
 		CommitmentAsset:         asset,
 		CommitmentThesisSummary: summary,

@@ -24,6 +24,7 @@
 import { useEffect, useRef } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 import Animated, {
   Easing,
   runOnJS,
@@ -43,6 +44,7 @@ export interface SplashCoverProps {
 
 export function SplashCover({ onFinish }: SplashCoverProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   // Reanimated 的 Animated.View 不认 DynamicColorIOS 动态色, 根容器底色取 resolved hex.
   const c = useThemeColors();
 
@@ -117,7 +119,7 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
       <View style={styles.topMeta}>
         <Animated.View style={taglineStyle}>
           <Sans size={9} weight="600" style={styles.topMetaText}>
-            财知 · 创刊号
+            {t("components.splash.stamp")}
           </Sans>
         </Animated.View>
       </View>
@@ -147,14 +149,14 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
 
         <Animated.View style={taglineStyle}>
           <RNText allowFontScaling={false} style={styles.tagline}>
-            以智驭财 · 行远致富
+            {t("components.splash.tagline")}
           </RNText>
         </Animated.View>
       </View>
 
       <Animated.View style={[styles.footer, taglineStyle]}>
         <Sans size={9} weight="600" style={styles.footerText}>
-          A QUIET LEDGER · EST. MMXXVI
+          {t("components.splash.footer")}
         </Sans>
       </Animated.View>
     </Animated.View>

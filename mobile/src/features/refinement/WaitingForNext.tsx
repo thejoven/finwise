@@ -16,6 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import Animated, {
   Easing,
   cancelAnimation,
@@ -82,6 +83,7 @@ function RetryGate({
   busy: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
@@ -95,7 +97,7 @@ function RetryGate({
   return (
     <View style={styles.retryBlock}>
       <Serif size={12} italic style={styles.retryHint}>
-        ◆ 等下一题超过 {elapsedSec}s — 大概率 Socratic 输出格式偶发不稳, 让它重试一次.
+        {t("refinement.retry.hint", { seconds: elapsedSec })}
       </Serif>
       <TapEffect
         style={[styles.retryButton, busy && styles.retryButtonBusy]}
@@ -104,7 +106,7 @@ function RetryGate({
         disabled={busy}
       >
         <Sans size={11} weight="700" style={styles.retryLabel}>
-          {busy ? "正在重新出题..." : "让它再出一次"}
+          {busy ? t("refinement.retry.busy") : t("refinement.retry.action")}
         </Sans>
       </TapEffect>
     </View>

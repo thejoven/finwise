@@ -1,0 +1,31 @@
+{
+  "nameplate": "WiseFlow",
+  "header": {
+    "colophon": "Colophon · About",
+    "capture": "Record a new observation"
+  },
+  "tabs": {
+    "inbox": "Inbox",
+    "distill": "Distill",
+    "archive": "Archive"
+  },
+  "inbox": {
+    "thisWeek": "This Week",
+    "thisWeekMeta": "{{count}} entries · all archived",
+    "loading": "Fetching entries…",
+    "empty": "Your observations will appear here.\nThere's no need to write them down right away.",
+    "callout": {
+      "letterSuffix": "A Letter",
+      "retrospect": {
+        "stamp": "Retrospective",
+        "title": "Position matured · let's review",
+        "subtitle": "Four questions, no scores, just seeing yourself."
+      },
+      "commitment": {
+        "stamp": "Commitment",
+        "title": "AI drafted a commitment for you",
+        "subtitle": "{{asset}} · {{pct}}% · {{months}} months"
+      }
+    }
+  }
+}

@@ -1,15 +1,16 @@
 // Package companion is the M9 持仓陪伴 module.
 //
 // 数据流:
-//   POST /v1/commitments/:id/open
-//     → 写 events.commitment.opened
-//     → upsert behavioral_fingerprints (open_count++, 重算 classified)
-//     → 如果 classified 升到 anxious_3x/5x 且 companion_shown=false
-//       → 写 events.companion.shown (editor_text = 用户自己 reasons_for_future_self 其中一段)
-//       → 标记 fingerprint.companion_shown=true
-//     → 返回 { opens_today, should_show_companion, fingerprint_id }
 //
-//   GET /v1/commitments/:id/companion → 返回今天的 companion view (或 204)
+//	POST /v1/commitments/:id/open
+//	  → 写 events.commitment.opened
+//	  → upsert behavioral_fingerprints (open_count++, 重算 classified)
+//	  → 如果 classified 升到 anxious_3x/5x 且 companion_shown=false
+//	    → 写 events.companion.shown (editor_text = 用户自己 reasons_for_future_self 其中一段)
+//	    → 标记 fingerprint.companion_shown=true
+//	  → 返回 { opens_today, should_show_companion, fingerprint_id }
+//
+//	GET /v1/commitments/:id/companion → 返回今天的 companion view (或 204)
 //
 // Phase 3 v1 简化:
 //   - 不用 Redis. 直接 Postgres upsert. 单用户低并发场景 OK.
@@ -51,6 +52,11 @@ func NewRepository(pool *db.Pool) *Repository {
 	return &Repository{pool: pool}
 }
 
+// UserLanguage 取用户语言偏好, 供 M9 Editor 的陪伴文字跟随用户语言. 见 db.UserLanguage.
+func (r *Repository) UserLanguage(ctx context.Context, userID uuid.UUID) string {
+	return db.UserLanguage(ctx, r.pool, userID)
+}
+
 // CompanionView 返回给客户端的当天陪伴.
 type CompanionView struct {
 	CommitmentID  uuid.UUID
@@ -68,7 +74,7 @@ type OpenResult struct {
 	Classified          string
 	// Reasons 仅 ShouldShowCompanion=true 时填充, 供 service 给 Mastra Editor (或 fallback) 用
 	ReasonsForFutureSelf []string
-	CompanionView       *CompanionView // service 调 EmitCompanion 后填回
+	CompanionView        *CompanionView // service 调 EmitCompanion 后填回
 }
 
 // ───── RecordOpen ─────
@@ -257,10 +263,10 @@ func (r *Repository) GetCompanionToday(ctx context.Context, userID, commitmentID
 		WHERE user_id = $1 AND commitment_id = $2 AND date = $3
 	`
 	var (
-		fpID         uuid.UUID
-		openCount    int
-		classified   *string
-		shown        bool
+		fpID       uuid.UUID
+		openCount  int
+		classified *string
+		shown      bool
 	)
 	if err := r.pool.QueryRow(ctx, q, userID, commitmentID, today).Scan(&fpID, &openCount, &classified, &shown); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -396,9 +402,9 @@ func (r *Repository) loadOrEmpty(ctx context.Context, userID, commitID uuid.UUID
 		return nil, err
 	}
 	return &OpenResult{
-		OpensToday:    fp.OpenCount,
-		FingerprintID: fp.ID,
-		Classified:    fp.Classified,
+		OpensToday:          fp.OpenCount,
+		FingerprintID:       fp.ID,
+		Classified:          fp.Classified,
 		ShouldShowCompanion: fp.CompanionShown,
 	}, nil
 }

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Display, Serif, Sans, TapEffect, DoubleRule } from "@/shared/components";
 import { NativeField } from "@/shared/native";
@@ -26,6 +27,7 @@ import { useActiveProject } from "@/features/project";
  *   - 关闭 modal 时不震动
  */
 export default function CaptureModal() {
+  const { t } = useTranslation();
   const [text, setText] = useState("");
   // 分类必选. 默认带入当前 active 分类 (没有则为 null, 用户须手选).
   const [projectId, setProjectId] = useState<string | null>(
@@ -56,18 +58,17 @@ export default function CaptureModal() {
       >
         <View style={styles.body}>
           <Display size={26} italic style={styles.title}>
-            一句话, 30 秒.
+            {t("capture.compose.title")}
           </Display>
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
-            一次只记一件事。{"\n"}
-            选个分类放好, 字句不必精确。
+            {t("capture.compose.hint")}
           </Serif>
 
           <NativeField
             value={text}
             onChangeText={setText}
-            placeholder="今天看到什么…"
+            placeholder={t("capture.compose.placeholder")}
             multiline
             autoFocus
             maxLength={2000}
@@ -87,12 +88,12 @@ export default function CaptureModal() {
             disabled={!canSubmit}
           >
             <Sans size={11} weight="700" style={styles.signLabel}>
-              记下
+              {t("capture.compose.submit")}
             </Sans>
           </TapEffect>
           <TapEffect style={styles.cancel} onPress={() => router.back()} disableEffect>
             <Serif size={12} italic style={styles.cancelLabel}>
-              再想想
+              {t("capture.compose.cancel")}
             </Serif>
           </TapEffect>
         </View>

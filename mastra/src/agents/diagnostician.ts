@@ -15,6 +15,7 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
+import { languageDirective } from "./language-context.js";
 import { getMemory } from "../memory/agent-memory.js";
 
 export const FocusDim = z.enum([
@@ -29,7 +30,7 @@ export type FocusDimT = z.infer<typeof FocusDim>;
 
 export const DiagnosisSchema = z.object({
   focus_dim: FocusDim,
-  focus_text: z.string().min(20).max(120),
+  focus_text: z.string().min(20).max(360),
 });
 export type Diagnosis = z.infer<typeof DiagnosisSchema>;
 
@@ -83,6 +84,7 @@ export interface DiagnosticianInput {
     choice: string;
     open_text?: string;
   }>;
+  language?: string;
 }
 
 export async function runDiagnostician(input: DiagnosticianInput): Promise<Diagnosis> {
@@ -91,7 +93,7 @@ export async function runDiagnostician(input: DiagnosticianInput): Promise<Diagn
     .join("\n\n");
   const messages = [{
     role: "user" as const,
-    content: `持仓资产: ${input.commitment_asset}
+    content: `${languageDirective(input.language)}持仓资产: ${input.commitment_asset}
 当时的承诺要点: ${input.commitment_thesis_summary}
 
 复盘四问 (用户的答案):

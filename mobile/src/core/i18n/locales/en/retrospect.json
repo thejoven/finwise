@@ -1,0 +1,84 @@
+{
+  "header": {
+    "finalized": "Retrospective · Wrapped",
+    "step": "Retrospective · {{step}}/4"
+  },
+  "loading": "Opening your retrospective…",
+  "error": "Couldn't load this retrospective. Try again later.",
+  "questionStamp": "{{dim}} · Q{{no}}/4",
+  "openPlaceholder": "(optional)",
+  "ready": {
+    "header": "All four answered",
+    "meta": "ready",
+    "body": "Press the button below when you're ready. No rush."
+  },
+  "finalized": {
+    "stamp": "TRAINING FOCUS · Your Next Focus",
+    "fallbackText": "Next time, push the inference chain one step further.",
+    "note": "This goes into your training file. Next time you run the five rounds, the AI puts it in the first line."
+  },
+  "footer": {
+    "backToInbox": "Back to Inbox",
+    "submitting": "Saving…",
+    "submitLast": "Save Q4",
+    "submitNext": "Save This Answer · Next",
+    "finalizing": "Wrapping up…",
+    "finalize": "Finish · See Yourself"
+  },
+  "dim": {
+    "perception": "Perception",
+    "inference": "Inference",
+    "evaluation": "Evaluation",
+    "execution": "Execution"
+  },
+  "focusDim": {
+    "perception_speed": "Capture Speed",
+    "inference_depth": "Inference Depth",
+    "decision_speed": "Decision Speed",
+    "holding_patience": "Holding Patience",
+    "exit_quality": "Exit Quality",
+    "thesis_evolution": "Thesis Evolution"
+  },
+  "questions": {
+    "q1": {
+      "title": "When you captured this signal, where was it in the narrative arc?",
+      "options": {
+        "pre_narrative": "Silent phase · no one outside the circle is talking; a physical variable, not noise, set me off",
+        "early": "Early leading · insiders are murmuring, mainstream media hasn't covered it",
+        "mid": "Mid spread · sell-side is publishing, but the disagreement is still live",
+        "late": "Late consensus · headlines and retail are all on it; I captured it late"
+      },
+      "openPrompt": "What's your basis for placing it in this phase? (name one or two specific signals, not \"a feeling\")"
+    },
+    "q2": {
+      "title": "How many hops did your inference chain run? Which lenses did you use?",
+      "options": {
+        "first_one_lens": "First-order · one lens · who obviously benefits (stayed on the surface, the latticework never opened)",
+        "second_one_lens": "Second-order · one lens · who's forced to concede (there's a second order, but only finance or business)",
+        "third_multi_lens": "Third-order · multi-lens · cross-disciplinary (law / engineering / game theory / history) surfaced a contrarian winner",
+        "wavered": "Talked myself back partway — the chain ran, but I overrode it"
+      },
+      "openPrompt": "If you ran it again, which lens did you miss? (pick one: psychology / law / history / game theory / biology / engineering / chemistry / physics / math)"
+    },
+    "q3": {
+      "title": "Can your exit conditions turn this position's convexity back into cash?",
+      "options": {
+        "specific_anchored": "Yes · all three anchors: a price anchor + a time anchor + one externally observable signal",
+        "price_only": "Half · only a price stop, no intrinsic margin of safety — one drop and it's empty",
+        "vague": "Empty · what I wrote amounts to \"it depends\"; the convexity can't be realized",
+        "wrong_kind": "Wrong type · this position never should've had exit conditions (it's really a hedge / pair / long-term own)"
+      },
+      "openPrompt": "Next time you write exit conditions, what will your three anchors be? (price + time + external)"
+    },
+    "q4": {
+      "title": "From signing to acting, where did your hesitation cost come from?",
+      "options": {
+        "same_day": "Same day · acted immediately, no hesitation",
+        "within_week": "Within a week · acted after one pass of base-rate calibration",
+        "weeks_later": "Dragged for weeks · the inside view's overconfidence had to be knocked down repeatedly first",
+        "never": "Signed but never really acted · thesis and position broke apart"
+      },
+      "openPrompt": "If you hesitated, which lens were you re-checking? (uneasy about the base rate, or judging reflexive timing, or something else)"
+    }
+  }
+}

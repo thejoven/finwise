@@ -122,6 +122,7 @@ export async function runCommitmentDraft(input: CommitmentDraftInput): Promise<C
       position_pct_hint: DEFAULT_POSITION_PCT,
       project_name: view.project_name,
       project_guidance: view.project_guidance,
+      language: view.language,
     });
   } catch (err) {
     return { evaluation_id: input.evaluation_id, ok: false, error: `narrator: ${errMsg(err)}` };

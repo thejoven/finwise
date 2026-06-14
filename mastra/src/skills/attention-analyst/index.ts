@@ -23,6 +23,7 @@ import { z } from "zod";
 import { config } from "../../config/env.js";
 import { defaultModel } from "../../llm/model.js";
 import { categoryContextBlock } from "../../agents/category.js";
+import { languageDirective } from "../../agents/language-context.js";
 
 // ──────────────────── schema ────────────────────
 
@@ -31,8 +32,8 @@ export const AttentionSchema = z.object({
   depth_score: z.number().int().min(0).max(100),
   breadth_score: z.number().int().min(0).max(100),
   execution_score: z.number().int().min(0).max(100),
-  insight: z.string().min(10).max(200),
-  blindspot: z.string().min(10).max(120),
+  insight: z.string().min(10).max(600),
+  blindspot: z.string().min(10).max(360),
 });
 export type Attention = z.infer<typeof AttentionSchema>;
 
@@ -78,6 +79,8 @@ export interface AttentionInput {
   signalTags: string[];
   projectName?: string;
   projectGuidance?: string;
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
   rounds: Array<{
     round: number;
     kind: string;
@@ -124,7 +127,9 @@ function buildPrompt(input: AttentionInput): string {
     .join("\n");
 
   const cat = categoryContextBlock(input.projectName, input.projectGuidance);
+  const lang = languageDirective(input.language).trimEnd();
   return [
+    ...(lang ? [lang, ""] : []),
     ...(cat ? [cat, ""] : []),
     `信号 (本次追问基于这条信号):`,
     `  summary: ${input.signalSummary}`,

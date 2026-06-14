@@ -58,6 +58,7 @@ type sessionResponse struct {
 	PrimarySignalSummary *string `json:"primary_signal_summary,omitempty"`
 	ProjectName          *string `json:"project_name,omitempty"`
 	ProjectGuidance      *string `json:"project_guidance,omitempty"`
+	Language             *string `json:"language,omitempty"`
 }
 
 type sessionViewResponse struct {
@@ -367,6 +368,7 @@ func toSessionResponse(s *Session) sessionResponse {
 		PrimarySignalSummary: s.PrimarySignalSummary,
 		ProjectName:          s.ProjectName,
 		ProjectGuidance:      s.ProjectGuidance,
+		Language:             s.Language,
 	}
 	if s.CompletedAt != nil {
 		out.CompletedAt = s.CompletedAt.UTC().Format("2006-01-02T15:04:05Z07:00")

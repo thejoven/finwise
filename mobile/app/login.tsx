@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Link, router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Display, DoubleRule, KeyboardForm, Sans, Serif, TapEffect } from "@/shared/components";
 import { NativeField } from "@/shared/native";
@@ -23,6 +24,7 @@ export default function LoginScreen() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const setSession = useAuth((s) => s.setSession);
+  const { t } = useTranslation();
 
   const canSubmit = email.trim().length > 0 && password.length >= 1 && !pending;
 
@@ -50,20 +52,20 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.body}>
           <Display size={30} italic style={styles.title}>
-            欢迎回来.
+            {t("auth.login.title")}
           </Display>
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
-            请输入你的邮箱和密码。{"\n"}没有账号? 可以注册一个。
+            {t("auth.login.hint")}
           </Serif>
 
           <Sans size={11} weight="600" style={styles.label}>
-            邮箱
+            {t("auth.login.emailLabel")}
           </Sans>
           <NativeField
             value={email}
             onChangeText={setEmail}
-            placeholder="you@example.com"
+            placeholder={t("auth.login.emailPlaceholder")}
             keyboardType="email-address"
             autoComplete="email"
             textContentType="emailAddress"
@@ -71,12 +73,12 @@ export default function LoginScreen() {
           />
 
           <Sans size={11} weight="600" style={styles.label}>
-            密码
+            {t("auth.login.passwordLabel")}
           </Sans>
           <NativeField
             value={password}
             onChangeText={setPassword}
-            placeholder="至少 8 位"
+            placeholder={t("auth.login.passwordPlaceholder")}
             secure
             autoComplete="current-password"
             textContentType="password"
@@ -99,13 +101,13 @@ export default function LoginScreen() {
             disabled={!canSubmit}
           >
             <Sans size={11} weight="700" style={styles.signLabel}>
-              {pending ? "登录中…" : "登录"}
+              {pending ? t("auth.login.submitting") : t("auth.login.submit")}
             </Sans>
           </TapEffect>
           <Link href="/register" asChild>
             <TapEffect style={styles.linkRow} disableEffect>
               <Serif size={12} italic style={styles.linkLabel}>
-                还没账号 · 注册
+                {t("auth.login.toRegister")}
               </Serif>
             </TapEffect>
           </Link>

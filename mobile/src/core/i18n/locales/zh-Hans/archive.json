@@ -1,0 +1,64 @@
+{
+  "header": {
+    "label": "沉默归档",
+    "meta": "没进承诺书的, 都在这里",
+    "intro": "想过但没出手的瞬间, 按\"为什么没进\"分成两类. 每一条都能点开, 跟当时拦下它的分析师继续聊."
+  },
+  "groups": {
+    "waiting": {
+      "label": "还在等",
+      "meta": "等信号变厚 · 等窗口到来",
+      "intro": "信号还不够确凿, 或时机还没到. 我们不丢, 也不替你下决定 — 你想看的时候来翻翻.",
+      "tagObservation": "信号",
+      "tagCalendar": "时机"
+    },
+    "letGo": {
+      "label": "已经放下",
+      "meta": "能力圈外 · 市场已定价",
+      "intro": "这些已经清楚 \"不进\". 留着不是为了出手, 是为了下次再遇到类似的, 能更快认出来.",
+      "tagLesson": "圈外",
+      "tagDiscard": "已定价"
+    },
+    "count": "{{count}} 条 · {{meta}}",
+    "empty": "这一类目前是空的, 这是常态.",
+    "more": "· 还有 {{count}} 条"
+  },
+  "retrospect": {
+    "label": "复盘",
+    "meta": "过去你说过什么",
+    "empty": "还没有复盘完成. 持仓到期或主动平仓后会自动生成.",
+    "none": "(无)",
+    "dim": {
+      "perceptionSpeed": "录入速度",
+      "inferenceDepth": "推演深度",
+      "decisionSpeed": "决策速度",
+      "holdingPatience": "持仓耐心",
+      "exitQuality": "退出质量",
+      "thesisEvolution": "命题演化",
+      "unset": "(未定)"
+    }
+  },
+  "card": {
+    "defaultAnalyst": "分析师",
+    "sealFallback": "审",
+    "unpricedDirections": "未被定价的方向: {{directions}}",
+    "continue": "继续对话"
+  },
+  "chat": {
+    "back": "返回",
+    "defaultAnalyst": "分析师",
+    "evalError": "读取这条评估遇到了问题, 退回去再进一次.",
+    "archivedStamp": "投决会归档",
+    "firstStamp": "归档结论",
+    "sendError": "◆ 分析师暂时没回上来 — 网络或模型偶发. 你的话还在输入框里, 再发一次.",
+    "disclaimer": "这场对话不改判. 真有新证据, 把它录成新信号, 再走一次追问与评审.",
+    "placeholder": "回他一句 — 为什么拦 / 差在哪 / 什么会让你改判",
+    "unpricedDirections": "未被定价的方向",
+    "poolNote": {
+      "observation": "这条先放观察池 — 不丢. 等更多独立角度的同一观察出现, 它会变厚.",
+      "calendar": "这条先放日历池 — 窗口没到, 时间到了再回来看.",
+      "lesson": "这条进了课堂池 — 不是惩罚. 下次再遇到类似的, 你能更快认出来.",
+      "discard": "这条进了已弃池 — 市场已经定价, 你看见的不再是 leading."
+    }
+  }
+}

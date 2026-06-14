@@ -44,6 +44,7 @@ type User struct {
 	DisplayName  *string
 	AvatarURL    *string
 	Bio          *string
+	Language     *string // 'zh-Hans' | 'zh-Hant' | 'en'; nil = 未设置 (按默认简体处理)
 	IsAdmin      bool
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
@@ -64,7 +65,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 	const q = `
 		INSERT INTO users (id, email, email_lower, password_hash, display_name)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, in.ID, in.Email, emailLower, in.PasswordHash, in.DisplayName)
 	u, err := scanUser(row)
@@ -81,7 +82,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 // FindByEmail 用小写邮箱查找用户. 找不到返回 ErrNotFound.
 func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
 		FROM users
 		WHERE email_lower = $1
 	`
@@ -99,7 +100,7 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, erro
 // FindByID 按 uuid 查用户.
 func (r *Repository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -119,6 +120,7 @@ type UpdateProfileInput struct {
 	DisplayName *string
 	Bio         *string
 	AvatarURL   *string
+	Language    *string // nil = 不动; 否则覆盖 (mobile 切语言时静默 PATCH)
 }
 
 // UpdateProfile 部分更新 users 行的可编辑字段. 全空时不改 updated_at.
@@ -128,11 +130,12 @@ func (r *Repository) UpdateProfile(ctx context.Context, id uuid.UUID, in UpdateP
 			display_name = COALESCE($2, display_name),
 			bio          = COALESCE($3, bio),
 			avatar_url   = COALESCE($4, avatar_url),
+			language     = COALESCE($5, language),
 			updated_at   = NOW()
 		WHERE id = $1
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
 	`
-	row := r.pool.QueryRow(ctx, q, id, in.DisplayName, in.Bio, in.AvatarURL)
+	row := r.pool.QueryRow(ctx, q, id, in.DisplayName, in.Bio, in.AvatarURL, in.Language)
 	u, err := scanUser(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -194,7 +197,7 @@ func (r *Repository) SetAdminByEmail(ctx context.Context, email string, isAdmin 
 	const q = `
 		UPDATE users SET is_admin = $2, updated_at = NOW()
 		WHERE email_lower = $1
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, strings.ToLower(strings.TrimSpace(email)), isAdmin)
 	u, err := scanUser(row)
@@ -219,7 +222,7 @@ type UserListRow struct {
 // 单 host 个人 app, 用户量小, 不分页.
 func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
 	const q = `
-		SELECT u.id, u.email, u.password_hash, u.display_name, u.avatar_url, u.bio,
+		SELECT u.id, u.email, u.password_hash, u.display_name, u.avatar_url, u.bio, u.language,
 		       u.is_admin, u.created_at, u.updated_at,
 		       COALESCE(sig.cnt, 0)        AS signal_count,
 		       sess.last_seen              AS last_seen_at
@@ -242,7 +245,7 @@ func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
 	for rows.Next() {
 		var row UserListRow
 		if err := rows.Scan(
-			&row.ID, &row.Email, &row.PasswordHash, &row.DisplayName, &row.AvatarURL, &row.Bio,
+			&row.ID, &row.Email, &row.PasswordHash, &row.DisplayName, &row.AvatarURL, &row.Bio, &row.Language,
 			&row.IsAdmin, &row.CreatedAt, &row.UpdatedAt,
 			&row.SignalCount, &row.LastSeenAt,
 		); err != nil {
@@ -318,7 +321,7 @@ func (r *Repository) DeleteUserSessions(ctx context.Context, userID uuid.UUID) e
 
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.Bio, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.Bio, &u.Language, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil

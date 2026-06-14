@@ -9,6 +9,8 @@
  *   毫秒(时间戳或时长, 见各自注释).
  */
 
+import i18n from "@/core/i18n";
+
 const MONTH_DAY = "MM·dd";
 
 /** "MM·dd" —— 列表行的紧凑日期戳. */
@@ -79,15 +81,14 @@ export function isSameLocalDay(iso: string, today = new Date()): boolean {
   );
 }
 
-const CHINESE_WEEKDAY = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
-
-export function chineseWeekday(d: Date = new Date()): string {
-  return CHINESE_WEEKDAY[d.getDay()]!;
+/** 本地化星期(短) — 报刊头日期戳, 跟随当前 i18n 语言 (周一 / 週一 / Mon). */
+export function weekdayLabel(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat(i18n.language, { weekday: "short" }).format(d);
 }
 
-/** "5月15日" — 报刊头中间的日期戳. */
-export function chineseMonthDay(d: Date = new Date()): string {
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+/** 本地化"月日" — 报刊头中间的日期戳 (5月15日 / May 15). */
+export function monthDayLabel(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat(i18n.language, { month: "long", day: "numeric" }).format(d);
 }
 
 /** 中文相对时间 — 列表 meta 行用; 超过一周退回日期. */
@@ -96,13 +97,12 @@ export function relativeTimeZh(iso: string): string {
   if (Number.isNaN(t)) return "";
   const diff = Date.now() - t;
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
+  if (min < 1) return i18n.t("errors.time.justNow");
+  if (min < 60) return i18n.t("errors.time.minutesAgo", { count: min });
   const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
+  if (hr < 24) return i18n.t("errors.time.hoursAgo", { count: hr });
   const day = Math.floor(hr / 24);
-  if (day === 1) return "昨天";
-  if (day < 7) return `${day} 天前`;
-  const d = new Date(iso);
-  return `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+  if (day === 1) return i18n.t("errors.time.yesterday");
+  if (day < 7) return i18n.t("errors.time.daysAgo", { count: day });
+  return monthDayLabel(new Date(iso));
 }

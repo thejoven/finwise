@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -33,6 +34,7 @@ function renderSignalRow({ item }: { item: MergedSignal }) {
 }
 
 export default function SearchScreen() {
+  const { t } = useTranslation();
   const [raw, setRaw] = useState("");
   const [debounced, setDebounced] = useState("");
 
@@ -74,11 +76,11 @@ export default function SearchScreen() {
 
   return (
     <KeyboardForm>
-      <ModalTopBar label="搜索 · SEARCH" />
+      <ModalTopBar label={t("profile.search.topBar")} />
 
       <View style={styles.header}>
         <Display size={24} italic style={styles.title}>
-          搜索观察记录.
+          {t("profile.search.title")}
         </Display>
         <DoubleRule />
       </View>
@@ -87,7 +89,7 @@ export default function SearchScreen() {
         <NativeField
           value={raw}
           onChangeText={setRaw}
-          placeholder="输入关键词…"
+          placeholder={t("profile.search.placeholder")}
           autoFocus
           returnKeyType="search"
           bare
@@ -111,11 +113,11 @@ export default function SearchScreen() {
           <View style={styles.empty}>
             {debounced.length === 0 ? (
               <Serif size={13} italic style={styles.emptyText}>
-                在原文或推演摘要里搜索关键词。
+                {t("profile.search.hint")}
               </Serif>
             ) : isFetching ? (
               <Serif size={13} italic style={styles.emptyText}>
-                搜索中…
+                {t("profile.search.searching")}
               </Serif>
             ) : errorMsg ? (
               <Serif size={13} italic style={styles.emptyError}>
@@ -123,7 +125,7 @@ export default function SearchScreen() {
               </Serif>
             ) : (
               <Serif size={13} italic style={styles.emptyText}>
-                没有匹配 "{debounced}"。
+                {t("profile.search.noMatch", { query: debounced })}
               </Serif>
             )}
           </View>

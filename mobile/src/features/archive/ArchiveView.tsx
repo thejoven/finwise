@@ -21,6 +21,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Icon,
@@ -35,40 +36,57 @@ import {
 // archive/index ⇄ ArchiveView 的自引用 require cycle. 具体路径切断回边.
 import { useGatePool, type GateEvaluation } from "@/features/archive/hooks";
 import { useRetrospectList, type Retrospect } from "@/features/retrospect";
-import { analystByGate, gateVerdictText, type ArchivePoolT } from "@/core/api/gate";
+import {
+  analystByGate,
+  analystName,
+  analystRole,
+  gateVerdictText,
+  type ArchivePoolT,
+} from "@/core/api/gate";
 import { theme } from "@/core/theme";
+import i18n from "@/core/i18n";
 import { LIST_LAYOUT } from "@/shared/motion";
 
 // 两个语义组. 每组合并多个底层 pool, 用一句口语说人话.
 // pools 定为 [A, B] 定长元组, 让 GroupSection 里两次 useGatePool 顺序固定 (rules-of-hooks).
+// 文案走 i18n: id 定位 archive.groups.<id>.*; tagKeys 给每个 pool 一个完整 i18n key.
+/** 卡头小标签的完整 i18n key (字面量, 让 t() 仍受类型检查). */
+type TagI18nKey =
+  | "archive.groups.waiting.tagObservation"
+  | "archive.groups.waiting.tagCalendar"
+  | "archive.groups.letGo.tagLesson"
+  | "archive.groups.letGo.tagDiscard";
+
 interface PoolGroup {
-  label: string;
-  meta: string;
-  intro: string;
+  /** i18n 组 id: archive.groups.<id>.{label,meta,intro} */
+  id: "waiting" | "letGo";
   pools: readonly [ArchivePoolT, ArchivePoolT];
-  /** 每个 pool 的小标签, 卡头右侧露出, 提示来源 */
-  tagOf: Partial<Record<ArchivePoolT, string>>;
+  /** 每个 pool 的小标签完整 i18n key, 卡头右侧露出, 提示来源 */
+  tagKeys: Partial<Record<ArchivePoolT, TagI18nKey>>;
 }
 
 const GROUPS: PoolGroup[] = [
   {
-    label: "还在等",
-    meta: "等信号变厚 · 等窗口到来",
-    intro: "信号还不够确凿, 或时机还没到. 我们不丢, 也不替你下决定 — 你想看的时候来翻翻.",
+    id: "waiting",
     pools: ["observation", "calendar"] as const,
-    tagOf: { observation: "信号", calendar: "时机" },
+    tagKeys: {
+      observation: "archive.groups.waiting.tagObservation",
+      calendar: "archive.groups.waiting.tagCalendar",
+    },
   },
   {
-    label: "已经放下",
-    meta: "能力圈外 · 市场已定价",
-    intro: '这些已经清楚 "不进". 留着不是为了出手, 是为了下次再遇到类似的, 能更快认出来.',
+    id: "letGo",
     pools: ["lesson", "discard"] as const,
-    tagOf: { lesson: "圈外", discard: "已定价" },
+    tagKeys: {
+      lesson: "archive.groups.letGo.tagLesson",
+      discard: "archive.groups.letGo.tagDiscard",
+    },
   },
 ];
 
 export function ArchiveView() {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const { data: retrospects } = useRetrospectList();
   const finalizedRetrospects = (retrospects ?? []).filter((r) => r.state === "finalized");
 
@@ -84,23 +102,23 @@ export function ArchiveView() {
         }}
       >
         <View style={styles.section}>
-          <SectionHeader label="沉默归档" meta="没进承诺书的, 都在这里" />
+          <SectionHeader label={t("archive.header.label")} meta={t("archive.header.meta")} />
           <Serif size={13} italic style={styles.intro}>
-            想过但没出手的瞬间, 按"为什么没进"分成两类. 每一条都能点开, 跟当时拦下它的分析师继续聊.
+            {t("archive.header.intro")}
           </Serif>
         </View>
 
         {/* GROUPS 是静态的 2 项模块常量, 整页是带异构段落的滚动页 (非长列表) —— ScrollView 正确. */}
         {/* react-doctor-disable-next-line react-doctor/rn-no-scrollview-mapped-list */}
         {GROUPS.map((g) => (
-          <GroupSection key={g.label} group={g} />
+          <GroupSection key={g.id} group={g} />
         ))}
 
         <View style={styles.section}>
-          <SectionHeader label="复盘" meta="过去你说过什么" />
+          <SectionHeader label={t("archive.retrospect.label")} meta={t("archive.retrospect.meta")} />
           {finalizedRetrospects.length === 0 ? (
             <Serif size={13} italic style={styles.muted}>
-              还没有复盘完成. 持仓到期或主动平仓后会自动生成.
+              {t("archive.retrospect.empty")}
             </Serif>
           ) : (
             <View style={styles.cardList}>
@@ -118,6 +136,7 @@ export function ArchiveView() {
 function GroupSection({ group }: { group: PoolGroup }) {
   // 并行拉该组下两个 pool, 合并 + 时间倒序.
   // hooks 顺序在渲染期固定 (GROUPS 静态常量, pools 定长元组), 不违反 rules-of-hooks.
+  const { t } = useTranslation();
   const [poolA, poolB] = group.pools;
   const a = useGatePool(poolA);
   const b = useGatePool(poolB);
@@ -133,11 +152,16 @@ function GroupSection({ group }: { group: PoolGroup }) {
   const isLoading = a.isLoading || b.isLoading;
   const cap = 6;
 
+  const groupMeta = t(`archive.groups.${group.id}.meta`);
+
   return (
     <View style={styles.section}>
-      <SectionHeader label={group.label} meta={`${items.length} 条 · ${group.meta}`} />
+      <SectionHeader
+        label={t(`archive.groups.${group.id}.label`)}
+        meta={t("archive.groups.count", { count: items.length, meta: groupMeta })}
+      />
       <Serif size={12} italic style={styles.groupIntro}>
-        {group.intro}
+        {t(`archive.groups.${group.id}.intro`)}
       </Serif>
       {isLoading && items.length === 0 ? (
         <Serif size={12} italic style={styles.muted}>
@@ -145,16 +169,17 @@ function GroupSection({ group }: { group: PoolGroup }) {
         </Serif>
       ) : items.length === 0 ? (
         <Serif size={12} italic style={styles.muted}>
-          这一类目前是空的, 这是常态.
+          {t("archive.groups.empty")}
         </Serif>
       ) : (
         <View style={styles.cardList}>
-          {items.slice(0, cap).map((ev) => (
-            <PoolCard key={ev.id} ev={ev} tag={group.tagOf[ev._pool] ?? ""} />
-          ))}
+          {items.slice(0, cap).map((ev) => {
+            const tagKey = group.tagKeys[ev._pool];
+            return <PoolCard key={ev.id} ev={ev} tag={tagKey ? t(tagKey) : ""} />;
+          })}
           {items.length > cap ? (
             <Mono size={10} style={styles.more}>
-              · 还有 {items.length - cap} 条
+              {t("archive.groups.more", { count: items.length - cap })}
             </Mono>
           ) : null}
         </View>
@@ -168,6 +193,7 @@ function GroupSection({ group }: { group: PoolGroup }) {
  * 否决理由以分析师第一人称的气泡呈现; 点整卡进入对话页继续聊.
  */
 function PoolCard({ ev, tag }: { ev: GateEvaluation; tag: string }) {
+  const { t } = useTranslation();
   const analyst = analystByGate(ev.failed_gate);
   const date = ev.evaluated_at.slice(0, 10).replace(/-/g, "·");
   const verdict = gateVerdictText(ev);
@@ -217,14 +243,14 @@ function PoolCard({ ev, tag }: { ev: GateEvaluation; tag: string }) {
         <View style={styles.analystRow}>
           <View style={styles.seal}>
             <Sans size={10} weight="700" style={styles.sealText}>
-              {(analyst?.name ?? "审").slice(0, 1)}
+              {(analyst ? analystName(analyst) : t("archive.card.sealFallback")).slice(0, 1)}
             </Sans>
           </View>
           <Sans size={12} weight="600" style={styles.analystName}>
-            {analyst?.name ?? "分析师"}
+            {analystName(analyst)}
           </Sans>
           <Serif size={11} italic style={styles.analystRole}>
-            {analyst?.role ?? ""}
+            {analystRole(analyst)}
           </Serif>
         </View>
         <View style={styles.bubble}>
@@ -233,7 +259,9 @@ function PoolCard({ ev, tag }: { ev: GateEvaluation; tag: string }) {
           </Serif>
           {directions.length > 0 ? (
             <Serif size={12} italic style={styles.bubbleDirections}>
-              未被定价的方向: {directions.map((d) => d.angle).join(" · ")}
+              {t("archive.card.unpricedDirections", {
+                directions: directions.map((d) => d.angle).join(" · "),
+              })}
             </Serif>
           ) : null}
         </View>
@@ -241,7 +269,7 @@ function PoolCard({ ev, tag }: { ev: GateEvaluation; tag: string }) {
         {/* 卡脚: 继续对话指引 */}
         <View style={styles.cardFoot}>
           <Mono size={9} style={styles.footHint}>
-            继续对话
+            {t("archive.card.continue")}
           </Mono>
           <Icon name="chevronRight" size={11} color={theme.color.muted} strokeWidth={1.5} />
         </View>
@@ -266,7 +294,7 @@ function RetrospectCard({ retro }: { retro: Retrospect }) {
           </View>
         </View>
         <Serif size={13} italic style={styles.retroText}>
-          {retro.focus_text ?? "(无)"}
+          {retro.focus_text ?? i18n.t("archive.retrospect.none")}
         </Serif>
       </View>
     </Animated.View>
@@ -278,19 +306,19 @@ function RetrospectCard({ retro }: { retro: Retrospect }) {
 function focusDimLabel(d: string): string {
   switch (d) {
     case "perception_speed":
-      return "录入速度";
+      return i18n.t("archive.retrospect.dim.perceptionSpeed");
     case "inference_depth":
-      return "推演深度";
+      return i18n.t("archive.retrospect.dim.inferenceDepth");
     case "decision_speed":
-      return "决策速度";
+      return i18n.t("archive.retrospect.dim.decisionSpeed");
     case "holding_patience":
-      return "持仓耐心";
+      return i18n.t("archive.retrospect.dim.holdingPatience");
     case "exit_quality":
-      return "退出质量";
+      return i18n.t("archive.retrospect.dim.exitQuality");
     case "thesis_evolution":
-      return "命题演化";
+      return i18n.t("archive.retrospect.dim.thesisEvolution");
     default:
-      return d || "(未定)";
+      return d || i18n.t("archive.retrospect.dim.unset");
   }
 }
 

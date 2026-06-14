@@ -1,0 +1,64 @@
+{
+  "header": {
+    "label": "Silent Archive",
+    "meta": "Everything that didn't make commitments",
+    "intro": "Moments you considered but didn't act on, sorted by \"why it didn't make it\" into two groups. Tap any one to keep talking with the analyst who held it back."
+  },
+  "groups": {
+    "waiting": {
+      "label": "Still Waiting",
+      "meta": "Waiting to thicken · waiting for the window",
+      "intro": "The signal isn't conclusive yet, or the timing hasn't come. We don't discard it, and we don't decide for you — drop by whenever you want.",
+      "tagObservation": "Signal",
+      "tagCalendar": "Timing"
+    },
+    "letGo": {
+      "label": "Let Go",
+      "meta": "Outside the circle · already priced",
+      "intro": "These are clearly a \"no\". We keep them not to act on, but so you can recognize the next one like it faster.",
+      "tagLesson": "Outside",
+      "tagDiscard": "Priced in"
+    },
+    "count": "{{count}} · {{meta}}",
+    "empty": "This group is empty right now, and that's normal.",
+    "more": "· {{count}} more"
+  },
+  "retrospect": {
+    "label": "Retrospective",
+    "meta": "What you said before",
+    "empty": "No retrospective finished yet. One is generated automatically after a position expires or you close it out.",
+    "none": "(none)",
+    "dim": {
+      "perceptionSpeed": "Capture speed",
+      "inferenceDepth": "Inference depth",
+      "decisionSpeed": "Decision speed",
+      "holdingPatience": "Holding patience",
+      "exitQuality": "Exit quality",
+      "thesisEvolution": "Thesis evolution",
+      "unset": "(undecided)"
+    }
+  },
+  "card": {
+    "defaultAnalyst": "Analyst",
+    "sealFallback": "—",
+    "unpricedDirections": "Unpriced directions: {{directions}}",
+    "continue": "Continue"
+  },
+  "chat": {
+    "back": "Back",
+    "defaultAnalyst": "Analyst",
+    "evalError": "Something went wrong loading this evaluation. Go back and open it again.",
+    "archivedStamp": "Committee archive",
+    "firstStamp": "Archived verdict",
+    "sendError": "◆ The analyst didn't reply — a transient network or model hiccup. Your message is still in the box; send it again.",
+    "disclaimer": "This conversation doesn't change the verdict. If you have new evidence, capture it as a new signal and run questioning and review again.",
+    "placeholder": "Reply — why held back / what's missing / what would change your mind",
+    "unpricedDirections": "Unpriced directions",
+    "poolNote": {
+      "observation": "This one goes to the observation pool — not discarded. When the same observation shows up from more independent angles, it thickens.",
+      "calendar": "This one goes to the calendar pool — the window isn't here yet; come back when the time comes.",
+      "lesson": "This one goes to the lesson pool — not a punishment. Next time you meet something like it, you'll recognize it faster.",
+      "discard": "This one goes to the discard pool — the market has already priced it; what you see is no longer leading."
+    }
+  }
+}

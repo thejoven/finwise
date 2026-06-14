@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { Modal, Pressable, StyleSheet, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -26,6 +27,7 @@ export function PromoteSheet({
   visible: boolean;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [note, setNote] = useState("");
   const promote = usePromoteTweet();
@@ -47,7 +49,7 @@ export function PromoteSheet({
       <View style={[styles.sheet, { paddingBottom: insets.bottom + theme.spacing.lg }]}>
         <View style={styles.headRow}>
           <Sans size={15} weight="600" style={styles.title}>
-            转为信号
+            {t("subscriptions.promote.title")}
           </Sans>
           <TapEffect onPress={onClose} disableEffect style={styles.closeBtn}>
             <Icon name="close" size={18} color={theme.color.muted} strokeWidth={1.75} />
@@ -66,38 +68,42 @@ export function PromoteSheet({
         {result ? (
           <View style={styles.done}>
             <Serif size={13} italic style={styles.doneText}>
-              {result.duplicate ? "这条已经转过了。" : "已落入信箱, 与手录信号同列。"}
+              {result.duplicate
+                ? t("subscriptions.promote.doneDuplicate")
+                : t("subscriptions.promote.doneOk")}
             </Serif>
             <TapEffect onPress={handleGoSignal} disableEffect>
               <Sans size={12} weight="600" style={styles.goLink}>
-                去看信号 →
+                {t("subscriptions.promote.goSignal")}
               </Sans>
             </TapEffect>
           </View>
         ) : (
           <View>
             <Sans size={12} style={styles.noteLabel}>
-              用你的话说一句 (可选)
+              {t("subscriptions.promote.noteLabel")}
             </Sans>
             <TextInput
               value={note}
               onChangeText={setNote}
-              placeholder="例: 利率顶部的接盘结构, 值得盯配置盘动向"
+              placeholder={t("subscriptions.promote.notePlaceholder")}
               placeholderTextColor={theme.color.muted2}
               multiline
               style={styles.input}
             />
             <Mono size={10} style={styles.hint}>
-              不填则原文直通, 出处自动带上 via @{tweet.handle}
+              {t("subscriptions.promote.hint", { handle: tweet.handle })}
             </Mono>
             <TapEffect onPress={handleConfirm} style={styles.confirmBtn}>
               <Sans size={13} weight="600" style={styles.confirmText}>
-                {promote.isPending ? "正在转…" : "确认转为信号"}
+                {promote.isPending
+                  ? t("subscriptions.promote.confirming")
+                  : t("subscriptions.promote.confirm")}
               </Sans>
             </TapEffect>
             {promote.isError ? (
               <Serif size={12} italic style={styles.err}>
-                没转成功, 再试一次。
+                {t("subscriptions.promote.error")}
               </Serif>
             ) : null}
           </View>

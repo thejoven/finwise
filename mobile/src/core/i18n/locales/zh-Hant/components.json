@@ -1,0 +1,83 @@
+{
+  "splash": {
+    "stamp": "財知 · 創刊號",
+    "tagline": "以智馭財 · 行遠致富",
+    "footer": "A QUIET LEDGER · EST. MMXXVI"
+  },
+  "notFound": {
+    "navTitle": "迷路了",
+    "title": "走丟了。",
+    "note": "這條路徑不存在，或者還沒建好。",
+    "backToInbox": "← 回信箱"
+  },
+  "tabMenu": {
+    "inbox": "信箱",
+    "distill": "降噪",
+    "archive": "歸檔",
+    "refreshStats": "重新整理統計",
+    "notifications": "通知"
+  },
+  "colophon": {
+    "navTitle": "卷首語 · COLOPHON",
+    "tagline": "以智馭財 · 行遠致富",
+    "taglineEn": "Master money. Master your future.",
+    "lede": {
+      "pre": "財知是一款",
+      "emphasis": "不打擾你",
+      "post": "的 AI 財富夥伴。"
+    },
+    "intro": "它不追每日行情、不堆砌資訊，而是幫你把模糊的市場直覺，淬煉成少數幾個高確定性的投資承諾。",
+    "introPull": "少一點決策，\n多一份信念。",
+    "debt": {
+      "label": "認知的債務",
+      "meta": "COGNITIVE DEBT",
+      "intro": {
+        "pre": "市面上的 AI，都在比誰更快替你給出答案。你越貪圖這種捷徑，越在不知不覺中欠下一筆",
+        "emphasis": "「認知債務」",
+        "post": "——被代勞的每一個判斷，都是大腦本該變強、卻被你跳過的一次機會。"
+      },
+      "para": {
+        "pre": "財知反其道而行。它從不替你思考，只把問題一次次還給你——每一次訊號都是大腦變強的機會，每一輪追問都是一次",
+        "emphasis": "思考的樂趣",
+        "post": "，一段只屬於你的創作。"
+      },
+      "pull": "別人用 AI 代替思考，\n你用財知練習思考。"
+    },
+    "compound": {
+      "label": "複利的認知",
+      "meta": "COMPOUNDING COGNITION",
+      "intro": {
+        "pre": "財知不是一個讓你「賺更多」的工具，而是一套透過五個動作循環不斷打磨的",
+        "emphasis": "財商認知系統",
+        "post": "。"
+      },
+      "introSub": "每一次完整的錄入、追問、投決、簽字、復盤，都是一筆本金；時間會替你把它們利上滾利。",
+      "items": {
+        "observe": {
+          "text": "觀察 — 每寫下一條訊號，是一次注意力的訓練。",
+          "subtext": "PHASE 1 · 安靜"
+        },
+        "reason": {
+          "text": "推理 — 每答完五輪追問，是一次結構化思考的訓練。",
+          "subtext": "PHASE 2 · 儀式"
+        },
+        "discipline": {
+          "text": "紀律 — 每一次投決，是一次能力圈的校準。",
+          "subtext": "PHASE 2 · 儀式"
+        },
+        "commit": {
+          "text": "承諾 — 每簽一份承諾書，是一次預決定的訓練。",
+          "subtext": "PHASE 2 · 儀式"
+        },
+        "reflect": {
+          "text": "自省 — 每完成一次復盤，是一次照見自己的訓練。",
+          "subtext": "PHASE 3 · 鏡子"
+        }
+      },
+      "close": "財富的複利來自資本，\n認知的複利來自次數。",
+      "closeBody": "一年之後，你不只是賺到了錢 —— 你建立了一套不會被市場情緒裹挾的判斷系統。這套系統會跟著你的下一筆投資、下一個十年，持續複利。"
+    },
+    "footerIssue": "創刊號",
+    "footerColophon": "WISEFLOW · 財知大道"
+  }
+}

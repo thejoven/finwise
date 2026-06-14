@@ -1,0 +1,84 @@
+{
+  "header": {
+    "finalized": "復盤 · 已收尾",
+    "step": "復盤 · 第 {{step}}/4"
+  },
+  "loading": "正在打開復盤…",
+  "error": "讀不到這次復盤，稍後再試。",
+  "questionStamp": "{{dim}} · 第 {{no}}/4 題",
+  "openPlaceholder": "（可選）",
+  "ready": {
+    "header": "四問已答完",
+    "meta": "ready",
+    "body": "準備好了就按下面那個按鈕。不急。"
+  },
+  "finalized": {
+    "stamp": "TRAINING FOCUS · 下一次的訓練重點",
+    "fallbackText": "下一次，把推演鏈多走一步。",
+    "note": "這條會被寫進你的訓練檔案，下次五輪追問時，AI 會把它放在第一句。"
+  },
+  "footer": {
+    "backToInbox": "回到信箱",
+    "submitting": "正在記下…",
+    "submitLast": "記下第 4 題",
+    "submitNext": "記下這一答 · 下一題",
+    "finalizing": "正在收尾…",
+    "finalize": "結束復盤 · 看見自己"
+  },
+  "dim": {
+    "perception": "感知",
+    "inference": "推演",
+    "evaluation": "判定",
+    "execution": "執行"
+  },
+  "focusDim": {
+    "perception_speed": "錄入速度",
+    "inference_depth": "推演深度",
+    "decision_speed": "決策速度",
+    "holding_patience": "持倉耐心",
+    "exit_quality": "退出品質",
+    "thesis_evolution": "命題演化"
+  },
+  "questions": {
+    "q1": {
+      "title": "你錄到這條訊號時，它在敘事生命週期的哪一段？",
+      "options": {
+        "pre_narrative": "沉默期 · 圈外沒人在說，我是被噪音以外的物理變數觸發的",
+        "early": "早期 leading · 圈內人開始低聲討論，主流媒體還沒覆蓋",
+        "mid": "中段擴散 · sell-side 開始出報告，但分歧仍在",
+        "late": "晚期共識 · 頭條 / retail 都在討論，我錄得已經晚了"
+      },
+      "openPrompt": "你判斷這一階段的依據是什麼？（具體到一兩個訊號，不寫「感覺」）"
+    },
+    "q2": {
+      "title": "你的推演鏈跑到第幾跳？用了哪幾個 lens？",
+      "options": {
+        "first_one_lens": "一階 · 單 lens · 誰明顯受益（停在表層，多元思維柵格沒展開）",
+        "second_one_lens": "二階 · 單 lens · 誰因此被迫讓步（有二階，但只用了金融或商業）",
+        "third_multi_lens": "三階 · 多 lens · 跨學科（法律 / 工程 / 博弈 / 歷史）交叉看到了反共識的贏家",
+        "wavered": "中途自己說服自己回退了 — 鏈跑出來了，但又自我否決"
+      },
+      "openPrompt": "如果重來，你會用哪個之前漏掉的 lens？（心理學 / 法律 / 歷史 / 博弈論 / 生物學 / 工程 / 化學 / 物理 / 數學 中挑一個）"
+    },
+    "q3": {
+      "title": "你的退出條件能把這個倉位的「凸性」還原成現金嗎？",
+      "options": {
+        "specific_anchored": "可以 · 三錨齊全：價格錨 + 時間錨 + 一條外部可觀察訊號",
+        "price_only": "半套 · 只有價格停損，沒有 intrinsic 安全邊際，一砸就空",
+        "vague": "空的 · 寫了也是「看情況」，凸性根本兌現不了",
+        "wrong_kind": "錯型 · 這個倉位本就不該用退出條件（本質是 hedge / pair / 長期 own）"
+      },
+      "openPrompt": "下一次寫退出條件，你的三錨分別會是什麼？（price + time + external）"
+    },
+    "q4": {
+      "title": "從簽字到行動，你的猶豫成本來自哪裡？",
+      "options": {
+        "same_day": "簽字當天 · 立刻執行，沒猶豫",
+        "within_week": "一週內 · 走了一遍 base rate 校準才動",
+        "weeks_later": "拖了幾週 · inside view 過度自信被反覆推翻才動",
+        "never": "簽了字但沒真做 · 命題與持倉斷裂"
+      },
+      "openPrompt": "如果有猶豫，你在反覆檢查的是哪個 lens？（是 base rate 不放心，還是反身性時機判斷，還是別的）"
+    }
+  }
+}

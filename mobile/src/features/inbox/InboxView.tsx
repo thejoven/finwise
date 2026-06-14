@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { SectionHeader, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 import {
@@ -27,6 +28,7 @@ import { isSameLocalDay } from "@/shared/format";
  *   底部仍留 insets.bottom + TAB_BAR_CLEARANCE 给悬浮的灵动岛 tab bar 让位.
  */
 export function InboxView() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data, refetch, isLoading } = useMergedSignals();
   const [refreshing, setRefreshing] = useState(false);
@@ -75,7 +77,10 @@ export function InboxView() {
             <InboxCallouts />
             {data.length > 0 ? (
               <View style={styles.section}>
-                <SectionHeader label="本周记录" meta={`${data.length} 条 · 全部已归档`} />
+                <SectionHeader
+                  label={t("caizhi.inbox.thisWeek")}
+                  meta={t("caizhi.inbox.thisWeekMeta", { count: data.length })}
+                />
               </View>
             ) : null}
           </View>
@@ -83,7 +88,7 @@ export function InboxView() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Serif size={13} italic style={styles.emptyText}>
-              {isLoading ? "正在拉取记录…" : "这里会显示你的观察记录。\n它们不需要立即写下来。"}
+              {isLoading ? t("caizhi.inbox.loading") : t("caizhi.inbox.empty")}
             </Serif>
           </View>
         }

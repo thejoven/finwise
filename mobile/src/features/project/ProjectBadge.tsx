@@ -20,6 +20,7 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
@@ -42,6 +43,7 @@ export function ProjectBadge({
   variant = "pill",
   navigateOnPress = true,
 }: ProjectBadgeProps) {
+  const { t } = useTranslation();
   const setActive = useActiveProject((s) => s.setActive);
   const { data: projects } = useQuery({
     queryKey: ["projects"],
@@ -88,7 +90,7 @@ export function ProjectBadge({
         void setActive(p.id);
         router.navigate("/(tabs)/caizhi");
       }}
-      accessibilityLabel={`按分类「${p.name}」筛选`}
+      accessibilityLabel={t("project.badge.filterBy", { name: p.name })}
     >
       {content}
     </TapEffect>

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -15,6 +16,7 @@ import {
   TapEffect,
 } from "@/shared/components";
 import { theme } from "@/core/theme";
+import i18n from "@/core/i18n";
 import { getSignal, reinferSignal } from "@/core/api/signals";
 import { formatLongDate } from "@/shared/format";
 import { useRetryPending, usePendingSignals } from "@/features/capture";
@@ -42,6 +44,7 @@ import { ProjectBadge } from "@/features/project/ProjectBadge";
  * 视觉: 报刊式. 顶部"返回" + 卷期戳, 中部 raw_text 大字, 下面推演摘要/标签.
  */
 export default function SignalDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const pendingItem = usePendingSignals((s) => (id ? s.items[id] : undefined));
   const retry = useRetryPending();
@@ -110,7 +113,7 @@ export default function SignalDetailScreen() {
         <Header />
         <View style={styles.empty}>
           <Serif size={13} italic style={styles.muted}>
-            没有这条信号。
+            {t("gate.signal.empty")}
           </Serif>
         </View>
       </SafeAreaView>
@@ -145,18 +148,18 @@ export default function SignalDetailScreen() {
           </Display>
         ) : isLoading ? (
           <Serif size={13} italic style={styles.muted}>
-            正在加载…
+            {t("gate.signal.loading")}
           </Serif>
         ) : isError ? (
           <Serif size={13} italic style={styles.error}>
-            读取失败, 下拉刷新或稍后再试。
+            {t("gate.signal.loadFailed")}
           </Serif>
         ) : null}
 
         <DoubleRule />
 
         <View style={styles.statusBlock}>
-          <SectionHeader label="Inference" meta={statusLabel(inferenceStatus)} />
+          <SectionHeader label={t("gate.signal.inference.title")} meta={statusLabel(inferenceStatus)} />
           {summary ? (
             <Serif size={14} style={styles.summary}>
               {summary}
@@ -164,8 +167,8 @@ export default function SignalDetailScreen() {
           ) : (
             <Serif size={12} italic style={styles.muted}>
               {inferenceStatus === "failed"
-                ? "本条推演失败, 不会自动重跑。"
-                : "推演结果会在 30 秒内回填。这里先空着。"}
+                ? t("gate.signal.inference.failed")
+                : t("gate.signal.inference.pending")}
             </Serif>
           )}
 
@@ -205,7 +208,7 @@ export default function SignalDetailScreen() {
             onPress={() => void retry(pendingItem)}
           >
             <Sans size={11} weight="700" style={styles.retryLabel}>
-              重试上行
+              {t("gate.signal.retryUpload")}
             </Sans>
           </TapEffect>
         ) : null}
@@ -218,7 +221,11 @@ export default function SignalDetailScreen() {
             disabled={isStarting}
           >
             <Sans size={11} weight="700" style={styles.refineLabel}>
-              {isStarting ? "正在准备追问..." : history ? "再追问一次 · 五轮" : "开始追问 · 五轮"}
+              {isStarting
+                ? t("gate.signal.refine.preparing")
+                : history
+                  ? t("gate.signal.refine.again")
+                  : t("gate.signal.refine.start")}
             </Sans>
           </TapEffect>
         ) : null}
@@ -238,14 +245,17 @@ export default function SignalDetailScreen() {
           <View style={styles.distillBlock}>
             {distillation.distilled_content ? (
               <View>
-                <SectionHeader label="降噪" meta="这条信号" />
+                <SectionHeader label={t("gate.signal.distill.label")} meta={t("gate.signal.distill.meta")} />
                 <DoubleRule />
                 <DistilledContent content={distillation.distilled_content} />
               </View>
             ) : null}
             {distillation.beneficiary != null ? (
               <View style={styles.beneficiaryBlock}>
-                <SectionHeader label="收益标的" meta="金融推演" />
+                <SectionHeader
+                  label={t("gate.signal.distill.beneficiaryLabel")}
+                  meta={t("gate.signal.distill.beneficiaryMeta")}
+                />
                 <DoubleRule />
                 {distillation.beneficiary.length > 0 ? (
                   <View style={styles.beneficiaryList}>
@@ -289,7 +299,12 @@ export default function SignalDetailScreen() {
   );
 }
 
-const ORDER_LABEL: Record<string, string> = { first: "一阶", second: "二阶", third: "三阶" };
+/** order 枚举 → 完整 i18n key (字面量, 让 t() 仍受类型检查). */
+const ORDER_I18N = {
+  first: "gate.signal.financial.orderFirst",
+  second: "gate.signal.financial.orderSecond",
+  third: "gate.signal.financial.orderThird",
+} as const;
 
 /** 金融分析 — Analyst 第一层推演出的相关标的 (ticker + 一阶/二阶/三阶 + 理由). */
 function FinancialTargets({
@@ -297,31 +312,35 @@ function FinancialTargets({
 }: {
   assets: { ticker: string; rationale: string; order: string }[];
 }) {
+  const { t } = useTranslation();
   if (assets.length === 0) return null;
   return (
     <View style={styles.faBlock}>
-      <SectionHeader label="金融分析" meta="推演标的" />
+      <SectionHeader label={t("gate.signal.financial.label")} meta={t("gate.signal.financial.meta")} />
       <DoubleRule />
       <View style={styles.faList}>
-        {assets.map((a, i) => (
-          <View key={`${a.ticker}-${i}`} style={styles.faItem}>
-            <View style={styles.faHead}>
-              <Mono size={12} style={styles.faTicker}>
-                {a.ticker}
-              </Mono>
-              {ORDER_LABEL[a.order] ? (
-                <Sans size={9} weight="700" style={styles.faOrder}>
-                  {ORDER_LABEL[a.order]}
-                </Sans>
+        {assets.map((a, i) => {
+          const orderKey = ORDER_I18N[a.order as keyof typeof ORDER_I18N];
+          return (
+            <View key={`${a.ticker}-${i}`} style={styles.faItem}>
+              <View style={styles.faHead}>
+                <Mono size={12} style={styles.faTicker}>
+                  {a.ticker}
+                </Mono>
+                {orderKey ? (
+                  <Sans size={9} weight="700" style={styles.faOrder}>
+                    {t(orderKey)}
+                  </Sans>
+                ) : null}
+              </View>
+              {a.rationale ? (
+                <Serif size={13} style={styles.faRationale}>
+                  {a.rationale}
+                </Serif>
               ) : null}
             </View>
-            {a.rationale ? (
-              <Serif size={13} style={styles.faRationale}>
-                {a.rationale}
-              </Serif>
-            ) : null}
-          </View>
-        ))}
+          );
+        })}
       </View>
     </View>
   );
@@ -345,6 +364,7 @@ function PendingRetry({
   busy: boolean;
   onRetry: () => void;
 }) {
+  const { t } = useTranslation();
   // 每秒自重渲 — 让"是否超过 60s"的判断实时
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -359,7 +379,7 @@ function PendingRetry({
   return (
     <View style={styles.retryStuckBlock}>
       <Serif size={12} italic style={styles.retryStuckHint}>
-        ◆ 推演卡住超过 {elapsedSec}s — 大概率 LLM 输出格式偶发不稳, 可以让它重试一次.
+        {t("gate.signal.stuck.hint", { seconds: elapsedSec })}
       </Serif>
       <TapEffect
         style={[styles.retryStuckButton, busy && styles.retryStuckButtonBusy]}
@@ -368,7 +388,7 @@ function PendingRetry({
         disabled={busy}
       >
         <Sans size={11} weight="700" style={styles.retryStuckLabel}>
-          {busy ? "正在重新推演..." : "让它再推一次"}
+          {busy ? t("gate.signal.stuck.retrying") : t("gate.signal.stuck.retry")}
         </Sans>
       </TapEffect>
     </View>
@@ -378,25 +398,26 @@ function PendingRetry({
 function statusLabel(status: string | undefined): string {
   switch (status) {
     case "done":
-      return "已推演";
+      return i18n.t("gate.signal.inference.statusDone");
     case "pending":
-      return "推演中";
+      return i18n.t("gate.signal.inference.statusPending");
     case "failed":
-      return "推演失败";
+      return i18n.t("gate.signal.inference.statusFailed");
     default:
       return "";
   }
 }
 
 function Header() {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("gate.signal.back")}</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
-        信号
+        {t("gate.signal.headerStamp")}
       </Sans>
       <View style={styles.headerSpacer} />
     </View>

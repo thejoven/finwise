@@ -18,6 +18,7 @@
 import { ScrollView, StyleSheet, Text as RNText, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -32,6 +33,7 @@ import {
 import { theme } from "@/core/theme";
 
 export default function ColophonScreen() {
+  const { t } = useTranslation();
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
       <View style={styles.topBar}>
@@ -39,7 +41,7 @@ export default function ColophonScreen() {
           <Icon name="chevronLeft" size={22} color={theme.color.ink} strokeWidth={1.5} />
         </TapEffect>
         <Mono size={10} style={styles.topMeta}>
-          卷首语 · COLOPHON
+          {t("components.colophon.navTitle")}
         </Mono>
         <View style={styles.backBtn} />
       </View>
@@ -58,10 +60,10 @@ export default function ColophonScreen() {
 
         <View style={styles.sloganBlock}>
           <RNText maxFontSizeMultiplier={1.2} style={styles.sloganZh}>
-            以智驭财 · 行远致富
+            {t("components.colophon.tagline")}
           </RNText>
           <Serif size={11} italic style={styles.sloganEn}>
-            Master money. Master your future.
+            {t("components.colophon.taglineEn")}
           </Serif>
         </View>
 
@@ -69,17 +71,19 @@ export default function ColophonScreen() {
 
         <View style={styles.body}>
           <Serif size={14} style={styles.lede}>
-            财知是一款<RNText style={styles.bodyBold}>不打扰你</RNText>的 AI 财富伙伴。
+            {t("components.colophon.lede.pre")}
+            <RNText style={styles.bodyBold}>{t("components.colophon.lede.emphasis")}</RNText>
+            {t("components.colophon.lede.post")}
           </Serif>
 
           <Serif size={14} style={styles.para}>
-            它不追每日行情、不堆砌资讯，而是帮你把模糊的市场直觉，淬炼成少数几个高确定性的投资承诺。
+            {t("components.colophon.intro")}
           </Serif>
 
           <View style={styles.pullQuoteWrap}>
             <View style={styles.pullRule} />
             <Serif size={16} italic style={styles.pullQuote}>
-              少一点决策，{"\n"}多一份信念。
+              {t("components.colophon.introPull")}
             </Serif>
             <View style={styles.pullRule} />
           </View>
@@ -88,25 +92,27 @@ export default function ColophonScreen() {
         <DoubleRule />
 
         <View style={styles.debtBlock}>
-          <SectionHeader label="认知的债务" meta="COGNITIVE DEBT" />
+          <SectionHeader
+            label={t("components.colophon.debt.label")}
+            meta={t("components.colophon.debt.meta")}
+          />
 
           <Serif size={14} style={styles.debtIntro}>
-            市面上的 AI，都在比谁更快替你给出答案。你越贪图这种捷径，越在不知不觉中欠下一笔
-            <RNText style={styles.bodyBold}>“认知债务”</RNText>
-            ——被代劳的每一个判断，都是大脑本该变强、却被你跳过的一次机会。
+            {t("components.colophon.debt.intro.pre")}
+            <RNText style={styles.bodyBold}>{t("components.colophon.debt.intro.emphasis")}</RNText>
+            {t("components.colophon.debt.intro.post")}
           </Serif>
 
           <Serif size={14} style={styles.debtPara}>
-            财知反其道而行。它从不替你思考，只把问题一次次还给你——每一次信号都是大脑变强的机会，每一轮追问都是一次
-            <RNText style={styles.bodyBold}>思考的乐趣</RNText>
-            ，一段只属于你的创作。
+            {t("components.colophon.debt.para.pre")}
+            <RNText style={styles.bodyBold}>{t("components.colophon.debt.para.emphasis")}</RNText>
+            {t("components.colophon.debt.para.post")}
           </Serif>
 
           <View style={styles.pullQuoteWrap}>
             <View style={styles.pullRule} />
             <Serif size={16} italic style={styles.pullQuote}>
-              别人用 AI 代替思考，{"\n"}
-              你用财知练习思考。
+              {t("components.colophon.debt.pull")}
             </Serif>
             <View style={styles.pullRule} />
           </View>
@@ -115,39 +121,45 @@ export default function ColophonScreen() {
         <DoubleRule />
 
         <View style={styles.compoundBlock}>
-          <SectionHeader label="复利的认知" meta="COMPOUNDING COGNITION" />
+          <SectionHeader
+            label={t("components.colophon.compound.label")}
+            meta={t("components.colophon.compound.meta")}
+          />
 
           <Serif size={14} style={styles.compoundIntro}>
-            财知不是一个让你"赚更多"的工具，而是一套通过五个动作循环不断打磨的
-            <RNText style={styles.bodyBold}>财商认知系统</RNText>。
+            {t("components.colophon.compound.intro.pre")}
+            <RNText style={styles.bodyBold}>
+              {t("components.colophon.compound.intro.emphasis")}
+            </RNText>
+            {t("components.colophon.compound.intro.post")}
           </Serif>
 
           <Serif size={13} italic style={styles.compoundIntroSub}>
-            每一次完整的录入、追问、过会、签字、复盘，都是一笔本金；时间会替你把它们利上滚利。
+            {t("components.colophon.compound.introSub")}
           </Serif>
 
           <View style={styles.compoundList}>
             <RomanList
               items={[
                 {
-                  text: "观察 — 每写下一条信号，是一次注意力的训练。",
-                  subtext: "PHASE 1 · 安静",
+                  text: t("components.colophon.compound.items.observe.text"),
+                  subtext: t("components.colophon.compound.items.observe.subtext"),
                 },
                 {
-                  text: "推理 — 每答完五轮追问，是一次结构化思考的训练。",
-                  subtext: "PHASE 2 · 仪式",
+                  text: t("components.colophon.compound.items.reason.text"),
+                  subtext: t("components.colophon.compound.items.reason.subtext"),
                 },
                 {
-                  text: "纪律 — 每一次过会，是一次能力圈的校准。",
-                  subtext: "PHASE 2 · 仪式",
+                  text: t("components.colophon.compound.items.discipline.text"),
+                  subtext: t("components.colophon.compound.items.discipline.subtext"),
                 },
                 {
-                  text: "承诺 — 每签一份承诺书，是一次预决定的训练。",
-                  subtext: "PHASE 2 · 仪式",
+                  text: t("components.colophon.compound.items.commit.text"),
+                  subtext: t("components.colophon.compound.items.commit.subtext"),
                 },
                 {
-                  text: "自省 — 每完成一次复盘，是一次照见自己的训练。",
-                  subtext: "PHASE 3 · 镜子",
+                  text: t("components.colophon.compound.items.reflect.text"),
+                  subtext: t("components.colophon.compound.items.reflect.subtext"),
                 },
               ]}
             />
@@ -156,23 +168,21 @@ export default function ColophonScreen() {
           <View style={styles.compoundCloseWrap}>
             <View style={styles.pullRule} />
             <Serif size={14} italic style={styles.compoundClose}>
-              财富的复利来自资本，{"\n"}
-              认知的复利来自次数。
+              {t("components.colophon.compound.close")}
             </Serif>
             <View style={styles.pullRule} />
             <Serif size={13} style={styles.compoundCloseBody}>
-              一年之后，你不只是赚到了钱 ——
-              你建立了一套不会被市场情绪裹挟的判断系统。这套系统会跟着你的下一笔投资、下一个十年，持续复利。
+              {t("components.colophon.compound.closeBody")}
             </Serif>
           </View>
         </View>
 
         <View style={styles.footer}>
           <Mono size={9} style={styles.footMeta}>
-            创刊号
+            {t("components.colophon.footerIssue")}
           </Mono>
           <Mono size={9} style={styles.footMeta}>
-            WISEFLOW · 财知大道
+            {t("components.colophon.footerColophon")}
           </Mono>
         </View>
       </ScrollView>

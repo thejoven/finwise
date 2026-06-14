@@ -18,11 +18,9 @@ import { useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { createProject, listProjects, type ProjectView } from "@/core/api/project";
+import i18n from "@/core/i18n";
 
 import { useActiveProject } from "./store";
-
-/** 新用户首次进入时自动建的分类名. 用户可随时改名 / 再建. */
-const DEFAULT_CATEGORY_NAME = "我的关注";
 
 // 模块级兜重入: 跨组件实例共享, 保证默认分类只创建一次.
 let creatingDefault: Promise<ProjectView> | null = null;
@@ -48,7 +46,8 @@ export function useEnsureCategory() {
     // 情况 1: 一个可用分类都没有 → 建默认分类.
     if (usable.length === 0) {
       if (creatingDefault) return;
-      creatingDefault = createProject({ name: DEFAULT_CATEGORY_NAME })
+      // 新用户首次进入时自动建的分类名. 用户可随时改名 / 再建.
+      creatingDefault = createProject({ name: i18n.t("project.defaultCategoryName") })
         .then(async (created) => {
           queryClient.setQueryData<ProjectView[]>(["projects"], (old) =>
             old ? [...old, created] : [created],

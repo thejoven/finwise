@@ -34,6 +34,7 @@ import { create } from "zustand";
 import { Display, Mono, Serif } from "@/shared/components";
 import { theme, useThemeColors } from "@/core/theme";
 import { useNotifications, type NotificationType } from "@/features/notifications";
+import i18n from "@/core/i18n";
 
 // ──────────────────── Public API ────────────────────
 
@@ -76,7 +77,7 @@ export function notify(opts: NotifyOpts): void {
   showToast(opts);
   void useNotifications.getState().push({
     type: opts.type,
-    stamp: opts.stamp ?? "通知",
+    stamp: opts.stamp ?? i18n.t("errors.toast.defaultStamp"),
     title: opts.title,
     subtitle: opts.subtitle,
     href: opts.href,

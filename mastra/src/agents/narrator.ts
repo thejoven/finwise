@@ -14,6 +14,7 @@ import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 
 // ─────────────────────── Schema ───────────────────────
 
@@ -26,9 +27,9 @@ export const ThesisSchema = z.object({
   action: CommitmentAction,
   position_pct: z.number().min(0).max(100),
   duration_months: z.number().int().min(1).max(36),
-  entry_method: z.string().min(10).max(120),
-  exit_conditions: z.array(z.string().min(10).max(120)).min(2).max(4),
-  reasons_for_future_self: z.array(z.string().min(20).max(300)).min(3).max(5),
+  entry_method: z.string().min(10).max(360),
+  exit_conditions: z.array(z.string().min(10).max(360)).min(2).max(4),
+  reasons_for_future_self: z.array(z.string().min(20).max(900)).min(3).max(5),
 });
 export type Thesis = z.infer<typeof ThesisSchema>;
 
@@ -91,6 +92,8 @@ export interface NarratorInput {
   /** 分类上下文 (分类名 + 分析指引), 空时不注入. */
   project_name?: string;
   project_guidance?: string;
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
 }
 
 export async function runNarrator(input: NarratorInput): Promise<{ thesis: Thesis; verbatim_ok: boolean; missing_quotes: string[] }> {
@@ -133,7 +136,8 @@ function buildNarratorPrompt(input: NarratorInput): string {
     .join("\n\n");
   const catBlock = categoryContextBlock(input.project_name, input.project_guidance);
   const catPrefix = catBlock ? catBlock + "\n\n" : "";
-  return `${catPrefix}${signals}
+  const langPrefix = languageDirective(input.language);
+  return `${langPrefix}${catPrefix}${signals}
 
 ----- refinement 五轮 -----
 ${rounds}

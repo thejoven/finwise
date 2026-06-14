@@ -22,6 +22,8 @@
 
 import { useState } from "react";
 import { Linking, StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 
 import { Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -35,10 +37,11 @@ export interface LearningCardProps {
 }
 
 export function LearningCard({ items, loading, defaultExpanded = false }: LearningCardProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
 
   const totalResults = (items ?? []).reduce((acc, r) => acc + r.results.length, 0);
-  const statusMeta = computeStatusMeta({ items, loading, totalResults });
+  const statusMeta = computeStatusMeta({ items, loading, totalResults }, t);
 
   return (
     <View style={styles.container}>
@@ -49,7 +52,7 @@ export function LearningCard({ items, loading, defaultExpanded = false }: Learni
       >
         <View style={styles.diamond} />
         <Sans size={10} weight="700" style={styles.label}>
-          相关线索
+          {t("refinement.clues.label")}
         </Sans>
         <Serif size={10} italic style={styles.meta}>
           {statusMeta}
@@ -68,18 +71,21 @@ export function LearningCard({ items, loading, defaultExpanded = false }: Learni
   );
 }
 
-function computeStatusMeta({
-  items,
-  loading,
-  totalResults,
-}: {
-  items?: ResearchRecord[];
-  loading: boolean;
-  totalResults: number;
-}): string {
-  if (totalResults > 0) return `${totalResults} 条来源`;
-  if (!items && loading) return "加载中…";
-  return "未检索到外部资料";
+function computeStatusMeta(
+  {
+    items,
+    loading,
+    totalResults,
+  }: {
+    items?: ResearchRecord[];
+    loading: boolean;
+    totalResults: number;
+  },
+  t: TFunction,
+): string {
+  if (totalResults > 0) return t("refinement.learning.metaSources", { count: totalResults });
+  if (!items && loading) return t("refinement.learning.metaLoading");
+  return t("refinement.learning.metaNone");
 }
 
 /**
@@ -89,6 +95,7 @@ function computeStatusMeta({
  * empty 状态由调用方处理 — 这里假设 totalResults > 0.
  */
 export function LearningTimeline({ items }: { items?: ResearchRecord[] }) {
+  const { t } = useTranslation();
   const signalScope = items?.find((r) => r.scope === "signal");
   const roundScopes = (items ?? [])
     .filter((r) => r.scope === "refinement_round")
@@ -96,9 +103,10 @@ export function LearningTimeline({ items }: { items?: ResearchRecord[] }) {
 
   type Node = { key: string; title: string; record: ResearchRecord };
   const nodes: Node[] = [];
-  if (signalScope) nodes.push({ key: signalScope.id, title: "背景检索", record: signalScope });
+  if (signalScope)
+    nodes.push({ key: signalScope.id, title: t("refinement.learning.nodeBackground"), record: signalScope });
   for (const r of roundScopes) {
-    nodes.push({ key: r.id, title: `本轮线索 · R${r.round}`, record: r });
+    nodes.push({ key: r.id, title: t("refinement.learning.nodeRound", { round: r.round }), record: r });
   }
   const visibleNodes = nodes.filter((n) => n.record.results.length > 0);
 
@@ -118,11 +126,12 @@ export function LearningTimeline({ items }: { items?: ResearchRecord[] }) {
 }
 
 function ExpandedBody({ items, totalResults }: { items?: ResearchRecord[]; totalResults: number }) {
+  const { t } = useTranslation();
   if (totalResults === 0) {
     return (
       <View style={styles.bodyEmpty}>
         <Serif size={12} italic style={styles.emptyHint}>
-          这条信号没找到匹配的外部新闻 — 推演会直接用你写下的原文.
+          {t("refinement.learning.emptyHint")}
         </Serif>
       </View>
     );
@@ -250,6 +259,7 @@ function MarketRow({
   age?: string;
   market: MarketData;
 }) {
+  const { t } = useTranslation();
   const handlePress = () => {
     if (url) Linking.openURL(url).catch(() => undefined);
   };
@@ -290,7 +300,7 @@ function MarketRow({
       </View>
       {market.volumeUsd ? (
         <Serif size={11} italic style={styles.vol}>
-          成交 {formatUsd(market.volumeUsd)}
+          {t("refinement.learning.volume", { amount: formatUsd(market.volumeUsd) })}
         </Serif>
       ) : null}
     </TapEffect>

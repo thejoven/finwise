@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -22,6 +23,7 @@ import { formFieldStyles } from "@/shared/styles/form";
  * 编辑资料 modal. 改 display_name + bio. (avatar 暂不开放上传, 等 storage 落.)
  */
 export default function ProfileEditScreen() {
+  const { t } = useTranslation();
   const user = useAuth((s) => s.user);
   const setUser = useAuth((s) => s.setUser);
   const [displayName, setDisplayName] = useState(user?.display_name ?? "");
@@ -58,42 +60,42 @@ export default function ProfileEditScreen() {
 
   return (
     <KeyboardForm>
-      <ModalTopBar label="编辑资料 · PROFILE" />
+      <ModalTopBar label={t("profile.edit.topBar")} />
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Display size={26} italic style={styles.title}>
-          编辑资料.
+          {t("profile.edit.title")}
         </Display>
         <DoubleRule />
         <Serif size={13} italic style={styles.hint}>
-          邮箱不能从这里修改。{"\n"}昵称和签名是公开的, 但目前只有你能看见。
+          {t("profile.edit.hint")}
         </Serif>
 
         <Sans size={11} weight="600" style={styles.label}>
-          邮箱 (只读)
+          {t("profile.edit.emailLabel")}
         </Sans>
         <Mono size={13} style={styles.readonly}>
           {user?.email ?? "—"}
         </Mono>
 
         <Sans size={11} weight="600" style={styles.label}>
-          昵称
+          {t("profile.edit.nameLabel")}
         </Sans>
         <NativeField
           value={displayName}
           onChangeText={setDisplayName}
-          placeholder="想被怎么称呼"
+          placeholder={t("profile.edit.namePlaceholder")}
           autoCapitalize="sentences"
           maxLength={60}
         />
 
         <Sans size={11} weight="600" style={styles.label}>
-          签名
+          {t("profile.edit.bioLabel")}
         </Sans>
         <NativeField
           value={bio}
           onChangeText={setBio}
-          placeholder="一句话介绍自己"
+          placeholder={t("profile.edit.bioPlaceholder")}
           autoCapitalize="sentences"
           multiline
           maxLength={280}
@@ -115,7 +117,7 @@ export default function ProfileEditScreen() {
           disabled={pending}
         >
           <Sans size={11} weight="700" style={styles.signLabel}>
-            {pending ? "保存中…" : "保存"}
+            {pending ? t("profile.saving") : t("common.save")}
           </Sans>
         </TapEffect>
       </View>

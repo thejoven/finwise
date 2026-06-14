@@ -11,6 +11,7 @@
 
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -19,6 +20,7 @@ import { useActiveCommitment } from "@/features/commitment";
 import { useRetrospectList } from "@/features/retrospect";
 
 export function InboxCallouts() {
+  const { t } = useTranslation();
   const { data: commitment } = useActiveCommitment();
   const { data: retrospects } = useRetrospectList();
 
@@ -31,9 +33,9 @@ export function InboxCallouts() {
   if (pendingRetrospect) {
     return (
       <Callout
-        stamp="复盘"
-        title="持仓到期 · 一起复盘"
-        subtitle="四个问题, 不打分, 看见自己."
+        stamp={t("caizhi.inbox.callout.retrospect.stamp")}
+        title={t("caizhi.inbox.callout.retrospect.title")}
+        subtitle={t("caizhi.inbox.callout.retrospect.subtitle")}
         onPress={() => router.push(`/retrospect/${pendingRetrospect.id}`)}
       />
     );
@@ -42,9 +44,13 @@ export function InboxCallouts() {
   if (draftedCommitment) {
     return (
       <Callout
-        stamp="承诺书"
-        title="AI 给你写了一份承诺书"
-        subtitle={`${draftedCommitment.thesis.asset_name} · ${draftedCommitment.thesis.position_pct.toFixed(0)}% · ${draftedCommitment.thesis.duration_months} 个月`}
+        stamp={t("caizhi.inbox.callout.commitment.stamp")}
+        title={t("caizhi.inbox.callout.commitment.title")}
+        subtitle={t("caizhi.inbox.callout.commitment.subtitle", {
+          asset: draftedCommitment.thesis.asset_name,
+          pct: draftedCommitment.thesis.position_pct.toFixed(0),
+          months: draftedCommitment.thesis.duration_months,
+        })}
         onPress={() => router.push(`/commitment/${draftedCommitment.id}`)}
       />
     );
@@ -61,6 +67,7 @@ interface CalloutProps {
 }
 
 function Callout({ stamp, title, subtitle, onPress }: CalloutProps) {
+  const { t } = useTranslation();
   return (
     <TapEffect
       style={styles.card}
@@ -69,7 +76,7 @@ function Callout({ stamp, title, subtitle, onPress }: CalloutProps) {
     >
       <View style={styles.rule} />
       <Mono size={9} style={styles.stamp}>
-        {stamp.toUpperCase()} · 一封信
+        {stamp.toUpperCase()} · {t("caizhi.inbox.callout.letterSuffix")}
       </Mono>
       <Serif size={18} style={styles.title}>
         {title}

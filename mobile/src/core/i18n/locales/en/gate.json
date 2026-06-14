@@ -1,0 +1,74 @@
+{
+  "committee": {
+    "name": "Investment Committee",
+    "analyst": "Analyst",
+    "review": "Analyst Review",
+    "waiting": "Awaiting evaluation",
+    "waitingHint": "Once questioning is done, four analysts (Evidence · Consensus · Timing · Circle of Competence) each review it in the background. Results usually arrive within a minute or two.",
+    "passedAll": "All passed · drafted to commitments",
+    "analystFailed": "{{name}} didn't pass",
+    "analysts": {
+      "thickness": { "name": "Evidence Analyst", "role": "Is the evidence thick enough" },
+      "antiConsensus": { "name": "Consensus Analyst", "role": "Has the market already priced it" },
+      "window": { "name": "Timing Analyst", "role": "Is the timing right" },
+      "edge": { "name": "Edge Analyst", "role": "Do you truly understand it" }
+    },
+    "unpricedDirections": "Unpriced directions"
+  },
+  "gateDetail": {
+    "thicknessCount": "{{count}} related signals",
+    "consensusScore": "Consensus score {{score}}",
+    "windowMonths": "Window {{months}} months",
+    "edge": {
+      "explain": "Can explain",
+      "direct": "First-hand",
+      "trackRecord": "Has track record",
+      "exitKnown": "Knows the exit"
+    }
+  },
+  "verdict": {
+    "thickness": "The independent evidence so far isn't thick enough.",
+    "antiConsensus": "The market is already talking about this; what you see isn't leading.",
+    "window": "The timing isn't within your window.",
+    "edge": "This one is beyond your current circle of competence."
+  },
+  "signal": {
+    "headerStamp": "Signal",
+    "back": "Back",
+    "empty": "This signal doesn't exist.",
+    "loading": "Loading…",
+    "loadFailed": "Failed to load. Pull to refresh or try again later.",
+    "inference": {
+      "title": "Inference",
+      "failed": "Inference failed for this one; it won't rerun automatically.",
+      "pending": "Inference results land within 30 seconds. Empty for now.",
+      "statusDone": "Inferred",
+      "statusPending": "Inferring",
+      "statusFailed": "Inference failed"
+    },
+    "stuck": {
+      "hint": "◆ Inference has been stuck for over {{seconds}}s — likely a transient LLM output glitch. You can have it retry once.",
+      "retry": "Run it again",
+      "retrying": "Re-inferring…"
+    },
+    "retryUpload": "Retry upload",
+    "refine": {
+      "preparing": "Preparing questions…",
+      "again": "Question again · five rounds",
+      "start": "Start questioning · five rounds"
+    },
+    "distill": {
+      "label": "Distill",
+      "meta": "This signal",
+      "beneficiaryLabel": "Beneficiaries",
+      "beneficiaryMeta": "Financial reasoning"
+    },
+    "financial": {
+      "label": "Financial Analysis",
+      "meta": "Inferred targets",
+      "orderFirst": "1st-order",
+      "orderSecond": "2nd-order",
+      "orderThird": "3rd-order"
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "appearance": {
+    "title": "外观",
+    "light": "光亮",
+    "dark": "暗黑",
+    "system": "跟随系统"
+  },
+  "language": {
+    "title": "语言",
+    "system": "跟随系统",
+    "footer": "默认跟随手机系统语言。也会用于 AI 生成的信号、总结与投决会判词。"
+  }
+}

@@ -1,21 +1,23 @@
 import { Link, Stack } from "expo-router";
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Display, Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
 
 export default function NotFound() {
+  const { t } = useTranslation();
   return (
     <>
-      <Stack.Screen options={{ title: "迷路了" }} />
+      <Stack.Screen options={{ title: t("components.notFound.navTitle") }} />
       <View style={styles.container}>
         <Display size={28} italic>
-          走丢了。
+          {t("components.notFound.title")}
         </Display>
         <Serif size={14} italic style={styles.note}>
-          这条路径不存在, 或者还没建好。
+          {t("components.notFound.note")}
         </Serif>
         <Link href="/(tabs)/caizhi" style={styles.link}>
-          <Serif size={13}>← 回信箱</Serif>
+          <Serif size={13}>{t("components.notFound.backToInbox")}</Serif>
         </Link>
       </View>
     </>

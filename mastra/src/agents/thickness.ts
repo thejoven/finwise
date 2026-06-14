@@ -22,6 +22,7 @@ import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import { recallSimilar, type RecalledSignal } from "../memory/vector-store.js";
 import { getMemory } from "../memory/agent-memory.js";
 
@@ -32,9 +33,9 @@ export const ThicknessSchema = z.object({
   score: z.number().min(0).max(100),
   single_signal_richness: z.number().min(0).max(100),
   cross_signal_breadth: z.number().min(0).max(100),
-  dimensions_covered: z.array(z.string().max(40)).max(8),
+  dimensions_covered: z.array(z.string().max(120)).max(8),
   // 一句话给用户看 — gates_detail.g1_thickness.detail + (失败时) archived_pool.human_reason
-  reasoning: z.string().min(10).max(160),
+  reasoning: z.string().min(10).max(480),
 });
 export type Thickness = z.infer<typeof ThicknessSchema>;
 
@@ -97,6 +98,7 @@ export interface ThicknessInput {
   project_id?: string;
   project_name?: string;
   project_guidance?: string;
+  language?: string;
 }
 
 export async function runThicknessJudge(input: ThicknessInput): Promise<Thickness> {
@@ -116,7 +118,7 @@ export async function runThicknessJudge(input: ThicknessInput): Promise<Thicknes
   }
 
   // 2) 拼 prompt
-  const userMsg = buildThicknessPrompt(input, recalled);
+  const userMsg = `${languageDirective(input.language)}${buildThicknessPrompt(input, recalled)}`;
   const messages = [{ role: "user" as const, content: userMsg }];
 
   // 3) 跑 agent, 一次 retry · per-user memory by resource=user_id

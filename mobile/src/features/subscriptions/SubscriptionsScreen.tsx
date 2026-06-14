@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -14,7 +15,7 @@ import {
 } from "@/shared/components";
 import { theme } from "@/core/theme";
 import { haptic } from "@/core/haptics";
-import { chineseMonthDay, chineseWeekday } from "@/shared/format";
+import { monthDayLabel, weekdayLabel } from "@/shared/format";
 import type { SubscriptionItem, TweetItem } from "@/core/api/subscriptions";
 
 // 具体路径 import (不走 barrel) — 防 index ⇄ Screen 自引用 require cycle (同 InboxView 先例).
@@ -38,6 +39,7 @@ import {
  * 你订的账号是通讯社, AI 是编辑部, 这一屏是排出来的报纸.
  */
 export function SubscriptionsScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<"unread" | "all">("unread");
   const [accountFilter, setAccountFilter] = useState<string | undefined>(undefined);
@@ -56,20 +58,20 @@ export function SubscriptionsScreen() {
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     let lastDay = "";
-    for (const t of tweets) {
-      const d = new Date(t.tweet_created_at);
-      const dayKey = Number.isNaN(d.getTime()) ? "未知日期" : d.toDateString();
+    for (const tw of tweets) {
+      const d = new Date(tw.tweet_created_at);
+      const dayKey = Number.isNaN(d.getTime()) ? "unknown" : d.toDateString();
       if (dayKey !== lastDay) {
         lastDay = dayKey;
         const label = Number.isNaN(d.getTime())
-          ? "未知日期"
-          : `${chineseMonthDay(d)} · ${chineseWeekday(d)}`;
+          ? t("subscriptions.unknownDate")
+          : `${monthDayLabel(d)} · ${weekdayLabel(d)}`;
         out.push({ kind: "header", key: `h-${dayKey}`, label });
       }
-      out.push({ kind: "tweet", tweet: t });
+      out.push({ kind: "tweet", tweet: tw });
     }
     return out;
-  }, [tweets]);
+  }, [tweets, t]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -132,18 +134,18 @@ export function SubscriptionsScreen() {
       {/* ── 刊头 ── */}
       <View style={[styles.masthead, { paddingTop: insets.top + theme.spacing.xl }]}>
         <View style={styles.mastheadRow}>
-          <Display size={30}>订阅</Display>
+          <Display size={30}>{t("subscriptions.masthead.title")}</Display>
           <TapEffect onPress={() => router.push("/subscriptions/manage")} disableEffect>
             <Serif size={13} style={styles.manageLink}>
-              管理
+              {t("subscriptions.masthead.manage")}
             </Serif>
           </TapEffect>
         </View>
         <Serif size={13} italic style={styles.subtitle}>
-          你订的人, 替你盯的事。
+          {t("subscriptions.masthead.subtitle")}
         </Serif>
         <Mono size={10} style={styles.stamp}>
-          {chineseMonthDay()} · {chineseWeekday()} · 未读 {unread}
+          {monthDayLabel()} · {weekdayLabel()} · {t("subscriptions.unread", { count: unread })}
         </Mono>
         <View style={styles.rule}>
           <DoubleRule />
@@ -160,7 +162,7 @@ export function SubscriptionsScreen() {
               weight="600"
               style={filter === "unread" ? styles.segTextActive : styles.segText}
             >
-              未读 {unread}
+              {t("subscriptions.unread", { count: unread })}
             </Sans>
           </TapEffect>
           <TapEffect
@@ -172,14 +174,14 @@ export function SubscriptionsScreen() {
               weight="600"
               style={filter === "all" ? styles.segTextActive : styles.segText}
             >
-              全部
+              {t("subscriptions.filter.all")}
             </Sans>
           </TapEffect>
           <View style={styles.filterSpacer} />
           {filter === "unread" && unread > 0 ? (
             <TapEffect onPress={handleMarkAll} disableEffect>
               <Sans size={11} weight="600" style={styles.markAll}>
-                全部已读
+                {t("subscriptions.filter.markAllRead")}
               </Sans>
             </TapEffect>
           ) : null}
@@ -199,7 +201,7 @@ export function SubscriptionsScreen() {
                 style={[styles.chip, !accountFilter && styles.chipActive]}
               >
                 <Mono size={10} style={!accountFilter ? styles.chipTextActive : styles.chipText}>
-                  全部账号
+                  {t("subscriptions.chips.all")}
                 </Mono>
               </TapEffect>
             }
@@ -222,29 +224,31 @@ export function SubscriptionsScreen() {
             {!hasSubs && !subsQuery.isLoading ? (
               <View style={styles.emptyInner}>
                 <Serif size={14} italic style={styles.emptyText}>
-                  这份报纸还没有通讯社。
+                  {t("subscriptions.empty.noSubs.title")}
                 </Serif>
                 <TapEffect
                   onPress={() => router.push("/subscriptions/manage")}
                   style={styles.emptyCta}
                 >
                   <Sans size={12} weight="600" style={styles.emptyCtaText}>
-                    添加第一个账号
+                    {t("subscriptions.empty.noSubs.cta")}
                   </Sans>
                 </TapEffect>
               </View>
             ) : emptyIsAllRead ? (
               <View style={styles.emptyInner}>
                 <Mono size={12} style={styles.zeroStamp}>
-                  ✓ 都读完了
+                  {t("subscriptions.empty.allRead.stamp")}
                 </Mono>
                 <Serif size={13} italic style={styles.emptyText}>
-                  今天订阅里的事, 你都过目了。
+                  {t("subscriptions.empty.allRead.body")}
                 </Serif>
               </View>
             ) : (
               <Serif size={13} italic style={styles.emptyText}>
-                {feed.isLoading ? "正在排版…" : "还没有内容。新推文会出现在这里。"}
+                {feed.isLoading
+                  ? t("subscriptions.empty.loading")
+                  : t("subscriptions.empty.noContent")}
               </Serif>
             )}
           </View>

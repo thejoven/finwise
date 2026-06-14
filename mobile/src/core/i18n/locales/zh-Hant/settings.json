@@ -1,0 +1,13 @@
+{
+  "appearance": {
+    "title": "外觀",
+    "light": "光亮",
+    "dark": "暗黑",
+    "system": "跟隨系統"
+  },
+  "language": {
+    "title": "語言",
+    "system": "跟隨系統",
+    "footer": "預設跟隨手機系統語言。也會用於 AI 生成的訊號、摘要與投決會判詞。"
+  }
+}

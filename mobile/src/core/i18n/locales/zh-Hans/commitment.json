@@ -1,0 +1,63 @@
+{
+  "header": {
+    "stamp": "承诺书"
+  },
+  "loading": "正在打开承诺书...",
+  "error": "打不开这份承诺书, 稍后再试.",
+  "status": {
+    "signedOn": "已签字 · {{date}}",
+    "postponed": "已放置 · {{count}}/3",
+    "draft": "草稿 · 等你签字"
+  },
+  "meta": "{{action}} · {{pct}}% 仓位 · {{months}} 个月",
+  "section": {
+    "entry": "进入",
+    "exit": "退出条件",
+    "reasons": "给未来的你"
+  },
+  "signed": {
+    "holding": "持仓中",
+    "signedDate": "签字日 {{date}}",
+    "note": "这份承诺已经归档. 退出条件已经被复制到持仓状态机, 它会安静地巡检. 你不用做什么."
+  },
+  "decision": {
+    "stamp": "DECISION · 你的最终判断",
+    "asDrafted": {
+      "label": "就照这份草稿签",
+      "hint": "{{action}} · {{pct}}% · {{months}} 个月"
+    },
+    "lowerPosition": {
+      "label": "更保守 — 调小仓位",
+      "hint": "仓位降到 {{pct}}% (其余不变)"
+    },
+    "longerHold": {
+      "label": "更耐心 — 拉长持仓",
+      "hint": "持仓拉到 {{months}} 个月"
+    },
+    "userInput": {
+      "label": "我有不一样的判断 — 写下来",
+      "hint": "你自己的语言, 不少于 10 字",
+      "placeholder": "例: 我接受买入但只用 3%, 因为这条信号还没穿过供应链层"
+    }
+  },
+  "slowSign": "仍在签收中...",
+  "signing": "正在签字...",
+  "signButton": {
+    "asDrafted": "签字, 提交承诺",
+    "lowerPosition": "按更保守的判断签字",
+    "longerHold": "按更耐心的判断签字",
+    "userInput": "按我的判断签字"
+  },
+  "postpone": "先放着",
+  "action": {
+    "buy": "买入",
+    "sell": "卖出",
+    "hold": "持有"
+  },
+  "companion": {
+    "stampAnxiety5x": "E4 · 焦虑日 · 第 5 次",
+    "stampAnxiety": "E4 · 焦虑日",
+    "intro": "你今天已经打开了好几次. 你当时写下了这句:",
+    "outro": "没有任何退出条件被触发. 这是规则."
+  }
+}

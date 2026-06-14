@@ -18,6 +18,7 @@ import { ScrollView, StyleSheet, View, useWindowDimensions } from "react-native"
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart, LineChart, PieChart } from "react-native-chart-kit";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -38,9 +39,9 @@ import { InsightBlock } from "./InsightBlock";
 import { makeBaseChartConfig, makeDimensionColors, makePiePalette, hexToRgba } from "./charts";
 
 const WINDOWS: WindowKey[] = ["7d", "30d", "all"];
-const WINDOW_LABEL: Record<WindowKey, string> = { "7d": "7 天", "30d": "30 天", all: "全部" };
 
 export function AttentionScreen() {
+  const { t } = useTranslation();
   const [window, setWindow] = useState<WindowKey>("30d");
   // chart 宽度 = 屏宽 - 2 * lg padding (用 hook 而非 Dimensions.get, 随旋转/分屏自适应)
   const { width } = useWindowDimensions();
@@ -79,16 +80,16 @@ export function AttentionScreen() {
       {/* 报刊头: 档案标识 · 标题 + 完成数 dateline · 时间窗 */}
       <View style={styles.masthead}>
         <Mono size={9} style={styles.stamp}>
-          注意力档案
+          {t("attention.stamp")}
           {activeProject ? ` · ${activeProject.emoji ?? ""}${activeProject.name}` : ""}
         </Mono>
         <View style={styles.titleRow}>
           <Display size={28} style={styles.title}>
-            统计
+            {t("attention.title")}
           </Display>
           {data && data.total_completed > 0 ? (
             <Mono size={10} style={styles.titleMeta}>
-              {data.total_completed} 次完成
+              {t("attention.completedCount", { count: data.total_completed })}
             </Mono>
           ) : null}
         </View>
@@ -103,7 +104,7 @@ export function AttentionScreen() {
                 style={[styles.windowPill, active && styles.windowPillActive]}
               >
                 <Mono size={10} style={[styles.windowLabel, active && styles.windowLabelActive]}>
-                  {WINDOW_LABEL[w]}
+                  {t(`attention.window.${w}`)}
                 </Mono>
               </TapEffect>
             );
@@ -117,28 +118,32 @@ export function AttentionScreen() {
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
         {isError ? (
           <Serif size={13} italic style={styles.error}>
-            读统计数据失败, 下拉刷新或稍后再开.
+            {t("attention.error")}
           </Serif>
         ) : isLoading || !data ? (
           <Serif size={13} italic style={styles.muted}>
-            正在汇总…
+            {t("attention.loading")}
           </Serif>
         ) : data.total_completed === 0 ? (
           <View style={styles.emptyBlock}>
-            <SectionHeader label="还没数据" meta="完成第一次五轮追问后会出现" />
+            <SectionHeader label={t("attention.empty.header")} meta={t("attention.empty.meta")} />
             <Serif size={14} italic style={styles.muted}>
-              系统会在每次五轮追问完成后, 自动生成本次的注意力档案 — 包含 4 个维度评分 + 一条洞察 +
-              一条盲点提示.
+              {t("attention.empty.body")}
             </Serif>
           </View>
         ) : (
           <>
             {/* 4 维评分 - BarChart 横向对比 */}
             <View style={styles.section}>
-              <StatStamp label="四维评分 · 近期均值" />
+              <StatStamp label={t("attention.scores.stamp")} />
               <BarChart
                 data={{
-                  labels: ["专注", "深度", "广度", "执行"],
+                  labels: [
+                    t("attention.dimensions.focus"),
+                    t("attention.dimensions.depth"),
+                    t("attention.dimensions.breadth"),
+                    t("attention.dimensions.execution"),
+                  ],
                   datasets: [
                     {
                       data: [
@@ -177,7 +182,10 @@ export function AttentionScreen() {
               <InsightBlock
                 insight={latest.insight}
                 blindspot={latest.blindspot}
-                whenLabel={`完成于 ${formatShortDateTime(latest.created_at)} · ${shortRef(latest.refinement_id)}`}
+                whenLabel={t("attention.insight.completedAt", {
+                  when: formatShortDateTime(latest.created_at),
+                  ref: shortRef(latest.refinement_id),
+                })}
               />
             ) : null}
 
@@ -186,7 +194,7 @@ export function AttentionScreen() {
             {/* 趋势 - LineChart 多 series */}
             {trendSeries.length >= 2 ? (
               <View style={styles.section}>
-                <StatStamp label={`趋势 · 近 ${trendSeries.length} 次`} />
+                <StatStamp label={t("attention.trend.stamp", { count: trendSeries.length })} />
                 <LineChart
                   data={{
                     labels: trendSeries.map((_, i) => `${i + 1}`),
@@ -212,7 +220,12 @@ export function AttentionScreen() {
                         strokeWidth: 2,
                       },
                     ],
-                    legend: ["专注", "深度", "广度", "执行"],
+                    legend: [
+                      t("attention.dimensions.focus"),
+                      t("attention.dimensions.depth"),
+                      t("attention.dimensions.breadth"),
+                      t("attention.dimensions.execution"),
+                    ],
                   }}
                   width={chartWidth}
                   height={220}
@@ -227,9 +240,9 @@ export function AttentionScreen() {
               </View>
             ) : (
               <View style={styles.section}>
-                <StatStamp label="趋势" />
+                <StatStamp label={t("attention.trend.stampPlain")} />
                 <Serif size={12} italic style={styles.muted}>
-                  需要 2 次以上完成才能画趋势曲线 — 当前 {trendSeries.length} 次.
+                  {t("attention.trend.needMore", { count: trendSeries.length })}
                 </Serif>
               </View>
             )}
@@ -238,10 +251,10 @@ export function AttentionScreen() {
 
             {/* 领域分布 - PieChart */}
             <View style={styles.section}>
-              <StatStamp label="领域分布" />
+              <StatStamp label={t("attention.tags.stamp")} />
               {data.top_tags.length === 0 ? (
                 <Serif size={12} italic style={styles.muted}>
-                  近期没有可统计的标签.
+                  {t("attention.tags.empty")}
                 </Serif>
               ) : (
                 <PieChart

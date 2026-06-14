@@ -1,0 +1,38 @@
+{
+  "cell": {
+    "activeLabel": "Current category “{{name}}”, tap to switch",
+    "noneSelected": "None selected",
+    "placeholder": "Select category"
+  },
+  "dropdown": {
+    "switchTo": "Switch to “{{name}}”",
+    "editCategory": "Edit “{{name}}”"
+  },
+  "badge": {
+    "filterBy": "Filter by “{{name}}”"
+  },
+  "modal": {
+    "title": {
+      "list": "Categories",
+      "create": "New Category",
+      "edit": "Edit Category"
+    },
+    "switchSection": "Switch Category"
+  },
+  "field": {
+    "name": "Name",
+    "namePlaceholder": "e.g. Pop Mart",
+    "icon": "Icon (optional)",
+    "color": "Color (optional)",
+    "none": "None",
+    "guidance": "Analysis guidance (optional)",
+    "guidanceHint": "Write a preference for this category's AI reasoning, e.g. “Watch channel sell-through and overseas expansion.” Leave blank for no effect.",
+    "guidancePlaceholder": "What should the AI watch for in this category…"
+  },
+  "actions": {
+    "newCategory": "New Category",
+    "create": "Create",
+    "archive": "Archive This Category"
+  },
+  "defaultCategoryName": "My Watchlist"
+}

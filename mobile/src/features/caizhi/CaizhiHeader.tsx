@@ -2,10 +2,11 @@ import { useMemo } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Icon, Sans, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
-import { chineseMonthDay, chineseWeekday } from "@/shared/format";
+import { monthDayLabel, weekdayLabel } from "@/shared/format";
 
 /**
  * 财知页固定报头 (不折叠版).
@@ -20,9 +21,10 @@ import { chineseMonthDay, chineseWeekday } from "@/shared/format";
  * @see CollapsibleMasthead
  */
 export function CaizhiHeader() {
+  const { t } = useTranslation();
   const today = useMemo(() => new Date(), []);
-  const date = chineseMonthDay(today);
-  const weekday = chineseWeekday(today);
+  const date = monthDayLabel(today);
+  const weekday = weekdayLabel(today);
   const insets = useSafeAreaInsets();
 
   return (
@@ -31,7 +33,7 @@ export function CaizhiHeader() {
         <TapEffect
           onPress={() => router.push("/colophon")}
           style={styles.iconButton}
-          accessibilityLabel="卷首语 · 关于本刊"
+          accessibilityLabel={t("caizhi.header.colophon")}
         >
           <Icon name="book" size={18} color={theme.color.ink} strokeWidth={1.5} />
         </TapEffect>
@@ -41,7 +43,7 @@ export function CaizhiHeader() {
         <TapEffect
           onPress={() => router.push("/capture")}
           style={styles.iconButton}
-          accessibilityLabel="记录新观察"
+          accessibilityLabel={t("caizhi.header.capture")}
         >
           <Icon name="plus" size={20} color={theme.color.ink} strokeWidth={1.75} />
         </TapEffect>
@@ -49,7 +51,7 @@ export function CaizhiHeader() {
 
       <View style={styles.nameplateRow}>
         <RNText allowFontScaling={false} style={styles.nameplate}>
-          财知
+          {t("caizhi.nameplate")}
         </RNText>
       </View>
     </View>

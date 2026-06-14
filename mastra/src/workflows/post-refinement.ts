@@ -94,6 +94,7 @@ export async function runPostRefinement(
       primaryAsset: view.primary_asset,
       projectName: view.project_name,
       projectGuidance: view.project_guidance,
+      language: view.language,
       rounds: distillRounds,
     });
     await postDistillation({
@@ -123,6 +124,7 @@ export async function runPostRefinement(
         primaryAsset: view.primary_asset,
         projectName: view.project_name,
         projectGuidance: view.project_guidance,
+        language: view.language,
         roundsBrief,
         research,
       });

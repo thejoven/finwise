@@ -58,6 +58,7 @@ type Session struct {
 	PrimarySignalSummary *string
 	ProjectName          *string // 分类名 (经 signal.project_id JOIN projects)
 	ProjectGuidance      *string // 分类的分析指引, 注入 socratic/narrator/attention prompt
+	Language             *string // 用户语言 (经 user JOIN); 注入 socratic/distiller/beneficiary 让产出跟随语言
 }
 
 type Round struct {
@@ -494,10 +495,12 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 		SELECT rs.id, rs.user_id, rs.primary_signal_id, rs.primary_asset, rs.status, rs.rounds_done,
 		       rs.decision, rs.started_at, rs.completed_at, rs.updated_at,
 		       s.raw_text, s.inference_summary,
-		       p.name, p.guidance
+		       p.name, p.guidance,
+		       u.language
 		FROM refinement_sessions rs
 		JOIN signals s ON s.id = rs.primary_signal_id
 		LEFT JOIN projects p ON p.id = s.project_id
+		JOIN users u ON u.id = rs.user_id
 		WHERE rs.user_id = $1 AND rs.id = $2
 	`
 	var s Session
@@ -506,6 +509,7 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 		&s.Decision, &s.StartedAt, &s.CompletedAt, &s.UpdatedAt,
 		&s.PrimarySignalRawText, &s.PrimarySignalSummary,
 		&s.ProjectName, &s.ProjectGuidance,
+		&s.Language,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound

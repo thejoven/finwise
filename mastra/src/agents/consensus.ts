@@ -17,6 +17,7 @@ import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 
 /**
  * 一条"未被市场定价的方向". 指方向 (往哪看), 不荐股 (买什么).
@@ -24,18 +25,18 @@ import { categoryContextBlock } from "./category.js";
  */
 export const UnpricedDirectionSchema = z.object({
   /** 往哪看的指针, ≤40 字. 例: "往上游 HBM 封装设备看" / "同一资产的二阶: 叙事退潮后现金流去向". */
-  angle: z.string().min(1).max(40),
+  angle: z.string().min(1).max(120),
   /** 为什么市场还没定价这个方向, ≤80 字. 共识分析师的独门判断. */
-  why_unpriced: z.string().min(1).max(80),
+  why_unpriced: z.string().min(1).max(240),
   /** 哪个产品语言 lens 照出来的, ≤24 字, 可选. 只用产品词, 不写人名. */
-  lens: z.string().max(24).optional(),
+  lens: z.string().max(72).optional(),
 });
 export type UnpricedDirection = z.infer<typeof UnpricedDirectionSchema>;
 
 export const ConsensusSchema = z.object({
   score: z.number().min(0).max(100),
-  narrative_summary: z.string().min(1).max(80),
-  evidence: z.array(z.string().min(1).max(60)).max(3),
+  narrative_summary: z.string().min(1).max(240),
+  evidence: z.array(z.string().min(1).max(180)).max(3),
   /** 已被定价时, 指向市场还没定价的相邻方向 (≤3). 没有清晰方向就 [] (沉默允许). */
   unpriced_directions: z.array(UnpricedDirectionSchema).max(3).default([]),
 });
@@ -134,12 +135,13 @@ export async function runConsensusCheck(input: {
   signal_text: string;
   project_name?: string;
   project_guidance?: string;
+  language?: string;
 }): Promise<Consensus> {
   const cat = categoryContextBlock(input.project_name, input.project_guidance);
   const catPrefix = cat ? cat + "\n\n" : "";
   const messages = [{
     role: "user" as const,
-    content: `${catPrefix}资产: ${input.asset}\n\n背景信号:\n${input.signal_text}\n\n请按 schema 输出 JSON.`,
+    content: `${languageDirective(input.language)}${catPrefix}资产: ${input.asset}\n\n背景信号:\n${input.signal_text}\n\n请按 schema 输出 JSON.`,
   }];
 
   let lastErr: unknown;

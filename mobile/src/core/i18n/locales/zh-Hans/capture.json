@@ -1,0 +1,45 @@
+{
+  "compose": {
+    "title": "一句话, 30 秒.",
+    "hint": "一次只记一件事。\n选个分类放好, 字句不必精确。",
+    "placeholder": "今天看到什么…",
+    "submit": "记下",
+    "cancel": "再想想"
+  },
+  "category": {
+    "stamp": "◆ 归到哪个分类",
+    "empty": "还没有分类，先建一个",
+    "add": "新建分类"
+  },
+  "denoise": {
+    "subtitle": "推断、分析后的金融信号，按时间倒序。",
+    "loading": "正在拉取记录…",
+    "empty": "还没有推演出标的的信号。\nAI 把你的观察降噪出标的后，会出现在这里。",
+    "earlier": "更早的记录…"
+  },
+  "denoisedRow": {
+    "order": {
+      "first": "一阶",
+      "second": "二阶",
+      "third": "三阶"
+    },
+    "origin": "缘起：{{text}}"
+  },
+  "status": {
+    "unsynced": "◆ 未同步 · 点开重试",
+    "retrying": "◆ 重试中",
+    "inferring": "◆ AI 推演中",
+    "inferred": "◆ AI 已推演",
+    "inferFailed": "◆ 推演失败"
+  },
+  "silence": {
+    "label": "今日状态",
+    "silent": "沉默",
+    "count": "{{count}} 条新记录"
+  },
+  "toast": {
+    "stamp": "AI 推演完成",
+    "fallbackTitle": "你的信号已推演完成",
+    "subtitle": "点开看完整推演 ↗"
+  }
+}

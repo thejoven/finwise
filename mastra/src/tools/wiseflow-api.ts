@@ -145,6 +145,8 @@ export interface SessionView {
   /** 分类上下文 (经 signal.project_id JOIN projects). 注入 socratic/narrator/attention prompt. */
   project_name?: string;
   project_guidance?: string;
+  /** App 选定的输出语言 ("zh-Hans" | "zh-Hant" | "en"). 空/未知 → 默认简体, 行为不变. */
+  language?: string;
   status: "active" | "completed" | "abandoned";
   rounds_done: number;
   decision?: string;

@@ -30,6 +30,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { DoubleRule, Icon, Mono, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -54,6 +55,7 @@ import type { UserAnswer } from "@/core/api/refinement";
 const CURRENT_KEY = 99;
 
 export default function RefinementScreen() {
+  const { t } = useTranslation();
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const { data: session, isError, refetch } = useRefinementSession(sessionId);
   const completed = session?.status === "completed";
@@ -209,7 +211,7 @@ export default function RefinementScreen() {
         >
           {isError ? (
             <Serif size={13} italic style={styles.error}>
-              读取这次追问遇到了问题, 下拉或稍后再开.
+              {t("refinement.error.load")}
             </Serif>
           ) : (
             <>
@@ -231,7 +233,7 @@ export default function RefinementScreen() {
                   {/* 顶部一条红 rule + Mono "当前" stamp — 报刊感的 "now reading" */}
                   <View style={styles.pendingTopRule} />
                   <Mono size={9} style={styles.pendingStamp}>
-                    {`◆ 当前 · ROUND ${pendingQuestion.round}`}
+                    {t("refinement.current.stamp", { round: pendingQuestion.round })}
                   </Mono>
                   {/* key 强制每题 fresh mount, 防止 QuestionCard 内部 useState 跨轮残留 */}
                   <QuestionCard
@@ -244,11 +246,15 @@ export default function RefinementScreen() {
                 <View style={styles.pendingBlock} onLayout={makeLayoutCapture(CURRENT_KEY)}>
                   <View style={styles.pendingTopRule} />
                   <Mono size={9} style={styles.pendingStamp}>
-                    {`◆ 当前 · ROUND ${roundsDone + 1}`}
+                    {t("refinement.current.stamp", { round: roundsDone + 1 })}
                   </Mono>
                   <WaitingForNext
                     stamp={undefined}
-                    text={roundsDone > 0 ? "你的答案收到了. 正在出下一题…" : "正在准备第一道题…"}
+                    text={
+                      roundsDone > 0
+                        ? t("refinement.waiting.nextQuestion")
+                        : t("refinement.waiting.firstQuestion")
+                    }
                     retryAnchor={
                       // 计时锚: 最近一轮回答时间 (有时), 否则 session 开始时间.
                       // R1 出题阶段不显示 retry — 这条路径暂不支持 (refinement.started reinfer).
@@ -276,7 +282,7 @@ export default function RefinementScreen() {
               onPress={() => router.replace(`/refinement/distilled/${sessionId}`)}
             >
               <Sans size={11} weight="700" style={styles.primaryLabel}>
-                看这条信号的降噪
+                {t("refinement.footer.viewDistilled")}
               </Sans>
             </TapEffect>
           </View>
@@ -300,18 +306,19 @@ interface HeaderProps {
 }
 
 function Header({ roundsDone, cluesTrigger }: HeaderProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("common.back")}</Serif>
       </TapEffect>
       <View style={styles.headerCenter}>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          五轮追问
+          {t("refinement.header.stamp")}
         </Sans>
         <Mono size={9} style={styles.headerProgress}>
-          {roundsDone}/5
+          {t("refinement.header.progress", { done: roundsDone })}
         </Mono>
       </View>
       <View style={styles.headerRight}>{cluesTrigger}</View>
@@ -320,14 +327,22 @@ function Header({ roundsDone, cluesTrigger }: HeaderProps) {
 }
 
 function Completed({ decision }: { decision?: string }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.completedBlock}>
-      <SectionHeader label="完成" meta={decision === "training_only" ? "训练" : "可入分析师评审"} />
+      <SectionHeader
+        label={t("refinement.completed.label")}
+        meta={
+          decision === "training_only"
+            ? t("refinement.completed.metaTraining")
+            : t("refinement.completed.metaEligible")
+        }
+      />
       <DoubleRule />
       <Serif size={15} style={styles.completedBody}>
         {decision === "training_only"
-          ? "这一次主要是训练. 你看见自己的几个盲点. 接下来去降噪页, 看看把噪音滤掉之后, 这条信号还剩什么."
-          : "五轮答完了. 把噪音滤掉之后这条信号还剩什么, 在降噪页等你. 看完, 由你来决定要不要交给四位分析师 (佐证 · 共识 · 时机 · 能力圈) 各审一遍."}
+          ? t("refinement.completed.bodyTraining")
+          : t("refinement.completed.bodyEligible")}
       </Serif>
     </View>
   );
@@ -340,6 +355,7 @@ interface FooterProps {
 }
 
 function Footer({ canSubmit, onSubmit, isSubmitting }: FooterProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.footer}>
       <TapEffect
@@ -349,7 +365,7 @@ function Footer({ canSubmit, onSubmit, isSubmitting }: FooterProps) {
         disabled={!canSubmit}
       >
         <Sans size={11} weight="700" style={styles.primaryLabel}>
-          {isSubmitting ? "正在记下..." : "提交这一轮"}
+          {isSubmitting ? t("refinement.footer.submitting") : t("refinement.footer.submit")}
         </Sans>
       </TapEffect>
     </View>

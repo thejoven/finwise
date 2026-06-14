@@ -18,6 +18,7 @@ import { defaultModel } from "../llm/model.js";
 import { JARGON_TRANSLATION_BLOCK } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 
 export const AnalystChatSchema = z.object({
   /** 对话回复正文. 期望 ≤220 字, 上限给宽防 schema 偶发失败. */
@@ -92,6 +93,7 @@ export interface AnalystChatInput {
   project_guidance?: string;
   history?: Array<{ role: "user" | "analyst"; content: string }>;
   user_message: string;
+  language?: string;
 }
 
 const POOL_LABEL: Record<string, string> = {
@@ -109,7 +111,7 @@ export async function runAnalystChat(
 
   const cat = categoryContextBlock(input.project_name, input.project_guidance);
   const dossier = [
-    `## 本次对话你的身份`,
+    `${languageDirective(input.language)}## 本次对话你的身份`,
     `你是**${persona.name}** — 职责: ${persona.duty}. 这条信号当时是你否决的.`,
     cat ? `\n${cat}` : "",
     `\n## 评估档案 (你的记忆, 不要逐条复读)`,

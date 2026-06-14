@@ -1,6 +1,7 @@
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
 import Animated from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 import { Mono, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -38,38 +39,39 @@ export function SignalRow({ signal }: SignalRowProps) {
 }
 
 function SignalStatus({ signal }: SignalRowProps) {
+  const { t } = useTranslation();
   if (signal.local_sync === "exhausted") {
     return (
       <Serif size={10} italic style={styles.statusFailed}>
-        ◆ 未同步 · 点开重试
+        {t("capture.status.unsynced")}
       </Serif>
     );
   }
   if (signal.local_sync === "failed") {
     return (
       <Serif size={10} italic style={styles.statusMuted}>
-        ◆ 重试中
+        {t("capture.status.retrying")}
       </Serif>
     );
   }
   if (signal.local_sync === "syncing" || signal.inference_status === "pending") {
     return (
       <Serif size={10} italic style={styles.statusMuted}>
-        ◆ AI 推演中
+        {t("capture.status.inferring")}
       </Serif>
     );
   }
   if (signal.inference_status === "done") {
     return (
       <Serif size={10} italic style={styles.statusDone}>
-        ◆ AI 已推演
+        {t("capture.status.inferred")}
       </Serif>
     );
   }
   if (signal.inference_status === "failed") {
     return (
       <Serif size={10} italic style={styles.statusFailed}>
-        ◆ 推演失败
+        {t("capture.status.inferFailed")}
       </Serif>
     );
   }

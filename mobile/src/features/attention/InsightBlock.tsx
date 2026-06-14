@@ -12,6 +12,7 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Display, Mono, Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -24,13 +25,14 @@ interface Props {
 }
 
 export function InsightBlock({ insight, blindspot, whenLabel }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.root}>
       <View style={styles.section}>
         <View style={styles.stampRow}>
           <View style={styles.diamond} />
           <Mono size={9} style={styles.stamp}>
-            本次洞察
+            {t("attention.insight.stamp")}
           </Mono>
         </View>
         <Display size={17} style={styles.insightText}>
@@ -42,7 +44,7 @@ export function InsightBlock({ insight, blindspot, whenLabel }: Props) {
         <View style={styles.stampRow}>
           <View style={[styles.diamond, styles.diamondMuted]} />
           <Mono size={9} style={styles.stamp}>
-            盲点 · 下次注意
+            {t("attention.insight.blindspotStamp")}
           </Mono>
         </View>
         <Serif size={14} italic style={styles.blindspotText}>

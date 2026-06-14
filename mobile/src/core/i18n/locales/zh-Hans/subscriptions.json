@@ -1,0 +1,89 @@
+{
+  "masthead": {
+    "title": "订阅",
+    "manage": "管理",
+    "subtitle": "你订的人, 替你盯的事。"
+  },
+  "unread": "未读 {{count}}",
+  "filter": {
+    "all": "全部",
+    "markAllRead": "全部已读"
+  },
+  "chips": {
+    "all": "全部账号"
+  },
+  "unknownDate": "未知日期",
+  "empty": {
+    "noSubs": {
+      "title": "这份报纸还没有通讯社。",
+      "cta": "添加第一个账号"
+    },
+    "allRead": {
+      "stamp": "✓ 都读完了",
+      "body": "今天订阅里的事, 你都过目了。"
+    },
+    "loading": "正在排版…",
+    "noContent": "还没有内容。新推文会出现在这里。"
+  },
+  "manage": {
+    "title": "管理订阅",
+    "sourceTypeLabel": "信号源类型",
+    "type": {
+      "x": "X 账号",
+      "telegram": "Telegram 频道",
+      "rss": "新闻源",
+      "available": "可用",
+      "planned": "规划中"
+    },
+    "plannedTitle": "在路上了",
+    "plannedBody": "{{label}}订阅还在规划中, 先把 X 账号读顺。",
+    "addLabel": "添加订阅 · X 账号",
+    "handlePlaceholder": "elonmusk 或 @elonmusk",
+    "resolve": "解析",
+    "resolving": "解析中…",
+    "subscribe": "确认订阅",
+    "subscribing": "订阅中…",
+    "subscribed": "已订阅。正在回填最近的推文, 新内容会出现在你的报纸里。",
+    "listLabel": "X 账号 · {{count}}",
+    "dead": "已失效",
+    "subUnread": "未读 {{count}}",
+    "lastPolled": "{{time}}更新",
+    "unsubscribe": "取消订阅",
+    "footer": "X 账号 {{count}} / {{limit}} —— 先读完手头的, 再添新的。"
+  },
+  "errors": {
+    "notFound": "没有找到这个账号",
+    "quota": "先读完手头的, 再添新的。",
+    "collectorUnavailable": "采集服务暂不可用, 稍后再试",
+    "generic": "出了点问题, 再试一次"
+  },
+  "promote": {
+    "title": "转为信号",
+    "doneDuplicate": "这条已经转过了。",
+    "doneOk": "已落入信箱, 与手录信号同列。",
+    "goSignal": "去看信号 →",
+    "noteLabel": "用你的话说一句 (可选)",
+    "notePlaceholder": "例: 利率顶部的接盘结构, 值得盯配置盘动向",
+    "hint": "不填则原文直通, 出处自动带上 via @{{handle}}",
+    "confirm": "确认转为信号",
+    "confirming": "正在转…",
+    "error": "没转成功, 再试一次。"
+  },
+  "row": {
+    "retweet": "RT · ",
+    "aiReading": "AI 正在读…",
+    "photo": "[图]",
+    "video": "[视频]"
+  },
+  "detail": {
+    "stamp": "订阅",
+    "loading": "正在加载…",
+    "notFound": "没有这条推文。",
+    "retweet": "RT · ",
+    "playOnX": "▶ 在 X 播放",
+    "aiEditor": "AI 编辑",
+    "aiPending": "AI 正在读…",
+    "promote": "转为信号",
+    "openOnX": "在 X 打开"
+  }
+}

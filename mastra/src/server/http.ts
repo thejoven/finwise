@@ -98,6 +98,7 @@ async function handle(
       signal_text: string;
       project_name?: string;
       project_guidance?: string;
+      language?: string;
     };
     if (!input.asset || !input.signal_text) {
       writeJSON(res, 400, { error: "asset and signal_text required" });
@@ -125,6 +126,7 @@ async function handle(
       asset_name: string;
       opens_today: number;
       reasons_for_future_self: string[];
+      language?: string;
     };
     if (
       !input.user_id ||
@@ -168,6 +170,7 @@ async function handle(
       project_id?: string;
       project_name?: string;
       project_guidance?: string;
+      language?: string;
     };
     if (
       !input.user_id ||
@@ -191,6 +194,7 @@ async function handle(
         project_id: input.project_id,
         project_name: input.project_name,
         project_guidance: input.project_guidance,
+        language: input.language,
       });
       log("info", "thickness done", {
         signal_id: input.signal_id,
@@ -218,6 +222,7 @@ async function handle(
       plan_text?: string;
       project_name?: string;
       project_guidance?: string;
+      language?: string;
     };
     if (!input.asset || !input.signal_text) {
       writeJSON(res, 400, { error: "asset and signal_text required" });
@@ -249,6 +254,7 @@ async function handle(
       exit_text?: string;
       project_name?: string;
       project_guidance?: string;
+      language?: string;
     };
     if (!input.asset || !input.signal_text || !input.round1_text) {
       writeJSON(res, 400, {
@@ -266,6 +272,7 @@ async function handle(
         exit_text: input.exit_text,
         project_name: input.project_name,
         project_guidance: input.project_guidance,
+        language: input.language,
       });
       log("info", "competence done", {
         asset: input.asset,
@@ -296,6 +303,7 @@ async function handle(
         choice: string;
         open_text?: string;
       }>;
+      language?: string;
     };
     if (
       !input.user_id ||
@@ -333,6 +341,7 @@ async function handle(
       tweet_text: string;
       author_handle?: string;
       lang?: string;
+      language?: string;
     };
     if (!input.tweet_text || !input.tweet_text.trim()) {
       writeJSON(res, 400, { error: "tweet_text required" });
@@ -344,6 +353,7 @@ async function handle(
         tweetText: input.tweet_text,
         authorHandle: input.author_handle,
         lang: input.lang,
+        language: input.language,
       });
       log("info", "tweet-classify done", {
         handle: input.author_handle,

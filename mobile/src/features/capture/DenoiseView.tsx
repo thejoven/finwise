@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { DoubleRule, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 // 走具体文件而非 "@/features/capture" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
@@ -24,6 +25,7 @@ import { theme } from "@/core/theme";
  * - paddingBottom = insets.bottom + TAB_BAR_CLEARANCE, 给悬浮的灵动岛 tab bar 让位
  */
 export function DenoiseView() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useAllSignals();
@@ -84,7 +86,7 @@ export function DenoiseView() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Serif size={13} italic style={styles.subtitle}>
-              推断、分析后的金融信号，按时间倒序。
+              {t("capture.denoise.subtitle")}
             </Serif>
             <View style={styles.rule}>
               <DoubleRule />
@@ -94,9 +96,7 @@ export function DenoiseView() {
         ListEmptyComponent={
           <View style={styles.empty}>
             <Serif size={13} italic style={styles.emptyText}>
-              {isLoading
-                ? "正在拉取记录…"
-                : "还没有推演出标的的信号。\nAI 把你的观察降噪出标的后，会出现在这里。"}
+              {isLoading ? t("capture.denoise.loading") : t("capture.denoise.empty")}
             </Serif>
           </View>
         }
@@ -104,7 +104,7 @@ export function DenoiseView() {
           isFetchingNextPage ? (
             <View style={styles.footer}>
               <Serif size={12} italic style={styles.footerText}>
-                更早的记录…
+                {t("capture.denoise.earlier")}
               </Serif>
             </View>
           ) : null

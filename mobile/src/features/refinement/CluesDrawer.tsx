@@ -20,6 +20,8 @@ import { useEffect } from "react";
 import { Pressable, StyleSheet, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, ScrollView } from "react-native-gesture-handler";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 import Animated, {
   interpolate,
   runOnJS,
@@ -45,6 +47,7 @@ interface Props {
 const DRAWER_RATIO = 0.85;
 
 export function CluesDrawer({ open, onClose, items, loading }: Props) {
+  const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const drawerWidth = width * DRAWER_RATIO;
   // Reanimated 的 Animated.View 不认 DynamicColorIOS 动态色 → 抽屉底色/边线取 resolved hex.
@@ -115,10 +118,10 @@ export function CluesDrawer({ open, onClose, items, loading }: Props) {
               <View style={styles.headerLeft}>
                 <View style={styles.diamond} />
                 <Sans size={10} weight="700" style={styles.headerLabel}>
-                  相关线索
+                  {t("refinement.clues.label")}
                 </Sans>
                 <Serif size={10} italic style={styles.headerMeta}>
-                  {computeStatusMeta({ items, loading, totalResults })}
+                  {computeStatusMeta({ items, loading, totalResults }, t)}
                 </Serif>
               </View>
               <TapEffect style={styles.closeBtn} onPress={onClose} disableEffect>
@@ -132,12 +135,16 @@ export function CluesDrawer({ open, onClose, items, loading }: Props) {
               ) : (
                 <View style={styles.emptyWrap}>
                   <Mono size={9} style={styles.emptyStamp}>
-                    STATUS · {loading ? "FETCHING" : "EMPTY"}
+                    {t("refinement.clues.statusStamp", {
+                      status: loading
+                        ? t("refinement.clues.statusFetching")
+                        : t("refinement.clues.statusEmpty"),
+                    })}
                   </Mono>
                   <Serif size={13} italic style={styles.emptyHint}>
                     {loading
-                      ? "Mastra 还在拉外部资料, 一两秒…"
-                      : "这条信号没找到匹配的外部新闻 — 推演会直接用你写下的原文."}
+                      ? t("refinement.clues.drawerLoading")
+                      : t("refinement.clues.drawerEmpty")}
                   </Serif>
                 </View>
               )}
@@ -149,18 +156,21 @@ export function CluesDrawer({ open, onClose, items, loading }: Props) {
   );
 }
 
-function computeStatusMeta({
-  items,
-  loading,
-  totalResults,
-}: {
-  items?: ResearchRecord[];
-  loading: boolean;
-  totalResults: number;
-}): string {
-  if (totalResults > 0) return `· ${totalResults} 条来源`;
-  if (!items && loading) return "· 加载中…";
-  return "· 未检索到";
+function computeStatusMeta(
+  {
+    items,
+    loading,
+    totalResults,
+  }: {
+    items?: ResearchRecord[];
+    loading: boolean;
+    totalResults: number;
+  },
+  t: TFunction,
+): string {
+  if (totalResults > 0) return t("refinement.clues.metaSources", { count: totalResults });
+  if (!items && loading) return t("refinement.clues.metaLoading");
+  return t("refinement.clues.metaNone");
 }
 
 const styles = StyleSheet.create({

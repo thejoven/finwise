@@ -17,9 +17,10 @@ import { z } from "zod";
 import { config } from "../config/env.js";
 import { defaultModel } from "../llm/model.js";
 import { getMemory } from "../memory/agent-memory.js";
+import { languageDirective } from "./language-context.js";
 
 export const EditorSchema = z.object({
-  editor_text: z.string().min(20).max(200),
+  editor_text: z.string().min(20).max(600),
   quoted_segment: z.string().min(8).max(200),
 });
 export type EditorOutput = z.infer<typeof EditorSchema>;
@@ -58,6 +59,7 @@ export interface EditorInput {
   asset_name: string;
   opens_today: number;
   reasons_for_future_self: string[];
+  language?: string;
 }
 
 export async function runEditor(input: EditorInput): Promise<EditorOutput> {
@@ -66,7 +68,7 @@ export async function runEditor(input: EditorInput): Promise<EditorOutput> {
     .join("\n\n");
   const messages = [{
     role: "user" as const,
-    content: `资产: ${input.asset_name}
+    content: `${languageDirective(input.language)}资产: ${input.asset_name}
 今日打开次数: ${input.opens_today}
 
 用户签字时写的 reasons_for_future_self (verbatim 来源):

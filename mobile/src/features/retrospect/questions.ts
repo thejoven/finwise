@@ -13,6 +13,7 @@
  * 严禁选项 / 题面里出现 "Munger" "Soros" "Buffett" 等人名. 用产品语言.
  */
 
+import i18n from "@/core/i18n";
 import type { RetrospectDimT } from "@/core/api/retrospect";
 
 export interface RetrospectQuestion {
@@ -25,64 +26,49 @@ export interface RetrospectQuestion {
   openPrompt?: string;
 }
 
-export const RETROSPECT_QUESTIONS: RetrospectQuestion[] = [
+/**
+ * 四问的结构骨架 (no / dim / 选项 id), 与显示文案分离.
+ * 文案走 i18n: 用 question 序号 + 选项 id 作 key, 在 getRetrospectQuestions 里按当前语言解析,
+ * 故语言切换后重新取一次即更新 (静态 i18n.t 在 module-load 时会锁死语言, 不可取).
+ */
+const RETROSPECT_QUESTION_SHAPE: Array<{
+  no: 1 | 2 | 3 | 4;
+  dim: RetrospectDimT;
+  optionIds: string[];
+}> = [
   {
     no: 1,
     dim: "perception",
-    title: "你录到这条信号时, 它在叙事生命周期的哪一段?",
-    options: [
-      { id: "pre_narrative", label: "沉默期 · 圈外没人在说, 我是被噪音以外的物理变量触发的" },
-      { id: "early", label: "早期 leading · 圈内人开始低声讨论, 主流媒体还没覆盖" },
-      { id: "mid", label: "中段扩散 · sell-side 开始出报告, 但分歧仍在" },
-      { id: "late", label: "晚期共识 · 头条 / retail 都在讨论, 我录得已经晚了" },
-    ],
-    openPrompt: "你判断这一阶段的依据是什么? (具体到一两个信号, 不写'感觉')",
+    optionIds: ["pre_narrative", "early", "mid", "late"],
   },
   {
     no: 2,
     dim: "inference",
-    title: "你的推演链跑到第几跳? 用了哪几个 lens?",
-    options: [
-      { id: "first_one_lens", label: "一阶 · 单 lens · 谁明显受益 (停在表层, 多元思维栅格没展开)" },
-      {
-        id: "second_one_lens",
-        label: "二阶 · 单 lens · 谁因此被迫让步 (有二阶, 但只用了金融或商业)",
-      },
-      {
-        id: "third_multi_lens",
-        label: "三阶 · 多 lens · 跨学科 (法律 / 工程 / 博弈 / 历史) 交叉看到了反共识的赢家",
-      },
-      { id: "wavered", label: "中途自己说服自己回退了 — 链跑出来了, 但又自我否决" },
-    ],
-    openPrompt:
-      "如果重来, 你会用哪个之前漏掉的 lens? (心理学 / 法律 / 历史 / 博弈论 / 生物学 / 工程 / 化学 / 物理 / 数学 中挑一个)",
+    optionIds: ["first_one_lens", "second_one_lens", "third_multi_lens", "wavered"],
   },
   {
     no: 3,
     dim: "evaluation",
-    title: "你的退出条件能把这个仓位的'凸性'还原成现金吗?",
-    options: [
-      { id: "specific_anchored", label: "可以 · 三锚齐全: 价格锚 + 时间锚 + 一条外部可观察信号" },
-      { id: "price_only", label: "半套 · 只有价格止损, 没有 intrinsic 安全边际, 一砸就空" },
-      { id: "vague", label: "空的 · 写了也是 '看情况', 凸性根本兑现不了" },
-      {
-        id: "wrong_kind",
-        label: "错型 · 这个仓位本就不该用退出条件 (本质是 hedge / pair / 长期 own)",
-      },
-    ],
-    openPrompt: "下一次写退出条件, 你的三锚分别会是什么? (price + time + external)",
+    optionIds: ["specific_anchored", "price_only", "vague", "wrong_kind"],
   },
   {
     no: 4,
     dim: "execution",
-    title: "从签字到行动, 你的犹豫成本来自哪里?",
-    options: [
-      { id: "same_day", label: "签字当天 · 立刻执行, 没犹豫" },
-      { id: "within_week", label: "一周内 · 走了一遍 base rate 校准才动" },
-      { id: "weeks_later", label: "拖了几周 · inside view 过度自信被反复推翻才动" },
-      { id: "never", label: "签了字但没真做 · 命题与持仓断裂" },
-    ],
-    openPrompt:
-      "如果有犹豫, 你在反复检查的是哪个 lens? (是 base rate 不放心, 还是反身性时机判断, 还是别的)",
+    optionIds: ["same_day", "within_week", "weeks_later", "never"],
   },
 ];
+
+/** 按当前语言解析四问 (文案来自 retrospect.questions.qN.*). 每次取一份新数组, 语言切换即生效. */
+export function getRetrospectQuestions(): RetrospectQuestion[] {
+  return RETROSPECT_QUESTION_SHAPE.map((q) => ({
+    no: q.no,
+    dim: q.dim,
+    title: i18n.t(`retrospect.questions.q${q.no}.title`),
+    options: q.optionIds.map((id) => ({
+      id,
+      // optionIds 是固定枚举; 动态 key 转型成合法 key 让严格类型放行 (check-i18n 校验键存在)
+      label: i18n.t(`retrospect.questions.q${q.no}.options.${id}` as "retrospect.questions.q1.options.pre_narrative"),
+    })),
+    openPrompt: i18n.t(`retrospect.questions.q${q.no}.openPrompt`),
+  }));
+}

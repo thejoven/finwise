@@ -19,6 +19,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
@@ -49,6 +50,7 @@ function formReducer(s: FormState, patch: FormAction): FormState {
 }
 
 export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
+  const { t } = useTranslation();
   // 保证始终停在一个真实分类里 (无分类则自动创建默认分类).
   useEnsureCategory();
 
@@ -138,7 +140,9 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
             disableEffect
             style={styles.trigger}
             hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
-            accessibilityLabel={`当前分类「${active?.name ?? "未选择"}」, 点击切换`}
+            accessibilityLabel={t("project.cell.activeLabel", {
+              name: active?.name ?? t("project.cell.noneSelected"),
+            })}
           >
             {active?.emoji ? (
               <Sans size={12} style={styles.emoji}>
@@ -150,7 +154,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
               />
             )}
             <RNText allowFontScaling={false} style={styles.name} numberOfLines={1}>
-              {active?.name ?? "选择分类"}
+              {active?.name ?? t("project.cell.placeholder")}
             </RNText>
             <Animated.View style={arrowStyle}>
               <Icon name="chevronUp" size={12} color={theme.color.muted} strokeWidth={2} />

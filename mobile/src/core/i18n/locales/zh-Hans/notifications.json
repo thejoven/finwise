@@ -1,0 +1,23 @@
+{
+  "title": "消息通知",
+  "toolbar": {
+    "unread": "{{unread}} 条未读 / {{total}} 条",
+    "allRead": "{{total}} 条 · 全部已读",
+    "markAllRead": "全部已读",
+    "clear": "清空"
+  },
+  "clearConfirm": {
+    "title": "清空消息通知",
+    "message": "全部历史消息将被删除, 无法恢复."
+  },
+  "empty": {
+    "title": "没有消息。",
+    "hint": "AI 推演完成 / 五轮追问完成等异步事件触发后会出现在这里. 错过 toast 也能回看."
+  },
+  "group": {
+    "today": "今天",
+    "yesterday": "昨天",
+    "monthDay": "{{month}} 月 {{day}} 日",
+    "count": "{{count}} 条"
+  }
+}

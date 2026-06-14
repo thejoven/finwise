@@ -13,6 +13,7 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Icon, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export function InputTrigger({ value, placeholder, onPress, preview = 120, small = false }: Props) {
+  const { t } = useTranslation();
   const isEmpty = !value || value.trim() === "";
   const display = isEmpty
     ? placeholder
@@ -59,11 +61,11 @@ export function InputTrigger({ value, placeholder, onPress, preview = 120, small
       </View>
       {!isEmpty ? (
         <Serif size={10} italic style={styles.tapHint}>
-          点击编辑 · {value.length} 字
+          {t("refinement.input.tapToEdit", { count: value.length })}
         </Serif>
       ) : (
         <Serif size={10} italic style={styles.tapHint}>
-          点击展开输入
+          {t("refinement.input.tapToExpand")}
         </Serif>
       )}
     </TapEffect>

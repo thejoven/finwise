@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -20,6 +21,7 @@ import { useMarkTweetRead } from "./hooks";
  * 已读态: 整行 ink→muted, ◆ 消失. 点行 = 乐观已读 + push 详情.
  */
 export const TweetRow = memo(function TweetRow({ tweet }: { tweet: TweetItem }) {
+  const { t } = useTranslation();
   const markRead = useMarkTweetRead();
 
   const chars = [...tweet.text].length;
@@ -42,7 +44,7 @@ export const TweetRow = memo(function TweetRow({ tweet }: { tweet: TweetItem }) 
     <TapEffect onPress={handlePress} style={styles.row}>
       <View style={styles.meta}>
         <Mono size={10} style={styles.metaText} numberOfLines={1}>
-          {tweet.is_retweet ? "RT · " : ""}@{tweet.handle} ·{" "}
+          {tweet.is_retweet ? t("subscriptions.row.retweet") : ""}@{tweet.handle} ·{" "}
           {relativeTimeZh(tweet.tweet_created_at)}
         </Mono>
         {!tweet.read ? (
@@ -75,26 +77,26 @@ export const TweetRow = memo(function TweetRow({ tweet }: { tweet: TweetItem }) 
             </Sans>
           </View>
         ) : null}
-        {(tweet.tags ?? []).slice(0, 3).map((t) => (
-          <View key={t} style={styles.pill}>
+        {(tweet.tags ?? []).slice(0, 3).map((tag) => (
+          <View key={tag} style={styles.pill}>
             <Sans size={9} style={styles.pillText}>
-              {t}
+              {tag}
             </Sans>
           </View>
         ))}
         {hasPhoto ? (
           <Mono size={9} style={styles.mediaMark}>
-            [图]
+            {t("subscriptions.row.photo")}
           </Mono>
         ) : null}
         {hasVideo ? (
           <Mono size={9} style={styles.mediaMark}>
-            [视频]
+            {t("subscriptions.row.video")}
           </Mono>
         ) : null}
         {aiReading ? (
           <Mono size={9} style={styles.aiReading}>
-            AI 正在读…
+            {t("subscriptions.row.aiReading")}
           </Mono>
         ) : null}
       </View>

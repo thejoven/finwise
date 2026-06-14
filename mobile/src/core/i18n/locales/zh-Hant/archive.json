@@ -1,0 +1,64 @@
+{
+  "header": {
+    "label": "沉默歸檔",
+    "meta": "沒進承諾書的, 都在這裡",
+    "intro": "想過但沒出手的瞬間, 按\"為什麼沒進\"分成兩類. 每一條都能點開, 跟當時攔下它的分析師繼續聊."
+  },
+  "groups": {
+    "waiting": {
+      "label": "還在等",
+      "meta": "等訊號變厚 · 等窗口到來",
+      "intro": "訊號還不夠確鑿, 或時機還沒到. 我們不丟, 也不替你下決定 — 你想看的時候來翻翻.",
+      "tagObservation": "訊號",
+      "tagCalendar": "時機"
+    },
+    "letGo": {
+      "label": "已經放下",
+      "meta": "能力圈外 · 市場已定價",
+      "intro": "這些已經清楚 \"不進\". 留著不是為了出手, 是為了下次再遇到類似的, 能更快認出來.",
+      "tagLesson": "圈外",
+      "tagDiscard": "已定價"
+    },
+    "count": "{{count}} 條 · {{meta}}",
+    "empty": "這一類目前是空的, 這是常態.",
+    "more": "· 還有 {{count}} 條"
+  },
+  "retrospect": {
+    "label": "復盤",
+    "meta": "過去你說過什麼",
+    "empty": "還沒有復盤完成. 持倉到期或主動平倉後會自動生成.",
+    "none": "(無)",
+    "dim": {
+      "perceptionSpeed": "錄入速度",
+      "inferenceDepth": "推演深度",
+      "decisionSpeed": "決策速度",
+      "holdingPatience": "持倉耐心",
+      "exitQuality": "退出質量",
+      "thesisEvolution": "命題演化",
+      "unset": "(未定)"
+    }
+  },
+  "card": {
+    "defaultAnalyst": "分析師",
+    "sealFallback": "審",
+    "unpricedDirections": "未被定價的方向: {{directions}}",
+    "continue": "繼續對話"
+  },
+  "chat": {
+    "back": "返回",
+    "defaultAnalyst": "分析師",
+    "evalError": "讀取這條評估遇到了問題, 退回去再進一次.",
+    "archivedStamp": "投決會歸檔",
+    "firstStamp": "歸檔結論",
+    "sendError": "◆ 分析師暫時沒回上來 — 網路或模型偶發. 你的話還在輸入框裡, 再發一次.",
+    "disclaimer": "這場對話不改判. 真有新證據, 把它錄成新訊號, 再走一次追問與評審.",
+    "placeholder": "回他一句 — 為什麼攔 / 差在哪 / 什麼會讓你改判",
+    "unpricedDirections": "未被定價的方向",
+    "poolNote": {
+      "observation": "這條先放觀察池 — 不丟. 等更多獨立角度的同一觀察出現, 它會變厚.",
+      "calendar": "這條先放日曆池 — 窗口沒到, 時間到了再回來看.",
+      "lesson": "這條進了課堂池 — 不是懲罰. 下次再遇到類似的, 你能更快認出來.",
+      "discard": "這條進了已棄池 — 市場已經定價, 你看見的不再是 leading."
+    }
+  }
+}

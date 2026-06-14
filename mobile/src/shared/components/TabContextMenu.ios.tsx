@@ -1,5 +1,7 @@
 import { type ReactNode } from "react";
 import { StyleSheet } from "react-native";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 
 import { UI, MODS } from "@/shared/native";
 import { type TabContextMenuProps, type TabMenuActions } from "./TabContextMenu.types";
@@ -29,7 +31,7 @@ const TAB_W = 52;
 const TAB_H = 48;
 
 /** route name → 菜单项. 返回 null 表示该 tab 不挂菜单 (兜底原样渲染). */
-function itemsFor(routeName: string, a: TabMenuActions): ReactNode {
+function itemsFor(routeName: string, a: TabMenuActions, t: TFunction): ReactNode {
   if (!UI || !MODS) return null;
   const { Button, Divider } = UI;
   const { disabled } = MODS;
@@ -37,23 +39,53 @@ function itemsFor(routeName: string, a: TabMenuActions): ReactNode {
     case "caizhi":
       return (
         <>
-          <Button systemImage="tray" label="信箱" onPress={() => a.jumpCaizhi(0)} />
-          <Button systemImage="wand.and.sparkles" label="降噪" onPress={() => a.jumpCaizhi(1)} />
-          <Button systemImage="archivebox" label="归档" onPress={() => a.jumpCaizhi(2)} />
+          <Button
+            systemImage="tray"
+            label={t("components.tabMenu.inbox")}
+            onPress={() => a.jumpCaizhi(0)}
+          />
+          <Button
+            systemImage="wand.and.sparkles"
+            label={t("components.tabMenu.distill")}
+            onPress={() => a.jumpCaizhi(1)}
+          />
+          <Button
+            systemImage="archivebox"
+            label={t("components.tabMenu.archive")}
+            onPress={() => a.jumpCaizhi(2)}
+          />
         </>
       );
     case "attention":
-      return <Button systemImage="arrow.clockwise" label="刷新统计" onPress={a.refreshAttention} />;
+      return (
+        <Button
+          systemImage="arrow.clockwise"
+          label={t("components.tabMenu.refreshStats")}
+          onPress={a.refreshAttention}
+        />
+      );
     case "profile":
       return (
         <>
-          <Button systemImage="square.and.pencil" label="编辑资料" onPress={a.editProfile} />
-          <Button systemImage="key" label="修改密码" onPress={a.changePassword} />
-          <Button systemImage="bell" label="通知" onPress={a.openNotifications} />
+          <Button
+            systemImage="square.and.pencil"
+            label={t("profile.account.editProfile")}
+            onPress={a.editProfile}
+          />
+          <Button
+            systemImage="key"
+            label={t("profile.account.changePassword")}
+            onPress={a.changePassword}
+          />
+          <Button
+            systemImage="bell"
+            label={t("components.tabMenu.notifications")}
+            onPress={a.openNotifications}
+          />
           <Divider />
           <Button
             systemImage="rectangle.portrait.and.arrow.right"
-            label="退出登录"
+            label={t("profile.logout.action")}
             // @expo/ui SwiftUI ButtonRole (native), 非 ARIA role —— aria-role 规则在此为误报
             // react-doctor-disable-next-line react-doctor/aria-role
             role="destructive"
@@ -67,7 +99,8 @@ function itemsFor(routeName: string, a: TabMenuActions): ReactNode {
 }
 
 export function TabContextMenu({ routeName, actions, icon, children }: TabContextMenuProps) {
-  const items = itemsFor(routeName, actions);
+  const { t } = useTranslation();
+  const items = itemsFor(routeName, actions, t);
   if (!UI || !MODS || !items) return <>{children}</>;
   const { Host, ContextMenu, Image } = UI;
   const { frame, glassEffect } = MODS;

@@ -1,0 +1,83 @@
+{
+  "splash": {
+    "stamp": "WISEFLOW · INAUGURAL ISSUE",
+    "tagline": "Master money. Master your future.",
+    "footer": "A QUIET LEDGER · EST. MMXXVI"
+  },
+  "notFound": {
+    "navTitle": "Lost",
+    "title": "You've wandered off.",
+    "note": "This path doesn't exist, or it isn't built yet.",
+    "backToInbox": "← Back to Inbox"
+  },
+  "tabMenu": {
+    "inbox": "Inbox",
+    "distill": "Distill",
+    "archive": "Archive",
+    "refreshStats": "Refresh Stats",
+    "notifications": "Notifications"
+  },
+  "colophon": {
+    "navTitle": "Colophon",
+    "tagline": "Master money. Master your future.",
+    "taglineEn": "以智驭财 · 行远致富",
+    "lede": {
+      "pre": "WiseFlow is an AI wealth companion that ",
+      "emphasis": "stays out of your way",
+      "post": "."
+    },
+    "intro": "It doesn't chase daily prices or pile on headlines. Instead, it helps you refine vague market instincts into a handful of high-conviction investment commitments.",
+    "introPull": "Fewer decisions.\nDeeper conviction.",
+    "debt": {
+      "label": "Cognitive Debt",
+      "meta": "COGNITIVE DEBT",
+      "intro": {
+        "pre": "Today's AI competes to hand you answers faster. The more you crave that shortcut, the more you quietly run up a ",
+        "emphasis": "“cognitive debt”",
+        "post": " — every judgment outsourced is a chance your mind was meant to grow, but skipped."
+      },
+      "para": {
+        "pre": "WiseFlow does the opposite. It never thinks for you; it hands the question back, again and again — every signal a chance for your mind to grow, every round of questioning a ",
+        "emphasis": "pleasure of thinking",
+        "post": ", a work that is yours alone."
+      },
+      "pull": "Others use AI to replace thinking.\nYou use WiseFlow to practice it."
+    },
+    "compound": {
+      "label": "Compounding Cognition",
+      "meta": "COMPOUNDING COGNITION",
+      "intro": {
+        "pre": "WiseFlow isn't a tool to make you “earn more.” It's a ",
+        "emphasis": "system for financial cognition",
+        "post": ", honed through five recurring acts."
+      },
+      "introSub": "Every complete cycle — capture, questioning, committee, signing, retrospective — is principal. Time compounds it for you, interest upon interest.",
+      "items": {
+        "observe": {
+          "text": "Observe — every signal you write down trains your attention.",
+          "subtext": "PHASE 1 · STILLNESS"
+        },
+        "reason": {
+          "text": "Reason — every five rounds of questioning train structured thinking.",
+          "subtext": "PHASE 2 · RITUAL"
+        },
+        "discipline": {
+          "text": "Discipline — every committee review recalibrates your circle of competence.",
+          "subtext": "PHASE 2 · RITUAL"
+        },
+        "commit": {
+          "text": "Commit — every commitment you sign trains pre-decision.",
+          "subtext": "PHASE 2 · RITUAL"
+        },
+        "reflect": {
+          "text": "Reflect — every retrospective trains you to see yourself clearly.",
+          "subtext": "PHASE 3 · MIRROR"
+        }
+      },
+      "close": "Wealth compounds from capital.\nCognition compounds from repetition.",
+      "closeBody": "A year on, you haven't just earned money — you've built a system of judgment that won't be swept along by market sentiment. It keeps compounding through your next investment, your next decade."
+    },
+    "footerIssue": "INAUGURAL ISSUE",
+    "footerColophon": "WISEFLOW · THE WAY OF WEALTH"
+  }
+}

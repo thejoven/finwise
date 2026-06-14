@@ -1,0 +1,83 @@
+{
+  "splash": {
+    "stamp": "财知 · 创刊号",
+    "tagline": "以智驭财 · 行远致富",
+    "footer": "A QUIET LEDGER · EST. MMXXVI"
+  },
+  "notFound": {
+    "navTitle": "迷路了",
+    "title": "走丢了。",
+    "note": "这条路径不存在, 或者还没建好。",
+    "backToInbox": "← 回信箱"
+  },
+  "tabMenu": {
+    "inbox": "信箱",
+    "distill": "降噪",
+    "archive": "归档",
+    "refreshStats": "刷新统计",
+    "notifications": "通知"
+  },
+  "colophon": {
+    "navTitle": "卷首语 · COLOPHON",
+    "tagline": "以智驭财 · 行远致富",
+    "taglineEn": "Master money. Master your future.",
+    "lede": {
+      "pre": "财知是一款",
+      "emphasis": "不打扰你",
+      "post": "的 AI 财富伙伴。"
+    },
+    "intro": "它不追每日行情、不堆砌资讯，而是帮你把模糊的市场直觉，淬炼成少数几个高确定性的投资承诺。",
+    "introPull": "少一点决策，\n多一份信念。",
+    "debt": {
+      "label": "认知的债务",
+      "meta": "COGNITIVE DEBT",
+      "intro": {
+        "pre": "市面上的 AI，都在比谁更快替你给出答案。你越贪图这种捷径，越在不知不觉中欠下一笔",
+        "emphasis": "“认知债务”",
+        "post": "——被代劳的每一个判断，都是大脑本该变强、却被你跳过的一次机会。"
+      },
+      "para": {
+        "pre": "财知反其道而行。它从不替你思考，只把问题一次次还给你——每一次信号都是大脑变强的机会，每一轮追问都是一次",
+        "emphasis": "思考的乐趣",
+        "post": "，一段只属于你的创作。"
+      },
+      "pull": "别人用 AI 代替思考，\n你用财知练习思考。"
+    },
+    "compound": {
+      "label": "复利的认知",
+      "meta": "COMPOUNDING COGNITION",
+      "intro": {
+        "pre": "财知不是一个让你“赚更多”的工具，而是一套通过五个动作循环不断打磨的",
+        "emphasis": "财商认知系统",
+        "post": "。"
+      },
+      "introSub": "每一次完整的录入、追问、过会、签字、复盘，都是一笔本金；时间会替你把它们利上滚利。",
+      "items": {
+        "observe": {
+          "text": "观察 — 每写下一条信号，是一次注意力的训练。",
+          "subtext": "PHASE 1 · 安静"
+        },
+        "reason": {
+          "text": "推理 — 每答完五轮追问，是一次结构化思考的训练。",
+          "subtext": "PHASE 2 · 仪式"
+        },
+        "discipline": {
+          "text": "纪律 — 每一次过会，是一次能力圈的校准。",
+          "subtext": "PHASE 2 · 仪式"
+        },
+        "commit": {
+          "text": "承诺 — 每签一份承诺书，是一次预决定的训练。",
+          "subtext": "PHASE 2 · 仪式"
+        },
+        "reflect": {
+          "text": "自省 — 每完成一次复盘，是一次照见自己的训练。",
+          "subtext": "PHASE 3 · 镜子"
+        }
+      },
+      "close": "财富的复利来自资本，\n认知的复利来自次数。",
+      "closeBody": "一年之后，你不只是赚到了钱 —— 你建立了一套不会被市场情绪裹挟的判断系统。这套系统会跟着你的下一笔投资、下一个十年，持续复利。"
+    },
+    "footerIssue": "创刊号",
+    "footerColophon": "WISEFLOW · 财知大道"
+  }
+}

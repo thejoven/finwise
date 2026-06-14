@@ -8,6 +8,7 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Mono, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -20,8 +21,14 @@ interface Props {
 }
 
 export function CluesTrigger({ items, loading, onPress }: Props) {
+  const { t } = useTranslation();
   const total = (items ?? []).reduce((acc, r) => acc + r.results.length, 0);
-  const label = total > 0 ? `线索 · ${total}` : loading ? "线索 · …" : "线索";
+  const label =
+    total > 0
+      ? t("refinement.clues.triggerCount", { count: total })
+      : loading
+        ? t("refinement.clues.triggerLoading")
+        : t("refinement.clues.triggerLabel");
 
   return (
     <TapEffect

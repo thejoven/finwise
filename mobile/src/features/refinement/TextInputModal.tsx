@@ -24,6 +24,7 @@
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { Display, DoubleRule, Mono, Serif, TapEffect } from "@/shared/components";
 import { NativeField } from "@/shared/native";
@@ -52,6 +53,7 @@ export function TextInputModal({
   onSave,
   onCancel,
 }: Props) {
+  const { t } = useTranslation();
   const [draft, setDraft] = useState("");
 
   // 打开瞬间 (visible false→true) 把外部 value 复制进 draft —— 渲染期 prev 比较, 不用 effect
@@ -74,17 +76,17 @@ export function TextInputModal({
         <View style={styles.headerBar}>
           <TapEffect onPress={onCancel} style={styles.headerBtn} disableEffect>
             <Serif size={13} style={styles.headerLeft}>
-              取消
+              {t("common.cancel")}
             </Serif>
           </TapEffect>
           <View style={styles.headerCenter}>
             <Mono size={9} style={styles.headerStamp}>
-              输入
+              {t("refinement.input.stamp")}
             </Mono>
           </View>
           <TapEffect onPress={() => onSave(draft.trim())} style={styles.headerBtn} disableEffect>
             <Serif size={13} weight="semibold" style={styles.headerRight}>
-              保存
+              {t("common.save")}
             </Serif>
           </TapEffect>
         </View>
@@ -119,7 +121,7 @@ export function TextInputModal({
             />
             <View style={styles.footRow}>
               <Mono size={9} style={styles.charCount}>
-                {`${draft.length} 字`}
+                {t("refinement.input.charCount", { count: draft.length })}
               </Mono>
             </View>
           </View>

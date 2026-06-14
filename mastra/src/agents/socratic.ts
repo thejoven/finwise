@@ -22,6 +22,7 @@ import { defaultModel } from "../llm/model.js";
 import { LENS_LIBRARY_BLOCK, lensFocusBlock, type LensId } from "./lens.js";
 import { MACRO_FINANCE_CONTEXT_BLOCK } from "./market-context.js";
 import { categoryContextBlock } from "./category.js";
+import { languageDirective } from "./language-context.js";
 import type { SearchResult } from "../tools/exa-search.js";
 
 // ─────────────────────────── Schemas ───────────────────────────
@@ -42,7 +43,7 @@ export const QuestionOption = z.object({
   // commitment_setup 的 id 规范: act_buy/act_sell/act_hold, dur_1m/3m/6m/12m/24m/36m.
   // 其它题型沿用 a/b/c/self 等短码 (≤ 8 字).
   id: z.string().min(1).max(16),
-  text: z.string().min(1).max(120),
+  text: z.string().min(1).max(360),
   is_distractor: z.boolean(),
   is_required: z.boolean().default(false),
   // 用户自行补充观点 — 选中后客户端展示文本框, open_text 走 user_answer.open_text.
@@ -271,6 +272,8 @@ export async function runSocratic(input: {
   /** 分类上下文 (分类名 + 分析指引), 空时不注入. */
   project_name?: string;
   project_guidance?: string;
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
 }): Promise<Question> {
   const userMessage = buildSocraticPrompt(input);
   const messages = [{ role: "user" as const, content: userMessage }];
@@ -348,6 +351,7 @@ function buildSocraticPrompt(input: {
   round_research?: SearchResult[];
   project_name?: string;
   project_guidance?: string;
+  language?: string;
 }): string {
   const catBlock = categoryContextBlock(input.project_name, input.project_guidance);
   const catPrefix = catBlock ? catBlock + "\n\n" : "";
@@ -362,7 +366,7 @@ function buildSocraticPrompt(input: {
   const roundLens = ROUND_LENS[input.round];
   const lensBlock = roundLens ? lensFocusBlock(roundLens.ids, roundLens.why) : "";
   const researchBlock = buildResearchBlock(input.round_research);
-  return `${catPrefix}${signals}${asset}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
+  return `${languageDirective(input.language)}${catPrefix}${signals}${asset}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
 }
 
 function buildResearchBlock(items?: SearchResult[]): string {
@@ -427,12 +431,16 @@ note 字段 (≤ 280 字, 产品语言, 给用户看的):
 export async function runDiagnosis(input: {
   question: Question;
   user_answer: PriorRound["user_answer"];
+  /** App 选定的输出语言. 空/简体 → 默认行为不变. */
+  language?: string;
 }): Promise<Diagnosis> {
   const msg = JSON.stringify({
     question: input.question,
     user_answer: input.user_answer,
   });
-  const messages = [{ role: "user" as const, content: msg }];
+  const messages = [
+    { role: "user" as const, content: `${languageDirective(input.language)}${msg}` },
+  ];
 
   let lastErr: unknown;
   for (let attempt = 1; attempt <= 2; attempt++) {

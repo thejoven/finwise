@@ -14,6 +14,8 @@
 
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 
 import {
   Display,
@@ -43,11 +45,12 @@ export function RefinementHistory({
   completedAt,
   defaultExpanded = false,
 }: Props) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(defaultExpanded);
   if (rounds.length === 0) return null;
   const ordered = [...rounds].sort((a, b) => a.round - b.round);
 
-  const headerMeta = buildHeaderMeta(rounds.length, decision);
+  const headerMeta = buildHeaderMeta(rounds.length, decision, t);
 
   return (
     <View style={styles.root}>
@@ -58,7 +61,7 @@ export function RefinementHistory({
       >
         <View style={styles.diamond} />
         <Sans size={10} weight="700" style={styles.headerLabel}>
-          五轮追问 · 档案
+          {t("refinement.history.label")}
         </Sans>
         <Serif size={10} italic style={styles.headerMeta}>
           {headerMeta}
@@ -75,7 +78,7 @@ export function RefinementHistory({
           <DoubleRule />
           {completedAt ? (
             <Mono size={10} style={styles.completedStamp}>
-              完成于 {formatLongDate(completedAt)}
+              {t("refinement.history.completedAt", { date: formatLongDate(completedAt) })}
             </Mono>
           ) : null}
           <View style={styles.list}>
@@ -89,14 +92,15 @@ export function RefinementHistory({
   );
 }
 
-function buildHeaderMeta(roundsLen: number, decision?: string): string {
-  const decLabel = decisionLabel(decision);
-  const parts = [`${roundsLen} 轮`];
+function buildHeaderMeta(roundsLen: number, decision: string | undefined, t: TFunction): string {
+  const decLabel = decisionLabel(decision, t);
+  const parts = [t("refinement.history.metaRounds", { count: roundsLen })];
   if (decLabel) parts.push(decLabel);
   return parts.join(" · ");
 }
 
 function RoundBlock({ round }: { round: RoundView }) {
+  const { t } = useTranslation();
   const userOpen = round.user_answer.open_text?.trim();
   const choiceIds = new Set(round.user_answer.choice_ids ?? []);
   const options = round.options ?? [];
@@ -107,7 +111,7 @@ function RoundBlock({ round }: { round: RoundView }) {
     <View style={styles.round}>
       <View style={styles.roundHead}>
         <Mono size={9} style={styles.roundStamp}>
-          ROUND {round.round} · {kindLabel(round.question_kind)}
+          ROUND {round.round} · {kindLabel(round.question_kind, t)}
         </Mono>
         <Mono size={9} style={styles.timeStamp}>
           {formatDuration(round.user_answer.time_ms)}
@@ -136,7 +140,7 @@ function RoundBlock({ round }: { round: RoundView }) {
       {options.length === 0 && userOpen ? (
         <View style={styles.openAnswer}>
           <Mono size={9} style={styles.metaLabel}>
-            你的回答
+            {t("refinement.history.yourAnswer")}
           </Mono>
           <Serif size={14} style={styles.openAnswerText}>
             {userOpen}
@@ -157,6 +161,7 @@ interface OptionRowProps {
 }
 
 function OptionRow({ option, selected, rank, userOpenText }: OptionRowProps) {
+  const { t } = useTranslation();
   return (
     <View style={[styles.option, selected && styles.optionSelected]}>
       <View style={styles.optionMarker}>
@@ -184,17 +189,17 @@ function OptionRow({ option, selected, rank, userOpenText }: OptionRowProps) {
         <View style={styles.optionTags}>
           {option.is_distractor ? (
             <Mono size={9} style={[styles.tag, styles.tagDistractor]}>
-              诱导
+              {t("refinement.history.tagDistractor")}
             </Mono>
           ) : null}
           {option.is_required ? (
             <Mono size={9} style={[styles.tag, styles.tagRequired]}>
-              必选
+              {t("refinement.history.tagRequired")}
             </Mono>
           ) : null}
           {option.is_user_input ? (
             <Mono size={9} style={[styles.tag, styles.tagUser]}>
-              自填
+              {t("refinement.history.tagUser")}
             </Mono>
           ) : null}
         </View>
@@ -204,17 +209,18 @@ function OptionRow({ option, selected, rank, userOpenText }: OptionRowProps) {
 }
 
 function DiagnosisRow({ diagnosis, answer }: { diagnosis: Diagnosis; answer: UserAnswer }) {
+  const { t } = useTranslation();
   // 选项有 open_text 但 options 列表里的 is_user_input 已经把它带出来了 — 这里不重复.
   // 仅当 options 不存在的 open 题用上面的 openAnswer block.
   void answer;
   return (
     <View style={styles.diagnosis}>
       <Mono size={9} style={styles.metaLabel}>
-        诊断
+        {t("refinement.history.diagnosis")}
       </Mono>
       <View style={[styles.diagnosisBadge, diagnosisBadgeStyle(diagnosis.kind)]}>
         <Sans size={10} weight="600" style={styles.diagnosisLabel}>
-          {diagnosisLabel(diagnosis.kind)}
+          {diagnosisLabel(diagnosis.kind, t)}
         </Sans>
       </View>
       {diagnosis.note ? (
@@ -228,31 +234,31 @@ function DiagnosisRow({ diagnosis, answer }: { diagnosis: Diagnosis; answer: Use
 
 // ───── helpers ─────
 
-function kindLabel(k: RoundView["question_kind"]): string {
+function kindLabel(k: RoundView["question_kind"], t: TFunction): string {
   switch (k) {
     case "single":
-      return "推演 · 单选";
+      return t("refinement.kind.single");
     case "multi":
-      return "漏选 · 多选";
+      return t("refinement.kind.multi");
     case "ordering":
-      return "排序";
+      return t("refinement.kind.orderingShort");
     case "open":
-      return "收尾 · 你自己写";
+      return t("refinement.kind.open");
     case "commitment_setup":
-      return "签字 · 承诺要素";
+      return t("refinement.kind.commitmentSetup");
   }
 }
 
-function diagnosisLabel(k: Diagnosis["kind"]): string {
+function diagnosisLabel(k: Diagnosis["kind"], t: TFunction): string {
   switch (k) {
     case "correct":
-      return "贴近";
+      return t("refinement.diagnosis.correct");
     case "partial_miss":
-      return "有漏";
+      return t("refinement.diagnosis.partialMiss");
     case "distractor":
-      return "被带偏";
+      return t("refinement.diagnosis.distractor");
     case "weak":
-      return "偏轻";
+      return t("refinement.diagnosis.weak");
   }
 }
 
@@ -269,10 +275,10 @@ function diagnosisBadgeStyle(k: Diagnosis["kind"]) {
   }
 }
 
-function decisionLabel(decision?: string): string | undefined {
+function decisionLabel(decision: string | undefined, t: TFunction): string | undefined {
   if (!decision) return undefined;
-  if (decision === "training_only") return "训练";
-  if (decision === "eligible_for_gate") return "进入分析师评审";
+  if (decision === "training_only") return t("refinement.history.decisionTraining");
+  if (decision === "eligible_for_gate") return t("refinement.history.decisionEligible");
   return decision;
 }
 

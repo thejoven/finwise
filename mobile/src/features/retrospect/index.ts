@@ -6,4 +6,4 @@ export {
   type Retrospect,
 } from "./hooks";
 
-export { RETROSPECT_QUESTIONS, type RetrospectQuestion } from "./questions";
+export { getRetrospectQuestions, type RetrospectQuestion } from "./questions";

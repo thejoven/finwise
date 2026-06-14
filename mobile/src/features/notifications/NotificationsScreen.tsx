@@ -17,6 +17,7 @@ import { useCallback, useMemo } from "react";
 import { Alert, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -34,6 +35,7 @@ import { formatClock } from "@/shared/format";
 import { useNotifications, type Notification } from "./store";
 
 export function NotificationsScreen() {
+  const { t } = useTranslation();
   const items = useNotifications((s) => s.items);
   const markRead = useNotifications((s) => s.markRead);
   const markAllRead = useNotifications((s) => s.markAllRead);
@@ -41,6 +43,16 @@ export function NotificationsScreen() {
   const unread = useMemo(() => items.filter((n) => !n.read).length, [items]);
 
   const groups = useMemo(() => groupByDay(items), [items]);
+
+  const groupLabel = useCallback(
+    (g: Group): string => {
+      if (g.kind === "today") return t("notifications.group.today");
+      if (g.kind === "yesterday") return t("notifications.group.yesterday");
+      const d = new Date(Number(g.key));
+      return t("notifications.group.monthDay", { month: d.getMonth() + 1, day: d.getDate() });
+    },
+    [t],
+  );
 
   const handleTap = useCallback(
     (n: Notification) => {
@@ -53,21 +65,21 @@ export function NotificationsScreen() {
   );
 
   const handleClear = useCallback(() => {
-    Alert.alert("清空消息通知", "全部历史消息将被删除, 无法恢复.", [
-      { text: "再想想", style: "cancel" },
-      { text: "清空", style: "destructive", onPress: () => void clearAll() },
+    Alert.alert(t("notifications.clearConfirm.title"), t("notifications.clearConfirm.message"), [
+      { text: t("common.rethink"), style: "cancel" },
+      { text: t("notifications.toolbar.clear"), style: "destructive", onPress: () => void clearAll() },
     ]);
-  }, [clearAll]);
+  }, [clearAll, t]);
 
   return (
     <SafeAreaView edges={["top", "bottom"]} style={styles.root}>
       <View style={styles.header}>
         <TapEffect style={styles.backBtn} onPress={() => router.back()} disableEffect>
           <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-          <Serif size={13}>返回</Serif>
+          <Serif size={13}>{t("common.back")}</Serif>
         </TapEffect>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          消息通知
+          {t("notifications.title")}
         </Sans>
         <View style={styles.headerSpacer} />
       </View>
@@ -75,20 +87,22 @@ export function NotificationsScreen() {
       {/* 工具栏: 未读计数 + 全部已读 + 清空 */}
       <View style={styles.toolbar}>
         <Mono size={10} style={styles.unreadLabel}>
-          {unread > 0 ? `${unread} 条未读 / ${items.length} 条` : `${items.length} 条 · 全部已读`}
+          {unread > 0
+            ? t("notifications.toolbar.unread", { unread, total: items.length })
+            : t("notifications.toolbar.allRead", { total: items.length })}
         </Mono>
         <View style={styles.toolbarActions}>
           {unread > 0 ? (
             <TapEffect style={styles.toolBtn} onPress={() => void markAllRead()}>
               <Mono size={10} style={styles.toolBtnLabel}>
-                全部已读
+                {t("notifications.toolbar.markAllRead")}
               </Mono>
             </TapEffect>
           ) : null}
           {items.length > 0 ? (
             <TapEffect style={styles.toolBtn} onPress={handleClear}>
               <Mono size={10} style={styles.toolBtnLabel}>
-                清空
+                {t("notifications.toolbar.clear")}
               </Mono>
             </TapEffect>
           ) : null}
@@ -99,16 +113,19 @@ export function NotificationsScreen() {
         {items.length === 0 ? (
           <View style={styles.empty}>
             <Display size={20} italic style={styles.emptyTitle}>
-              没有消息。
+              {t("notifications.empty.title")}
             </Display>
             <Serif size={13} italic style={styles.emptyHint}>
-              AI 推演完成 / 五轮追问完成等异步事件触发后会出现在这里. 错过 toast 也能回看.
+              {t("notifications.empty.hint")}
             </Serif>
           </View>
         ) : (
           groups.map((g) => (
             <View key={g.key} style={styles.group}>
-              <SectionHeader label={g.label} meta={`${g.items.length} 条`} />
+              <SectionHeader
+                label={groupLabel(g)}
+                meta={t("notifications.group.count", { count: g.items.length })}
+              />
               <DoubleRule />
               {g.items.map((n) => (
                 <NotificationRow key={n.id} item={n} onPress={() => handleTap(n)} />
@@ -155,7 +172,8 @@ function NotificationRow({ item, onPress }: { item: Notification; onPress: () =>
 
 interface Group {
   key: string;
-  label: string;
+  /** 分组类型: 今天 / 昨天 / 具体日期 — label 文案在渲染时按当前语言解析. */
+  kind: "today" | "yesterday" | "date";
   items: Notification[];
 }
 
@@ -166,20 +184,19 @@ function groupByDay(items: Notification[]): Group[] {
 
   for (const n of items) {
     const day = startOfDay(n.createdAt);
-    let label: string;
+    let kind: Group["kind"];
     let key: string;
     if (day === today) {
       key = "today";
-      label = "今天";
+      kind = "today";
     } else if (day === yesterday) {
       key = "yesterday";
-      label = "昨天";
+      kind = "yesterday";
     } else {
       key = String(day);
-      const d = new Date(day);
-      label = `${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+      kind = "date";
     }
-    if (!map.has(key)) map.set(key, { key, label, items: [] });
+    if (!map.has(key)) map.set(key, { key, kind, items: [] });
     map.get(key)!.items.push(n);
   }
 

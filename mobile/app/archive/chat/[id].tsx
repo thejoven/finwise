@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -37,7 +38,7 @@ import Animated, {
 
 import { Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
-import { analystByGate, gateVerdictText, type ArchivePoolT } from "@/core/api/gate";
+import { analystByGate, analystName, analystRole, gateVerdictText } from "@/core/api/gate";
 import {
   useGateChat,
   useGateEvaluation,
@@ -45,15 +46,9 @@ import {
   type GateChatMessage,
 } from "@/features/archive/hooks";
 
-const POOL_NOTE: Record<ArchivePoolT, string> = {
-  observation: "这条先放观察池 — 不丢. 等更多独立角度的同一观察出现, 它会变厚.",
-  calendar: "这条先放日历池 — 窗口没到, 时间到了再回来看.",
-  lesson: "这条进了课堂池 — 不是惩罚. 下次再遇到类似的, 你能更快认出来.",
-  discard: "这条进了已弃池 — 市场已经定价, 你看见的不再是 leading.",
-};
-
 export default function AnalystChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { t } = useTranslation();
   const { data: evaluation, isError: evalError } = useGateEvaluation(id);
   const chatQuery = useGateChat(id);
   const { send, isSending, sendError } = useSendGateChat(id);
@@ -65,6 +60,8 @@ export default function AnalystChatScreen() {
   const didFirstScroll = useRef(false);
 
   const analyst = analystByGate(evaluation?.failed_gate);
+  const analystDisplayName = analystName(analyst);
+  const analystDisplayRole = analystRole(analyst);
   const messages = chatQuery.data ?? [];
 
   const handleSend = useCallback(async () => {
@@ -92,7 +89,7 @@ export default function AnalystChatScreen() {
 
   return (
     <SafeAreaView style={styles.root} edges={["top", "bottom"]}>
-      <Header name={analyst?.name ?? "分析师"} role={analyst?.role ?? ""} />
+      <Header name={analystDisplayName} role={analystDisplayRole} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -107,7 +104,7 @@ export default function AnalystChatScreen() {
         >
           {evalError ? (
             <Serif size={13} italic style={styles.error}>
-              读取这条评估遇到了问题, 退回去再进一次.
+              {t("archive.chat.evalError")}
             </Serif>
           ) : !evaluation ? (
             <Serif size={12} italic style={styles.muted}>
@@ -118,33 +115,33 @@ export default function AnalystChatScreen() {
               <SignalModule evaluation={evaluation} />
 
               {/* 开场白: 归档时分析师的否决理由, 永远是对话的第一句 */}
-              <AnalystBubble name={analyst?.name ?? "分析师"} first>
+              <AnalystBubble name={analystDisplayName} first>
                 <Serif size={14} style={styles.bubbleText}>
                   {gateVerdictText(evaluation)}
                 </Serif>
                 <Directions evaluation={evaluation} />
                 {evaluation.archived_pool ? (
                   <Serif size={12} italic style={styles.poolNote}>
-                    {POOL_NOTE[evaluation.archived_pool]}
+                    {t(`archive.chat.poolNote.${evaluation.archived_pool}`)}
                   </Serif>
                 ) : null}
               </AnalystBubble>
 
               {messages.map((m) => (
-                <MessageRow key={m.id} message={m} analystName={analyst?.name ?? "分析师"} />
+                <MessageRow key={m.id} message={m} analystName={analystDisplayName} />
               ))}
 
               {pendingText ? <UserBubble content={pendingText} /> : null}
-              {isSending ? <ThinkingBubble name={analyst?.name ?? "分析师"} /> : null}
+              {isSending ? <ThinkingBubble name={analystDisplayName} /> : null}
 
               {sendError && !isSending ? (
                 <Serif size={12} italic style={styles.sendError}>
-                  ◆ 分析师暂时没回上来 — 网络或模型偶发. 你的话还在输入框里, 再发一次.
+                  {t("archive.chat.sendError")}
                 </Serif>
               ) : null}
 
               <Serif size={11} italic style={styles.disclaimer}>
-                这场对话不改判. 真有新证据, 把它录成新信号, 再走一次追问与评审.
+                {t("archive.chat.disclaimer")}
               </Serif>
             </>
           )}
@@ -156,7 +153,7 @@ export default function AnalystChatScreen() {
             style={styles.input}
             value={draft}
             onChangeText={setDraft}
-            placeholder="回他一句 — 为什么拦 / 差在哪 / 什么会让你改判"
+            placeholder={t("archive.chat.placeholder")}
             placeholderTextColor={theme.color.muted2}
             multiline
             maxLength={1000}
@@ -179,11 +176,12 @@ export default function AnalystChatScreen() {
 // ───── 页面块 ─────
 
 function Header({ name, role }: { name: string; role: string }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("archive.chat.back")}</Serif>
       </TapEffect>
       <View style={styles.headerCenter}>
         <Sans size={9} weight="600" style={styles.headerStamp}>
@@ -206,13 +204,15 @@ function SignalModule({
 }: {
   evaluation: NonNullable<ReturnType<typeof useGateEvaluation>["data"]>;
 }) {
+  const { t } = useTranslation();
   const sig = evaluation.signal;
   const date = evaluation.evaluated_at.slice(0, 10).replace(/-/g, "·");
+  const dateStamp = `${date} · ${t("archive.chat.archivedStamp")}`;
   if (!sig) {
     return (
       <View style={styles.signalModule}>
         <Mono size={9} style={styles.signalDate}>
-          {date} · 投决会归档
+          {dateStamp}
         </Mono>
       </View>
     );
@@ -225,7 +225,7 @@ function SignalModule({
     >
       <View style={styles.signalHead}>
         <Mono size={9} style={styles.signalDate}>
-          {date} · 投决会归档
+          {dateStamp}
         </Mono>
         <Icon name="arrowUpRight" size={11} color={theme.color.muted} strokeWidth={1.5} />
       </View>
@@ -263,6 +263,7 @@ function AnalystBubble({
   first?: boolean;
   children: React.ReactNode;
 }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.analystBlock}>
       <View style={styles.analystSign}>
@@ -276,7 +277,7 @@ function AnalystBubble({
         </Sans>
         {first ? (
           <Mono size={9} style={styles.firstStamp}>
-            归档结论
+            {t("archive.chat.firstStamp")}
           </Mono>
         ) : null}
       </View>
@@ -343,12 +344,13 @@ function Directions({
 }: {
   evaluation: NonNullable<ReturnType<typeof useGateEvaluation>["data"]>;
 }) {
+  const { t } = useTranslation();
   const directions = evaluation.gates.g2_anti_consensus.unpriced_directions ?? [];
   if (evaluation.failed_gate !== 2 || directions.length === 0) return null;
   return (
     <View style={styles.directions}>
       <Mono size={9} style={styles.directionsLabel}>
-        未被定价的方向
+        {t("archive.chat.unpricedDirections")}
       </Mono>
       {directions.map((d) => (
         <View key={d.angle} style={styles.directionItem}>

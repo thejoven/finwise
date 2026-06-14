@@ -1,0 +1,40 @@
+{
+  "stamp": "注意力档案",
+  "title": "统计",
+  "completedCount": "{{count}} 次完成",
+  "window": {
+    "7d": "7 天",
+    "30d": "30 天",
+    "all": "全部"
+  },
+  "error": "读统计数据失败, 下拉刷新或稍后再开.",
+  "loading": "正在汇总…",
+  "empty": {
+    "header": "还没数据",
+    "meta": "完成第一次五轮追问后会出现",
+    "body": "系统会在每次五轮追问完成后, 自动生成本次的注意力档案 — 包含 4 个维度评分 + 一条洞察 + 一条盲点提示."
+  },
+  "scores": {
+    "stamp": "四维评分 · 近期均值"
+  },
+  "dimensions": {
+    "focus": "专注",
+    "depth": "深度",
+    "breadth": "广度",
+    "execution": "执行"
+  },
+  "trend": {
+    "stamp": "趋势 · 近 {{count}} 次",
+    "stampPlain": "趋势",
+    "needMore": "需要 2 次以上完成才能画趋势曲线 — 当前 {{count}} 次."
+  },
+  "tags": {
+    "stamp": "领域分布",
+    "empty": "近期没有可统计的标签."
+  },
+  "insight": {
+    "completedAt": "完成于 {{when}} · {{ref}}",
+    "stamp": "本次洞察",
+    "blindspotStamp": "盲点 · 下次注意"
+  }
+}

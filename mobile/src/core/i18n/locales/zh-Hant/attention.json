@@ -1,0 +1,40 @@
+{
+  "stamp": "注意力檔案",
+  "title": "統計",
+  "completedCount": "{{count}} 次完成",
+  "window": {
+    "7d": "7 天",
+    "30d": "30 天",
+    "all": "全部"
+  },
+  "error": "讀統計資料失敗，下拉重新整理或稍後再開。",
+  "loading": "正在彙總…",
+  "empty": {
+    "header": "還沒資料",
+    "meta": "完成第一次五輪追問後會出現",
+    "body": "系統會在每次五輪追問完成後，自動生成本次的注意力檔案 — 包含 4 個維度評分 + 一條洞察 + 一條盲點提示。"
+  },
+  "scores": {
+    "stamp": "四維評分 · 近期均值"
+  },
+  "dimensions": {
+    "focus": "專注",
+    "depth": "深度",
+    "breadth": "廣度",
+    "execution": "執行"
+  },
+  "trend": {
+    "stamp": "趨勢 · 近 {{count}} 次",
+    "stampPlain": "趨勢",
+    "needMore": "需要 2 次以上完成才能畫趨勢曲線 — 目前 {{count}} 次。"
+  },
+  "tags": {
+    "stamp": "領域分布",
+    "empty": "近期沒有可統計的標籤。"
+  },
+  "insight": {
+    "completedAt": "完成於 {{when}} · {{ref}}",
+    "stamp": "本次洞察",
+    "blindspotStamp": "盲點 · 下次注意"
+  }
+}

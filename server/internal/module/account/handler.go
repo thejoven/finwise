@@ -63,6 +63,7 @@ type updateMeRequest struct {
 	DisplayName *string `json:"display_name"`
 	Bio         *string `json:"bio"`
 	AvatarURL   *string `json:"avatar_url"`
+	Language    *string `json:"language"`
 }
 
 type changePasswordRequest struct {
@@ -76,6 +77,7 @@ type userView struct {
 	DisplayName *string   `json:"display_name,omitempty"`
 	AvatarURL   *string   `json:"avatar_url,omitempty"`
 	Bio         *string   `json:"bio,omitempty"`
+	Language    *string   `json:"language,omitempty"`
 	IsAdmin     bool      `json:"is_admin"`
 	CreatedAt   time.Time `json:"created_at"`
 }
@@ -97,6 +99,7 @@ func toUserView(u *PublicUser) userView {
 		DisplayName: u.DisplayName,
 		AvatarURL:   u.AvatarURL,
 		Bio:         u.Bio,
+		Language:    u.Language,
 		IsAdmin:     u.IsAdmin,
 		CreatedAt:   u.CreatedAt,
 	}
@@ -184,6 +187,7 @@ func (h *Handler) updateMe(c *gin.Context) {
 		DisplayName: req.DisplayName,
 		Bio:         req.Bio,
 		AvatarURL:   req.AvatarURL,
+		Language:    req.Language,
 	})
 	if err != nil {
 		writeServiceError(c, err)

@@ -10,12 +10,16 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Mono, Sans, Serif, SectionHeader } from "@/shared/components";
 import { theme } from "@/core/theme";
+import i18n from "@/core/i18n";
 import {
   ANALYSTS,
   analystByGate,
+  analystName,
+  analystRole,
   type GateEvaluation,
   type UnpricedDirection,
 } from "@/core/api/gate";
@@ -30,15 +34,15 @@ interface GateFeedbackProps {
 // 分析师名单来自 @/core/api/gate 的 ANALYSTS (单一事实源).
 
 export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackProps) {
+  const { t } = useTranslation();
   if (!refinementCompleted) return null;
 
   if (!evaluation) {
     return (
       <View style={styles.container}>
-        <SectionHeader label="分析师评审" meta="等待评估" />
+        <SectionHeader label={t("gate.committee.review")} meta={t("gate.committee.waiting")} />
         <Serif size={12} italic style={styles.muted}>
-          追问完成后, 后台会请四位分析师 (佐证 · 共识 · 时机 · 能力圈) 各审一遍.
-          通常在一两分钟内出结果.
+          {t("gate.committee.waitingHint")}
         </Serif>
       </View>
     );
@@ -50,11 +54,11 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
   return (
     <View style={styles.container}>
       <SectionHeader
-        label="分析师评审"
+        label={t("gate.committee.review")}
         meta={
           passedAll
-            ? "全员通过 · 进入承诺书草案"
-            : `${analystByGate(failedGate)?.name ?? "分析师"}没通过`
+            ? t("gate.committee.passedAll")
+            : t("gate.committee.analystFailed", { name: analystName(analystByGate(failedGate)) })
         }
       />
 
@@ -72,10 +76,10 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
               <View style={styles.body}>
                 <View style={styles.headRow}>
                   <Sans size={12} weight="600" style={styles.label}>
-                    {a.name}
+                    {analystName(a)}
                   </Sans>
                   <Serif size={11} italic style={styles.hint}>
-                    {a.role}
+                    {analystRole(a)}
                   </Serif>
                 </View>
                 {detail ? (
@@ -104,11 +108,12 @@ export function GateFeedback({ evaluation, refinementCompleted }: GateFeedbackPr
 // 共识分析师的"未被定价的方向". 已被定价时把死路改成指方向 — angle 指针 + why 解释 + 可选 lens.
 // 没有方向 (老评估行 / 沉默) 就整块不渲染. 这不是荐股, 只是"往哪看".
 function DirectionList({ directions }: { directions?: UnpricedDirection[] }) {
+  const { t } = useTranslation();
   if (!directions || directions.length === 0) return null;
   return (
     <View style={styles.directions}>
       <Mono size={10} style={styles.directionsLabel}>
-        未被定价的方向
+        {t("gate.committee.unpricedDirections")}
       </Mono>
       {directions.map((d) => (
         <View key={d.angle} style={styles.directionItem}>
@@ -146,19 +151,22 @@ function gateDetailText(gateId: 1 | 2 | 3 | 4, ev: GateEvaluation): string {
   const g = ev.gates;
   switch (gateId) {
     case 1:
-      return g.g1_thickness.detail ?? `${g.g1_thickness.count} 条相关信号`;
+      return g.g1_thickness.detail ?? i18n.t("gate.gateDetail.thicknessCount", { count: g.g1_thickness.count });
     case 2:
-      return g.g2_anti_consensus.detail ?? `共识分 ${g.g2_anti_consensus.score.toFixed(2)}`;
+      return (
+        g.g2_anti_consensus.detail ??
+        i18n.t("gate.gateDetail.consensusScore", { score: g.g2_anti_consensus.score.toFixed(2) })
+      );
     case 3:
-      return g.g3_window.detail ?? `窗口 ${g.g3_window.months} 个月`;
+      return g.g3_window.detail ?? i18n.t("gate.gateDetail.windowMonths", { months: g.g3_window.months });
     case 4: {
       if (g.g4_edge.detail) return g.g4_edge.detail;
       const s = g.g4_edge.sub;
       const checks = [
-        s.explain ? "讲得清" : null,
-        s.direct ? "亲历" : null,
-        s.track_record ? "有 track" : null,
-        s.exit_known ? "知退" : null,
+        s.explain ? i18n.t("gate.gateDetail.edge.explain") : null,
+        s.direct ? i18n.t("gate.gateDetail.edge.direct") : null,
+        s.track_record ? i18n.t("gate.gateDetail.edge.trackRecord") : null,
+        s.exit_known ? i18n.t("gate.gateDetail.edge.exitKnown") : null,
       ].filter(Boolean);
       return checks.length > 0 ? checks.join(" · ") : "";
     }

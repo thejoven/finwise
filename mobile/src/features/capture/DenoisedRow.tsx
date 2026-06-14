@@ -1,5 +1,6 @@
 import { StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -18,17 +19,14 @@ import type { MergedSignal } from "./hooks";
  * 这里把"降噪后的分析"放主位, 给降噪 tab 用.
  */
 
-const ORDER_LABEL: Record<string, string> = {
-  first: "一阶",
-  second: "二阶",
-  third: "三阶",
-};
+const KNOWN_ORDERS = new Set(["first", "second", "third"]);
 
 interface Props {
   signal: MergedSignal;
 }
 
 export function DenoisedRow({ signal }: Props) {
+  const { t } = useTranslation();
   const assets = signal.related_assets ?? [];
   const tags = signal.inference_tags ?? [];
   return (
@@ -58,9 +56,10 @@ export function DenoisedRow({ signal }: Props) {
                 <Mono size={12} style={styles.ticker}>
                   {a.ticker}
                 </Mono>
-                {ORDER_LABEL[a.order] ? (
+                {KNOWN_ORDERS.has(a.order) ? (
                   <Sans size={9} weight="700" style={styles.order}>
-                    {ORDER_LABEL[a.order]}
+                    {/* a.order 已经过 KNOWN_ORDERS.has 守卫; 动态 key 转型成合法 key 让严格类型放行 */}
+                    {t(`capture.denoisedRow.order.${a.order}` as "capture.denoisedRow.order.first")}
                   </Sans>
                 ) : null}
               </View>
@@ -76,7 +75,7 @@ export function DenoisedRow({ signal }: Props) {
 
       {signal.raw_text ? (
         <Serif size={11} italic style={styles.origin} numberOfLines={1}>
-          缘起：{signal.raw_text}
+          {t("capture.denoisedRow.origin", { text: signal.raw_text })}
         </Serif>
       ) : null}
     </TapEffect>

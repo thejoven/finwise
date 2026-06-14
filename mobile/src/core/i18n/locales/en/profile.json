@@ -1,0 +1,63 @@
+{
+  "archiveStamp": "READER FILE",
+  "title": "Profile.",
+  "sections": {
+    "account": "Account",
+    "preferences": "Preferences"
+  },
+  "account": {
+    "editProfile": "Edit Profile",
+    "changePassword": "Change Password",
+    "notifications": "Notifications",
+    "noNotifications": "None"
+  },
+  "preferences": {
+    "colophon": "Colophon · About",
+    "search": "Search Observations"
+  },
+  "joinedOn": "Joined {{date}}",
+  "bioEmpty": "No bio yet.",
+  "syncing": "Syncing…",
+  "logout": {
+    "action": "Sign Out",
+    "confirm": "Sign out of this account?",
+    "cancel": "Not now",
+    "confirmAction": "Sign Out"
+  },
+  "devMode": {
+    "notice": "Debug dev-token mode — not signed in to any account.",
+    "login": "Sign In"
+  },
+  "saving": "Saving…",
+  "edit": {
+    "topBar": "Edit Profile",
+    "title": "Edit Profile.",
+    "hint": "Your email can't be changed here.\nYour name and bio are public, but for now only you can see them.",
+    "emailLabel": "Email (read-only)",
+    "nameLabel": "Display name",
+    "namePlaceholder": "What should we call you",
+    "bioLabel": "Bio",
+    "bioPlaceholder": "A line about yourself"
+  },
+  "password": {
+    "topBar": "Change Password",
+    "title": "Change Password.",
+    "hint": "After this, all devices are signed out and you'll need to sign in again with the new password.",
+    "oldLabel": "Current password",
+    "oldPlaceholder": "Current password",
+    "newLabel": "New password",
+    "newPlaceholder": "At least 8 characters",
+    "confirmLabel": "Confirm new password",
+    "confirmPlaceholder": "Enter it again",
+    "mismatch": "The two entries don't match.",
+    "saveAndExit": "Save & Sign Out"
+  },
+  "search": {
+    "topBar": "Search",
+    "title": "Search Observations.",
+    "placeholder": "Type a keyword…",
+    "hint": "Search your raw notes and AI summaries by keyword.",
+    "searching": "Searching…",
+    "noMatch": "No matches for “{{query}}”."
+  }
+}

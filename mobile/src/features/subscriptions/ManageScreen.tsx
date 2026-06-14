@@ -11,6 +11,7 @@ import {
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 import { HTTPError } from "ky";
 
 import { Display, Icon, Mono, Sans, Serif, TapEffect } from "@/shared/components";
@@ -34,6 +35,7 @@ import {
  * 灰态卡不是死 UI — 是路线图可视化, 也倒逼 subscriptions 表 v1 起多态 (§4.2).
  */
 export function ManageScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const subsQuery = useSubscriptions();
   const subs = subsQuery.data?.items ?? [];
@@ -56,12 +58,12 @@ export function ManageScreen() {
       } catch {
         // body 不是 JSON — 落到状态码兜底
       }
-      if (err.response.status === 404) return "没有找到这个账号";
-      if (err.response.status === 409) return "先读完手头的, 再添新的。";
-      if (err.response.status === 503) return "采集服务暂不可用, 稍后再试";
+      if (err.response.status === 404) return t("subscriptions.errors.notFound");
+      if (err.response.status === 409) return t("subscriptions.errors.quota");
+      if (err.response.status === 503) return t("subscriptions.errors.collectorUnavailable");
     }
-    return "出了点问题, 再试一次";
-  }, []);
+    return t("subscriptions.errors.generic");
+  }, [t]);
 
   const handleResolve = useCallback(() => {
     const h = handleInput.trim();
@@ -84,17 +86,23 @@ export function ManageScreen() {
       onSuccess: () => {
         setSubscribed(true);
         setHandleInput("");
-        setFeedback("已订阅。正在回填最近的推文, 新内容会出现在你的报纸里。");
+        setFeedback(t("subscriptions.manage.subscribed"));
       },
       onError: (err) => {
         void errMessage(err).then(setFeedback);
       },
     });
-  }, [preview, subscribeMut, errMessage]);
+  }, [preview, subscribeMut, errMessage, t]);
 
-  const plannedAlert = useCallback((label: string) => {
-    Alert.alert("在路上了", `${label}订阅还在规划中, 先把 X 账号读顺。`);
-  }, []);
+  const plannedAlert = useCallback(
+    (label: string) => {
+      Alert.alert(
+        t("subscriptions.manage.plannedTitle"),
+        t("subscriptions.manage.plannedBody", { label }),
+      );
+    },
+    [t],
+  );
 
   return (
     <View style={styles.root}>
@@ -111,7 +119,7 @@ export function ManageScreen() {
         >
           {/* ── header ── */}
           <View style={styles.headerRow}>
-            <Display size={20}>管理订阅</Display>
+            <Display size={20}>{t("subscriptions.manage.title")}</Display>
             <TapEffect onPress={() => router.back()} disableEffect style={styles.closeBtn}>
               <Icon name="close" size={20} color={theme.color.ink} strokeWidth={1.75} />
             </TapEffect>
@@ -119,50 +127,50 @@ export function ManageScreen() {
 
           {/* ── 类型选择区 (多类型预留; v1 只有 X 可用) ── */}
           <Mono size={10} style={styles.sectionLabel}>
-            信号源类型
+            {t("subscriptions.manage.sourceTypeLabel")}
           </Mono>
           <View style={styles.typeRow}>
             <View style={[styles.typeCard, styles.typeCardActive]}>
               <Sans size={12} weight="600" style={styles.typeName}>
-                X 账号
+                {t("subscriptions.manage.type.x")}
               </Sans>
               <Mono size={9} style={styles.typeStatus}>
-                可用
+                {t("subscriptions.manage.type.available")}
               </Mono>
             </View>
             <TapEffect
-              onPress={() => plannedAlert("Telegram 频道")}
+              onPress={() => plannedAlert(t("subscriptions.manage.type.telegram"))}
               style={[styles.typeCard, styles.typeCardPlanned]}
             >
               <Sans size={12} style={styles.typeNamePlanned}>
-                Telegram 频道
+                {t("subscriptions.manage.type.telegram")}
               </Sans>
               <Mono size={9} style={styles.typeStatusPlanned}>
-                规划中
+                {t("subscriptions.manage.type.planned")}
               </Mono>
             </TapEffect>
             <TapEffect
-              onPress={() => plannedAlert("新闻源 (RSS)")}
+              onPress={() => plannedAlert(t("subscriptions.manage.type.rss"))}
               style={[styles.typeCard, styles.typeCardPlanned]}
             >
               <Sans size={12} style={styles.typeNamePlanned}>
-                新闻源
+                {t("subscriptions.manage.type.rss")}
               </Sans>
               <Mono size={9} style={styles.typeStatusPlanned}>
-                规划中
+                {t("subscriptions.manage.type.planned")}
               </Mono>
             </TapEffect>
           </View>
 
           {/* ── 添加流 (X) ── */}
           <Mono size={10} style={styles.sectionLabel}>
-            添加订阅 · X 账号
+            {t("subscriptions.manage.addLabel")}
           </Mono>
           <View style={styles.addRow}>
             <TextInput
               value={handleInput}
               onChangeText={setHandleInput}
-              placeholder="elonmusk 或 @elonmusk"
+              placeholder={t("subscriptions.manage.handlePlaceholder")}
               placeholderTextColor={theme.color.muted2}
               autoCapitalize="none"
               autoCorrect={false}
@@ -172,7 +180,9 @@ export function ManageScreen() {
             />
             <TapEffect onPress={handleResolve} style={styles.resolveBtn}>
               <Sans size={12} weight="600" style={styles.resolveText}>
-                {resolve.isPending ? "解析中…" : "解析"}
+                {resolve.isPending
+                  ? t("subscriptions.manage.resolving")
+                  : t("subscriptions.manage.resolve")}
               </Sans>
             </TapEffect>
           </View>
@@ -207,7 +217,9 @@ export function ManageScreen() {
               ) : null}
               <TapEffect onPress={handleSubscribe} style={styles.confirmBtn}>
                 <Sans size={12} weight="600" style={styles.confirmText}>
-                  {subscribeMut.isPending ? "订阅中…" : "确认订阅"}
+                  {subscribeMut.isPending
+                    ? t("subscriptions.manage.subscribing")
+                    : t("subscriptions.manage.subscribe")}
                 </Sans>
               </TapEffect>
             </View>
@@ -217,7 +229,7 @@ export function ManageScreen() {
           {subs.length > 0 ? (
             <View>
               <Mono size={10} style={[styles.sectionLabel, styles.listLabel]}>
-                X 账号 · {subs.length}
+                {t("subscriptions.manage.listLabel", { count: subs.length })}
               </Mono>
               {subs.map((s) => (
                 <View key={s.id} style={styles.subRow}>
@@ -238,13 +250,15 @@ export function ManageScreen() {
                     {s.status !== "active" ? (
                       <View style={styles.deadPill}>
                         <Sans size={9} weight="600" style={styles.deadText}>
-                          已失效
+                          {t("subscriptions.manage.dead")}
                         </Sans>
                       </View>
                     ) : (
                       <Mono size={9} style={styles.subMeta}>
-                        未读 {s.unread_count}
-                        {s.last_polled_at ? `\n${relativeTimeZh(s.last_polled_at)}更新` : ""}
+                        {t("subscriptions.manage.subUnread", { count: s.unread_count })}
+                        {s.last_polled_at
+                          ? `\n${t("subscriptions.manage.lastPolled", { time: relativeTimeZh(s.last_polled_at) })}`
+                          : ""}
                       </Mono>
                     )}
                     <TapEffect
@@ -253,7 +267,7 @@ export function ManageScreen() {
                       style={styles.unsubBtn}
                     >
                       <Sans size={10} style={styles.unsubText}>
-                        取消订阅
+                        {t("subscriptions.manage.unsubscribe")}
                       </Sans>
                     </TapEffect>
                   </View>
@@ -263,7 +277,7 @@ export function ManageScreen() {
           ) : null}
 
           <Mono size={10} style={styles.footer}>
-            X 账号 {subs.length} / {limit} —— 先读完手头的, 再添新的。
+            {t("subscriptions.manage.footer", { count: subs.length, limit })}
           </Mono>
         </ScrollView>
       </KeyboardAvoidingView>

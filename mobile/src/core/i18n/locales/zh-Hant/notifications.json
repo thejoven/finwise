@@ -1,0 +1,23 @@
+{
+  "title": "訊息通知",
+  "toolbar": {
+    "unread": "{{unread}} 條未讀 / {{total}} 條",
+    "allRead": "{{total}} 條 · 全部已讀",
+    "markAllRead": "全部已讀",
+    "clear": "清空"
+  },
+  "clearConfirm": {
+    "title": "清空訊息通知",
+    "message": "全部歷史訊息將被刪除, 無法復原."
+  },
+  "empty": {
+    "title": "沒有訊息。",
+    "hint": "AI 推演完成 / 五輪追問完成等非同步事件觸發後會出現在這裡. 錯過 toast 也能回看."
+  },
+  "group": {
+    "today": "今天",
+    "yesterday": "昨天",
+    "monthDay": "{{month}} 月 {{day}} 日",
+    "count": "{{count}} 條"
+  }
+}

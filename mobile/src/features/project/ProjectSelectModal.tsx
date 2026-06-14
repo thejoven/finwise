@@ -25,6 +25,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { ScrollView } from "react-native-gesture-handler";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import {
   archiveProject,
@@ -83,6 +84,7 @@ export function ProjectSelectModal({
   initialStage = "list",
   onProjectCreated,
 }: Props) {
+  const { t } = useTranslation();
   const [stage, setStage] = useState<Stage>("list");
   const [draft, patchDraft] = useReducer(draftReducer, EMPTY_DRAFT);
 
@@ -259,7 +261,7 @@ export function ProjectSelectModal({
         <AnimatedPressable
           style={[styles.backdrop, backdropStyle]}
           onPress={onClose}
-          accessibilityLabel="关闭"
+          accessibilityLabel={t("common.close")}
         />
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : undefined}
@@ -281,15 +283,19 @@ export function ProjectSelectModal({
                 <TapEffect
                   onPress={() => setStage("list")}
                   style={styles.headerSide}
-                  accessibilityLabel="返回"
+                  accessibilityLabel={t("common.back")}
                 >
                   <Icon name="chevronLeft" size={20} color={theme.color.ink} strokeWidth={1.75} />
                 </TapEffect>
               )}
               <Display size={18} style={styles.headerTitle}>
-                {stage === "list" ? "分类" : stage === "create" ? "新建分类" : "编辑分类"}
+                {stage === "list"
+                  ? t("project.modal.title.list")
+                  : stage === "create"
+                    ? t("project.modal.title.create")
+                    : t("project.modal.title.edit")}
               </Display>
-              <TapEffect onPress={onClose} style={styles.headerSide} accessibilityLabel="关闭">
+              <TapEffect onPress={onClose} style={styles.headerSide} accessibilityLabel={t("common.close")}>
                 <Icon name="close" size={20} color={theme.color.ink} strokeWidth={1.75} />
               </TapEffect>
             </View>
@@ -340,10 +346,11 @@ interface ListBodyProps {
 }
 
 function ListBody({ items, activeId, onPick, onEdit, onCreate }: ListBodyProps) {
+  const { t } = useTranslation();
   return (
     <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
       <Mono size={9} style={styles.sectionStamp}>
-        ◆ 切换分类
+        ◆ {t("project.modal.switchSection")}
       </Mono>
       {/* 分类列表有界 (用户分类数, maxHeight 内滚动), ScrollView+map 足够; rn-no-scrollview-mapped-list 针对长列表. */}
       {/* react-doctor-disable-next-line react-doctor/rn-no-scrollview-mapped-list */}
@@ -361,7 +368,7 @@ function ListBody({ items, activeId, onPick, onEdit, onCreate }: ListBodyProps) 
       <TapEffect onPress={onCreate} style={styles.createRow}>
         <Icon name="plus" size={16} color={theme.color.ink2} strokeWidth={1.75} />
         <Sans size={13} weight="500" style={styles.createLabel}>
-          新建分类
+          {t("project.actions.newCategory")}
         </Sans>
       </TapEffect>
     </ScrollView>
@@ -378,6 +385,7 @@ interface RowProps {
 }
 
 function Row({ emoji, name, color, active, onPress, onEdit }: RowProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.row}>
       <TapEffect onPress={onPress} style={styles.rowMain}>
@@ -394,7 +402,7 @@ function Row({ emoji, name, color, active, onPress, onEdit }: RowProps) {
         {active ? <Icon name="check" size={16} color={theme.color.ink} strokeWidth={2} /> : null}
       </TapEffect>
       {onEdit ? (
-        <TapEffect onPress={onEdit} style={styles.rowEditBtn} accessibilityLabel="编辑">
+        <TapEffect onPress={onEdit} style={styles.rowEditBtn} accessibilityLabel={t("common.edit")}>
           <Icon name="pencil" size={14} color={theme.color.muted} strokeWidth={1.5} />
         </TapEffect>
       ) : null}
@@ -433,15 +441,16 @@ function EditBody({
   onArchive,
   busy,
 }: EditBodyProps) {
+  const { t } = useTranslation();
   return (
     <ScrollView style={styles.body} contentContainerStyle={styles.bodyContent}>
       <Mono size={9} style={styles.sectionStamp}>
-        ◆ 名称
+        ◆ {t("project.field.name")}
       </Mono>
       <NativeField
         value={name}
         onChangeText={setName}
-        placeholder="例如：泡泡玛特"
+        placeholder={t("project.field.namePlaceholder")}
         autoCapitalize="sentences"
         maxLength={40}
         bare
@@ -450,7 +459,7 @@ function EditBody({
       />
 
       <Mono size={9} style={[styles.sectionStamp, styles.sectionTop]}>
-        ◆ 图标（可选）
+        ◆ {t("project.field.icon")}
       </Mono>
       <View style={styles.swatchRow}>
         <TapEffect
@@ -458,7 +467,7 @@ function EditBody({
           style={[styles.emojiSwatch, !emoji && styles.swatchActive]}
         >
           <Sans size={11} style={styles.emojiNone}>
-            无
+            {t("project.field.none")}
           </Sans>
         </TapEffect>
         {EMOJI_SUGGESTIONS.map((e) => (
@@ -473,7 +482,7 @@ function EditBody({
       </View>
 
       <Mono size={9} style={[styles.sectionStamp, styles.sectionTop]}>
-        ◆ 颜色（可选）
+        ◆ {t("project.field.color")}
       </Mono>
       <View style={styles.swatchRow}>
         <TapEffect
@@ -481,7 +490,7 @@ function EditBody({
           style={[styles.colorSwatch, styles.colorNone, !color && styles.swatchActive]}
         >
           <Sans size={11} style={styles.emojiNone}>
-            无
+            {t("project.field.none")}
           </Sans>
         </TapEffect>
         {projectSwatches.map((c) => (
@@ -496,15 +505,15 @@ function EditBody({
       </View>
 
       <Mono size={9} style={[styles.sectionStamp, styles.sectionTop]}>
-        ◆ 分析指引（可选）
+        ◆ {t("project.field.guidance")}
       </Mono>
       <Serif size={12} italic style={styles.guidanceHint}>
-        给这个分类的 AI 推理写一句偏好，例如“关注渠道动销与海外扩张”。留空则不影响。
+        {t("project.field.guidanceHint")}
       </Serif>
       <NativeField
         value={guidance}
         onChangeText={setGuidance}
-        placeholder="这个分类要 AI 特别留意什么…"
+        placeholder={t("project.field.guidancePlaceholder")}
         autoCapitalize="sentences"
         multiline
         maxLength={2000}
@@ -520,14 +529,14 @@ function EditBody({
         style={[styles.saveBtn, (!name.trim() || busy) && styles.saveBtnDisabled]}
       >
         <Sans size={13} weight="600" style={styles.saveLabel}>
-          {stage === "create" ? "创建" : "保存"}
+          {stage === "create" ? t("project.actions.create") : t("common.save")}
         </Sans>
       </TapEffect>
 
       {onArchive ? (
         <TapEffect onPress={onArchive} disabled={busy} style={styles.archiveBtn}>
           <Sans size={12} weight="500" style={styles.archiveLabel}>
-            归档此分类
+            {t("project.actions.archive")}
           </Sans>
         </TapEffect>
       ) : null}

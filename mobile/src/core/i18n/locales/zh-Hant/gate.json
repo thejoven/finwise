@@ -1,0 +1,74 @@
+{
+  "committee": {
+    "name": "投決會",
+    "analyst": "分析師",
+    "review": "分析師評審",
+    "waiting": "等待評估",
+    "waitingHint": "追問完成後, 後台會請四位分析師 (佐證 · 共識 · 時機 · 能力圈) 各審一遍. 通常在一兩分鐘內出結果.",
+    "passedAll": "全員通過 · 進入承諾書草案",
+    "analystFailed": "{{name}}沒通過",
+    "analysts": {
+      "thickness": { "name": "佐證分析師", "role": "證據夠不夠厚" },
+      "antiConsensus": { "name": "共識分析師", "role": "市場是否已定價" },
+      "window": { "name": "時機分析師", "role": "時機對不對" },
+      "edge": { "name": "能力圈分析師", "role": "你是否真的懂" }
+    },
+    "unpricedDirections": "未被定價的方向"
+  },
+  "gateDetail": {
+    "thicknessCount": "{{count}} 條相關訊號",
+    "consensusScore": "共識分 {{score}}",
+    "windowMonths": "窗口 {{months}} 個月",
+    "edge": {
+      "explain": "講得清",
+      "direct": "親歷",
+      "trackRecord": "有 track",
+      "exitKnown": "知退"
+    }
+  },
+  "verdict": {
+    "thickness": "目前看到的獨立證據還不夠厚.",
+    "antiConsensus": "這件事市場已經討論得很熱了, 你看見的不算 leading.",
+    "window": "時機不在你的窗口裡.",
+    "edge": "這一條超出你目前的能力圈半徑."
+  },
+  "signal": {
+    "headerStamp": "訊號",
+    "back": "返回",
+    "empty": "沒有這條訊號。",
+    "loading": "正在載入…",
+    "loadFailed": "讀取失敗, 下拉重新整理或稍後再試。",
+    "inference": {
+      "title": "Inference",
+      "failed": "本條推演失敗, 不會自動重跑。",
+      "pending": "推演結果會在 30 秒內回填。這裡先空著。",
+      "statusDone": "已推演",
+      "statusPending": "推演中",
+      "statusFailed": "推演失敗"
+    },
+    "stuck": {
+      "hint": "◆ 推演卡住超過 {{seconds}}s — 大概率 LLM 輸出格式偶發不穩, 可以讓它重試一次.",
+      "retry": "讓它再推一次",
+      "retrying": "正在重新推演..."
+    },
+    "retryUpload": "重試上行",
+    "refine": {
+      "preparing": "正在準備追問...",
+      "again": "再追問一次 · 五輪",
+      "start": "開始追問 · 五輪"
+    },
+    "distill": {
+      "label": "降噪",
+      "meta": "這條訊號",
+      "beneficiaryLabel": "收益標的",
+      "beneficiaryMeta": "金融推演"
+    },
+    "financial": {
+      "label": "金融分析",
+      "meta": "推演標的",
+      "orderFirst": "一階",
+      "orderSecond": "二階",
+      "orderThird": "三階"
+    }
+  }
+}

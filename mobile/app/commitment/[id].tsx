@@ -19,6 +19,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -32,6 +33,7 @@ import {
 } from "@/shared/components";
 import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
+import i18n from "@/core/i18n";
 import { formatIsoDate } from "@/shared/format";
 
 import { useCommitment, usePostponeCommitment, useSignCommitment } from "@/features/commitment";
@@ -42,6 +44,7 @@ import { ProjectBadge } from "@/features/project/ProjectBadge";
 type FinalDecisionChoice = "as_drafted" | "lower_position" | "longer_hold" | "user_input";
 
 export default function CommitmentScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: commit, isLoading, isError } = useCommitment(id);
   const { sign, isSigning } = useSignCommitment();
@@ -112,11 +115,11 @@ export default function CommitmentScreen() {
         {companion ? <CompanionCard view={companion} /> : null}
         {isLoading ? (
           <Serif size={13} italic style={styles.muted}>
-            正在打开承诺书...
+            {t("commitment.loading")}
           </Serif>
         ) : isError || !commit ? (
           <Serif size={13} italic style={styles.error}>
-            打不开这份承诺书, 稍后再试.
+            {t("commitment.error")}
           </Serif>
         ) : (
           <Body commitment={commit} />
@@ -132,7 +135,7 @@ export default function CommitmentScreen() {
             onNote={setDecisionNote}
           />
           {showSlowSign ? (
-            <TypewriterText text="仍在签收中..." style={styles.slowText} italic />
+            <TypewriterText text={t("commitment.slowSign")} style={styles.slowText} italic />
           ) : null}
           <TapEffect
             style={[styles.primaryButton, !canSign && styles.buttonDim]}
@@ -141,7 +144,7 @@ export default function CommitmentScreen() {
             disabled={!canSign}
           >
             <Sans size={11} weight="700" style={styles.primaryLabel}>
-              {isSigning ? "正在签字..." : signButtonLabel(decisionChoice)}
+              {isSigning ? t("commitment.signing") : signButtonLabel(decisionChoice)}
             </Sans>
           </TapEffect>
           <TapEffect
@@ -150,7 +153,7 @@ export default function CommitmentScreen() {
             disabled={isSigning || isPostponing}
           >
             <Serif size={13} italic style={styles.secondaryLabel}>
-              先放着
+              {t("commitment.postpone")}
             </Serif>
           </TapEffect>
         </View>
@@ -179,34 +182,39 @@ interface FinalDecisionProps {
  * v1 客户端记录, 不修改 thesis 落库. M7.5 把 decision_note 推到 events.
  */
 function FinalDecision({ thesis, choice, note, onChoice, onNote }: FinalDecisionProps) {
+  const { t } = useTranslation();
   const lowerPct = Math.max(1, Math.round(thesis.position_pct - 2));
   const longerMonths = Math.min(36, thesis.duration_months + 6);
   const opts: { id: FinalDecisionChoice; label: string; hint: string }[] = [
     {
       id: "as_drafted",
-      label: "就照这份草稿签",
-      hint: `${actionLabel(thesis.action)} · ${thesis.position_pct.toFixed(0)}% · ${thesis.duration_months} 个月`,
+      label: t("commitment.decision.asDrafted.label"),
+      hint: t("commitment.decision.asDrafted.hint", {
+        action: actionLabel(thesis.action),
+        pct: thesis.position_pct.toFixed(0),
+        months: thesis.duration_months,
+      }),
     },
     {
       id: "lower_position",
-      label: "更保守 — 调小仓位",
-      hint: `仓位降到 ${lowerPct}% (其余不变)`,
+      label: t("commitment.decision.lowerPosition.label"),
+      hint: t("commitment.decision.lowerPosition.hint", { pct: lowerPct }),
     },
     {
       id: "longer_hold",
-      label: "更耐心 — 拉长持仓",
-      hint: `持仓拉到 ${longerMonths} 个月`,
+      label: t("commitment.decision.longerHold.label"),
+      hint: t("commitment.decision.longerHold.hint", { months: longerMonths }),
     },
     {
       id: "user_input",
-      label: "我有不一样的判断 — 写下来",
-      hint: "你自己的语言, 不少于 10 字",
+      label: t("commitment.decision.userInput.label"),
+      hint: t("commitment.decision.userInput.hint"),
     },
   ];
   return (
     <View style={decisionStyles.root}>
       <Mono size={9} style={decisionStyles.stamp}>
-        DECISION · 你的最终判断
+        {t("commitment.decision.stamp")}
       </Mono>
       <View style={decisionStyles.options}>
         {opts.map((o) => {
@@ -235,7 +243,7 @@ function FinalDecision({ thesis, choice, note, onChoice, onNote }: FinalDecision
         <NativeField
           value={note}
           onChangeText={onNote}
-          placeholder="例: 我接受买入但只用 3%, 因为这条信号还没穿过供应链层"
+          placeholder={t("commitment.decision.userInput.placeholder")}
           multiline
           minHeight={80}
           bare
@@ -263,17 +271,18 @@ function describeFinalChoice(choice: FinalDecisionChoice, note: string): string 
 function signButtonLabel(choice: FinalDecisionChoice): string {
   switch (choice) {
     case "lower_position":
-      return "按更保守的判断签字";
+      return i18n.t("commitment.signButton.lowerPosition");
     case "longer_hold":
-      return "按更耐心的判断签字";
+      return i18n.t("commitment.signButton.longerHold");
     case "user_input":
-      return "按我的判断签字";
+      return i18n.t("commitment.signButton.userInput");
     default:
-      return "签字, 提交承诺";
+      return i18n.t("commitment.signButton.asDrafted");
   }
 }
 
 function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["data"] }) {
+  const { t: tr } = useTranslation();
   if (!commitment) return null;
   const t = commitment.thesis;
   const signed = commitment.status === "signed";
@@ -283,10 +292,10 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
     <View style={styles.body}>
       <Mono size={9} style={styles.stamp}>
         {signed
-          ? `已签字 · ${formatIsoDate(commitment.signed_at ?? "")}`
+          ? tr("commitment.status.signedOn", { date: formatIsoDate(commitment.signed_at ?? "") })
           : postponed
-            ? `已放置 · ${commitment.postpone_count}/3`
-            : "草稿 · 等你签字"}
+            ? tr("commitment.status.postponed", { count: commitment.postpone_count })
+            : tr("commitment.status.draft")}
       </Mono>
 
       <ProjectBadge projectId={commitment.project_id} />
@@ -299,17 +308,21 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
         </Display>
       </Display>
       <Mono size={11} style={styles.meta}>
-        {actionLabel(t.action)} · {t.position_pct.toFixed(0)}% 仓位 · {t.duration_months} 个月
+        {tr("commitment.meta", {
+          action: actionLabel(t.action),
+          pct: t.position_pct.toFixed(0),
+          months: t.duration_months,
+        })}
       </Mono>
 
       <DoubleRule />
 
-      <SectionHeader label="进入" meta="ENTRY" />
+      <SectionHeader label={tr("commitment.section.entry")} meta="ENTRY" />
       <Serif size={15} style={styles.entry}>
         {t.entry_method}
       </Serif>
 
-      <SectionHeader label="退出条件" meta="EXIT" />
+      <SectionHeader label={tr("commitment.section.exit")} meta="EXIT" />
       <View style={styles.list}>
         {t.exit_conditions.map((c, i) => (
           <View key={c} style={styles.listItem}>
@@ -323,7 +336,7 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
         ))}
       </View>
 
-      <SectionHeader label="给未来的你" meta="REASONS" />
+      <SectionHeader label={tr("commitment.section.reasons")} meta="REASONS" />
       <View style={styles.reasons}>
         {t.reasons_for_future_self.map((r, i) => (
           <View key={r} style={styles.reasonItem}>
@@ -341,11 +354,13 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
         <View style={styles.signedBanner}>
           <DoubleRule />
           <SectionHeader
-            label="持仓中"
-            meta={`签字日 ${formatIsoDate(commitment.signed_at ?? "")}`}
+            label={tr("commitment.signed.holding")}
+            meta={tr("commitment.signed.signedDate", {
+              date: formatIsoDate(commitment.signed_at ?? ""),
+            })}
           />
           <Serif size={13} italic style={styles.muted}>
-            这份承诺已经归档. 退出条件已经被复制到持仓状态机, 它会安静地巡检. 你不用做什么.
+            {tr("commitment.signed.note")}
           </Serif>
         </View>
       ) : null}
@@ -356,20 +371,23 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
 function CompanionCard({ view }: { view: CompanionView }) {
   // E4 焦虑日卡: 引用用户自己签字时写的一段话 (editor_text 来自 reasons_for_future_self).
   // 不预测涨跌, 不安抚, 不分析市场. 它就是把当时的判断换种语气递回来.
+  const { t } = useTranslation();
   return (
     <View style={cardStyles.root}>
       <View style={cardStyles.rule} />
       <Mono size={9} style={cardStyles.stamp}>
-        {view.reason === "anxiety_5x" ? "E4 · 焦虑日 · 第 5 次" : "E4 · 焦虑日"}
+        {view.reason === "anxiety_5x"
+          ? t("commitment.companion.stampAnxiety5x")
+          : t("commitment.companion.stampAnxiety")}
       </Mono>
       <Serif size={14} italic style={cardStyles.intro}>
-        你今天已经打开了好几次. 你当时写下了这句:
+        {t("commitment.companion.intro")}
       </Serif>
       <Serif size={16} style={cardStyles.body}>
         「{view.editor_text}」
       </Serif>
       <Serif size={13} italic style={cardStyles.outro}>
-        没有任何退出条件被触发. 这是规则.
+        {t("commitment.companion.outro")}
       </Serif>
       <View style={cardStyles.rule} />
     </View>
@@ -377,14 +395,15 @@ function CompanionCard({ view }: { view: CompanionView }) {
 }
 
 function Header() {
+  const { t } = useTranslation();
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("common.back")}</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
-        承诺书
+        {t("commitment.header.stamp")}
       </Sans>
       <View style={styles.headerSpacer} />
     </View>
@@ -394,11 +413,11 @@ function Header() {
 function actionLabel(a: string): string {
   switch (a) {
     case "buy":
-      return "买入";
+      return i18n.t("commitment.action.buy");
     case "sell":
-      return "卖出";
+      return i18n.t("commitment.action.sell");
     case "hold":
-      return "持有";
+      return i18n.t("commitment.action.hold");
     default:
       return a;
   }

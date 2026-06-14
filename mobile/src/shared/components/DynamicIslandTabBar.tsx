@@ -21,6 +21,7 @@ import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { haptic } from "@/core/haptics";
 import { theme, resolveColors } from "@/core/theme";
@@ -120,17 +121,17 @@ function clampWorklet(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-/** route name → 图标 + 标签. 顺序/键名必须与 `(tabs)/_layout.tsx` 的 <Tabs.Screen> 一致. */
-type TabMeta = { icon: SFSymbol; iconSelected: SFSymbol; label: string };
+/** route name → 图标. 顺序/键名必须与 `(tabs)/_layout.tsx` 的 <Tabs.Screen> 一致.
+ *  标签不在此 (随语言切换, 故在组件内经 `t("nav.tabs.<route>")` 取, 见 tabLabel). */
+type TabMeta = { icon: SFSymbol; iconSelected: SFSymbol };
 const TAB_META: Record<string, TabMeta> = {
-  subscriptions: { icon: "newspaper", iconSelected: "newspaper.fill", label: "订阅" },
-  caizhi: { icon: "books.vertical", iconSelected: "books.vertical.fill", label: "财知" },
+  subscriptions: { icon: "newspaper", iconSelected: "newspaper.fill" },
+  caizhi: { icon: "books.vertical", iconSelected: "books.vertical.fill" },
   attention: {
     icon: "chart.line.uptrend.xyaxis",
     iconSelected: "chart.line.uptrend.xyaxis",
-    label: "统计",
   },
-  profile: { icon: "person", iconSelected: "person.fill", label: "我" },
+  profile: { icon: "person", iconSelected: "person.fill" },
 };
 
 /** 单个 tab —— 上图标下文字. 选中时图标轻弹一下 (各自持 sharedValue, 故抽成组件挂 hook);
@@ -139,6 +140,7 @@ const TAB_META: Record<string, TabMeta> = {
  *  出现时弹簧弹入 / 消失时淡出 —— 静默闪现反而像渲染故障. */
 function TabButton({
   meta,
+  label,
   focused,
   dot,
   dotColor,
@@ -147,6 +149,8 @@ function TabButton({
   onPressOut,
 }: {
   meta: TabMeta;
+  /** 当前语言下的 tab 名 (随语言切换, 由父级经 `t()` 传入). */
+  label: string;
   focused: boolean;
   dot?: boolean;
   /** 红点颜色 —— 必须传**已解析的 hex** (非 theme.color 动态色): 红点带布局动画,
@@ -184,7 +188,7 @@ function TabButton({
       onPressOut={onPressOut}
       accessibilityRole="button"
       accessibilityState={{ selected: focused }}
-      accessibilityLabel={meta.label}
+      accessibilityLabel={label}
       style={({ pressed }) => [styles.tab, pressed && styles.tabPressed]}
     >
       <Animated.View style={iconStyle}>
@@ -207,7 +211,7 @@ function TabButton({
         allowFontScaling={false}
         style={[styles.label, { color: focused ? theme.color.ink : theme.color.muted }]}
       >
-        {meta.label}
+        {label}
       </Text>
     </Pressable>
   );
@@ -215,6 +219,7 @@ function TabButton({
 
 export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   // 红点要喂已解析的 hex (带布局动画, 见 TabButton.dotColor). 本组件已订阅 useColorScheme,
@@ -360,10 +365,10 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
 
   // 退出登录: 与「我」页同款二次确认; server 出错不阻塞本地清理 (token 反正不再用).
   const confirmLogout = useCallback(() => {
-    Alert.alert("退出登录", "确认退出当前账号?", [
-      { text: "再想想", style: "cancel" },
+    Alert.alert(t("profile.logout.action"), t("profile.logout.confirm"), [
+      { text: t("profile.logout.cancel"), style: "cancel" },
       {
-        text: "退出",
+        text: t("profile.logout.confirmAction"),
         style: "destructive",
         onPress: async () => {
           try {
@@ -376,7 +381,7 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
         },
       },
     ]);
-  }, [clearAuth]);
+  }, [clearAuth, t]);
 
   const tabMenuActions = useMemo<TabMenuActions>(
     () => ({
@@ -460,6 +465,7 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
                   >
                     <TabButton
                       meta={meta}
+                      label={t(`nav.tabs.${route.name}` as "nav.tabs.caizhi")}
                       focused={focused}
                       dot={route.name === "subscriptions" && subsUnread > 0}
                       dotColor={palette.red}

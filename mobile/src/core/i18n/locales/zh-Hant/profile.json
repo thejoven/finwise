@@ -1,0 +1,63 @@
+{
+  "archiveStamp": "讀者檔案",
+  "title": "個人資料.",
+  "sections": {
+    "account": "帳號",
+    "preferences": "偏好"
+  },
+  "account": {
+    "editProfile": "編輯資料",
+    "changePassword": "修改密碼",
+    "notifications": "訊息通知",
+    "noNotifications": "無"
+  },
+  "preferences": {
+    "colophon": "卷首語 · 關於",
+    "search": "搜尋觀察記錄"
+  },
+  "joinedOn": "加入於 {{date}}",
+  "bioEmpty": "還沒寫個人簽名。",
+  "syncing": "同步中…",
+  "logout": {
+    "action": "登出",
+    "confirm": "確認登出目前帳號?",
+    "cancel": "再想想",
+    "confirmAction": "登出"
+  },
+  "devMode": {
+    "notice": "目前為偵錯 dev token 模式，未登入任何帳號。",
+    "login": "登入帳號"
+  },
+  "saving": "儲存中…",
+  "edit": {
+    "topBar": "編輯資料 · PROFILE",
+    "title": "編輯資料.",
+    "hint": "電子郵件無法在此修改。\n暱稱與簽名是公開的，但目前只有你看得到。",
+    "emailLabel": "電子郵件 (唯讀)",
+    "nameLabel": "暱稱",
+    "namePlaceholder": "想被怎麼稱呼",
+    "bioLabel": "簽名",
+    "bioPlaceholder": "一句話介紹自己"
+  },
+  "password": {
+    "topBar": "修改密碼 · PASSWORD",
+    "title": "修改密碼.",
+    "hint": "修改後，所有裝置都會登出，你需要用新密碼重新登入。",
+    "oldLabel": "原密碼",
+    "oldPlaceholder": "目前的密碼",
+    "newLabel": "新密碼",
+    "newPlaceholder": "至少 8 位",
+    "confirmLabel": "確認新密碼",
+    "confirmPlaceholder": "再輸入一次",
+    "mismatch": "兩次輸入不一致。",
+    "saveAndExit": "儲存並登出"
+  },
+  "search": {
+    "topBar": "搜尋 · SEARCH",
+    "title": "搜尋觀察記錄.",
+    "placeholder": "輸入關鍵字…",
+    "hint": "在原文或推演摘要裡搜尋關鍵字。",
+    "searching": "搜尋中…",
+    "noMatch": "沒有符合 “{{query}}”。"
+  }
+}

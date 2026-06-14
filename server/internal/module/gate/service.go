@@ -133,6 +133,7 @@ func (s *Service) Evaluate(ctx context.Context, refinementID uuid.UUID) (*Evalua
 
 type refinementContext struct {
 	UserID               uuid.UUID
+	Language             string // 用户语言 ('zh-Hans'|'zh-Hant'|'en'); "" = 未设置→Mastra 按默认简体. 传给四位分析师让判词跟随语言.
 	RefinementID         uuid.UUID
 	PrimarySignalID      uuid.UUID
 	PrimaryAsset         *string
@@ -149,10 +150,12 @@ func (s *Service) loadRefinement(ctx context.Context, refinementID uuid.UUID) (*
 	const q = `
 		SELECT rs.user_id, rs.primary_signal_id, rs.primary_asset,
 		       s.raw_text, COALESCE(s.inference_summary, ''), COALESCE(s.inference_tags, ARRAY[]::TEXT[]),
-		       s.project_id, COALESCE(p.name, ''), COALESCE(p.guidance, '')
+		       s.project_id, COALESCE(p.name, ''), COALESCE(p.guidance, ''),
+		       COALESCE(u.language, '')
 		FROM refinement_sessions rs
 		JOIN signals s ON s.id = rs.primary_signal_id
 		LEFT JOIN projects p ON p.id = s.project_id
+		JOIN users u ON u.id = rs.user_id
 		WHERE rs.id = $1
 	`
 	rc := &refinementContext{RefinementID: refinementID}
@@ -160,6 +163,7 @@ func (s *Service) loadRefinement(ctx context.Context, refinementID uuid.UUID) (*
 		&rc.UserID, &rc.PrimarySignalID, &rc.PrimaryAsset,
 		&rc.PrimarySignalRawText, &rc.PrimarySignalSummary, &rc.PrimarySignalTags,
 		&rc.ProjectID, &rc.ProjectName, &rc.ProjectGuidance,
+		&rc.Language,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, fmt.Errorf("refinement %s not found", refinementID)
@@ -210,6 +214,7 @@ func (s *Service) evaluateG1Thickness(ctx context.Context, rc *refinementContext
 			projectID = rc.ProjectID.String()
 		}
 		resp, err := s.mastra.ThicknessCheck(callCtx, mastra.ThicknessRequest{
+			Language:        rc.Language,
 			UserID:          rc.UserID.String(),
 			SignalID:        rc.PrimarySignalID.String(),
 			RawText:         rc.PrimarySignalRawText,
@@ -357,6 +362,7 @@ func (s *Service) evaluateG2Consensus(ctx context.Context, rc *refinementContext
 	callCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 	resp, err := s.mastra.ConsensusCheck(callCtx, mastra.ConsensusRequest{
+		Language:        rc.Language,
 		Asset:           asset,
 		SignalText:      signalText,
 		ProjectName:     rc.ProjectName,
@@ -415,6 +421,7 @@ func (s *Service) evaluateG3Window(ctx context.Context, rc *refinementContext) (
 			planText = *rc.Rounds[4].Answer.OpenText
 		}
 		resp, err := s.mastra.TimingCheck(callCtx, mastra.TimingRequest{
+			Language:        rc.Language,
 			Asset:           asset,
 			SignalText:      signalText,
 			StatedMonths:    statedMonths,
@@ -520,6 +527,7 @@ func (s *Service) evaluateG4Edge(ctx context.Context, rc *refinementContext) (bo
 			exitText = *rc.Rounds[4].Answer.OpenText
 		}
 		resp, err := s.mastra.CompetenceCheck(callCtx, mastra.CompetenceRequest{
+			Language:        rc.Language,
 			Asset:           asset,
 			SignalText:      signalText,
 			Direct:          sub.Direct,

@@ -30,6 +30,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { ScrollView } from "react-native-gesture-handler";
+import { useTranslation } from "react-i18next";
 
 import { type ProjectView } from "@/core/api/project";
 import { theme, useThemeColors } from "@/core/theme";
@@ -78,6 +79,7 @@ export function CategoryDropdown({
   const [mounted, setMounted] = useState(false);
   const progress = useSharedValue(0);
   const c = useThemeColors();
+  const { t } = useTranslation();
 
   // onClosed 用 ref 持最新值: 退场完成回调在 worklet 里跑, 普通闭包会过期, 走 ref 取当前的.
   const onClosedRef = useRef(onClosed);
@@ -139,7 +141,7 @@ export function CategoryDropdown({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="关闭" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t("common.close")} />
       <Animated.View
         style={[
           styles.panel,
@@ -168,7 +170,7 @@ export function CategoryDropdown({
                 key={p.id}
                 onPress={() => onPick(p.id)}
                 style={styles.row}
-                accessibilityLabel={`切到分类「${p.name}」`}
+                accessibilityLabel={t("project.dropdown.switchTo", { name: p.name })}
               >
                 {p.emoji ? (
                   <Sans size={14} style={styles.rowEmoji}>
@@ -190,7 +192,7 @@ export function CategoryDropdown({
                   <TapEffect
                     onPress={() => onEdit(p.id)}
                     style={styles.editBtn}
-                    accessibilityLabel={`编辑分类「${p.name}」`}
+                    accessibilityLabel={t("project.dropdown.editCategory", { name: p.name })}
                   >
                     <Icon name="pencil" size={13} color={theme.color.muted} strokeWidth={1.5} />
                   </TapEffect>
@@ -201,10 +203,14 @@ export function CategoryDropdown({
 
           <View style={styles.divider} />
 
-          <TapEffect onPress={onCreate} style={styles.createRow} accessibilityLabel="新建分类">
+          <TapEffect
+            onPress={onCreate}
+            style={styles.createRow}
+            accessibilityLabel={t("project.actions.newCategory")}
+          >
             <Icon name="plus" size={15} color={theme.color.ink2} strokeWidth={1.75} />
             <Sans size={12} weight="500" style={styles.createLabel}>
-              新建分类
+              {t("project.actions.newCategory")}
             </Sans>
           </TapEffect>
         </ScrollView>

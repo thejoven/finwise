@@ -136,6 +136,7 @@ export async function runRefinementStep(input: RefinementStepInput): Promise<Ref
       round_research: roundResearch,
       project_name: view.project_name,
       project_guidance: view.project_guidance,
+      language: view.language,
     });
   } catch (err) {
     return {

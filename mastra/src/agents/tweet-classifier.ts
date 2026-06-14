@@ -17,12 +17,13 @@ import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
+import { languageDirective } from "./language-context.js";
 
 // ─────────────────────── Schema ───────────────────────
 
 export const TweetClassificationSchema = z.object({
-  tags: z.array(z.string().min(1).max(16)).min(1).max(4),
-  summary: z.string().min(4).max(120),
+  tags: z.array(z.string().min(1).max(48)).min(1).max(4),
+  summary: z.string().min(4).max(360),
   category: z.enum(["宏观", "公司", "行情", "政策", "技术", "观点", "其它"]),
   relevance: z.number().min(0).max(1),
 });
@@ -71,7 +72,10 @@ RT 开头的转推: 总结被转的内容本身, 标签照常打.
 export interface TweetClassifierInput {
   tweetText: string;
   authorHandle?: string;
+  /** 推文原文的语言 (来源语言, 仅作上下文提示给模型). 与输出语言 `language` 不同. */
   lang?: string;
+  /** 面向用户输出的目标语言 ("en" / "zh-Hant" / "zh-Hans"). 与推文来源语言 `lang` 不同. */
+  language?: string;
 }
 
 export async function runTweetClassifier(
@@ -96,7 +100,9 @@ export async function runTweetClassifier(
 }
 
 function buildPrompt(input: TweetClassifierInput): string {
+  const directive = languageDirective(input.language);
   return [
+    ...(directive ? [directive.trimEnd()] : []),
     ...(input.authorHandle ? [`作者: @${input.authorHandle}`] : []),
     ...(input.lang ? [`语言: ${input.lang}`] : []),
     `推文:`,

@@ -1,6 +1,7 @@
 import { useReducer } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { Link, router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { Display, DoubleRule, KeyboardForm, Sans, Serif, TapEffect } from "@/shared/components";
 import { NativeField } from "@/shared/native";
@@ -41,6 +42,7 @@ export default function RegisterScreen() {
     error: null,
   });
   const setSession = useAuth((s) => s.setSession);
+  const { t } = useTranslation();
 
   const trimmedEmail = form.email.trim();
   const trimmedName = form.displayName.trim();
@@ -79,32 +81,32 @@ export default function RegisterScreen() {
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.body}>
           <Display size={30} italic style={styles.title}>
-            注册.
+            {t("auth.register.title")}
           </Display>
           <DoubleRule />
           <Serif size={13} italic style={styles.hint}>
-            注册需要邀请码。{"\n"}向管理员索取后填入下方即可。
+            {t("auth.register.hint")}
           </Serif>
 
           <Sans size={11} weight="600" style={styles.label}>
-            邀请码
+            {t("auth.register.inviteLabel")}
           </Sans>
           <NativeField
             value={form.inviteCode}
             onChangeText={(text) => setForm({ inviteCode: text })}
-            placeholder="管理员发给你的邀请码"
+            placeholder={t("auth.register.invitePlaceholder")}
             autoCapitalize="characters"
             autoComplete="off"
             returnKeyType="next"
           />
 
           <Sans size={11} weight="600" style={styles.label}>
-            邮箱
+            {t("auth.register.emailLabel")}
           </Sans>
           <NativeField
             value={form.email}
             onChangeText={(text) => setForm({ email: text })}
-            placeholder="you@example.com"
+            placeholder={t("auth.register.emailPlaceholder")}
             keyboardType="email-address"
             autoComplete="email"
             textContentType="emailAddress"
@@ -112,12 +114,12 @@ export default function RegisterScreen() {
           />
 
           <Sans size={11} weight="600" style={styles.label}>
-            密码
+            {t("auth.register.passwordLabel")}
           </Sans>
           <NativeField
             value={form.password}
             onChangeText={(text) => setForm({ password: text })}
-            placeholder="至少 8 位"
+            placeholder={t("auth.register.passwordPlaceholder")}
             secure
             autoComplete="new-password"
             textContentType="newPassword"
@@ -125,12 +127,12 @@ export default function RegisterScreen() {
           />
 
           <Sans size={11} weight="600" style={styles.label}>
-            昵称 (可选)
+            {t("auth.register.displayNameLabel")}
           </Sans>
           <NativeField
             value={form.displayName}
             onChangeText={(text) => setForm({ displayName: text })}
-            placeholder="想被怎么称呼"
+            placeholder={t("auth.register.displayNamePlaceholder")}
             autoCapitalize="sentences"
             maxLength={60}
             returnKeyType="go"
@@ -152,13 +154,13 @@ export default function RegisterScreen() {
             disabled={!canSubmit}
           >
             <Sans size={11} weight="700" style={styles.signLabel}>
-              {form.pending ? "注册中…" : "注册"}
+              {form.pending ? t("auth.register.submitting") : t("auth.register.submit")}
             </Sans>
           </TapEffect>
           <Link href="/login" asChild>
             <TapEffect style={styles.linkRow} disableEffect>
               <Serif size={12} italic style={styles.linkLabel}>
-                已有账号 · 登录
+                {t("auth.register.toLogin")}
               </Serif>
             </TapEffect>
           </Link>

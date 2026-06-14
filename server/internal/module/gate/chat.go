@@ -156,6 +156,7 @@ func (s *Service) Chat(ctx context.Context, userID, evaluationID uuid.UUID, user
 	_, _, verdict := classifyFailure(ev.Gates)
 
 	req := mastra.AnalystChatRequest{
+		Language:        rc.Language,
 		Analyst:         analystKey,
 		Asset:           asset,
 		SignalText:      truncateRunes(signalText, 1200),

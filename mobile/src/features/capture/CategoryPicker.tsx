@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 
 import { listProjects, type ProjectView } from "@/core/api/project";
 import { Chip, ProjectSelectModal } from "@/features/project";
@@ -29,6 +30,7 @@ interface Props {
 }
 
 export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
+  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
 
   const { data: projects, isLoading } = useQuery({
@@ -56,7 +58,7 @@ export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
   return (
     <View style={styles.wrap}>
       <Mono size={9} style={styles.stamp}>
-        ◆ 归到哪个分类
+        {t("capture.category.stamp")}
       </Mono>
       <ScrollView
         horizontal
@@ -66,7 +68,7 @@ export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
       >
         {items.length === 0 && !isLoading ? (
           <Serif size={13} italic style={styles.empty}>
-            还没有分类，先建一个
+            {t("capture.category.empty")}
           </Serif>
         ) : null}
         {/* 行内分类条有界 (用户分类数), 横向 ScrollView+map 足够; rn-no-scrollview-mapped-list 针对长列表. */}
@@ -83,7 +85,7 @@ export function CaptureCategoryPicker({ selectedId, onSelect }: Props) {
         <TapEffect
           onPress={() => setModalOpen(true)}
           style={[styles.chip, styles.chipAdd]}
-          accessibilityLabel="新建分类"
+          accessibilityLabel={t("capture.category.add")}
         >
           <Icon name="plus" size={12} color={theme.color.ink2} strokeWidth={2} />
         </TapEffect>

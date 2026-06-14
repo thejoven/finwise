@@ -1,6 +1,7 @@
 import { useReducer } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { router } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -36,6 +37,7 @@ function formReducer(s: FormState, patch: FormAction): FormState {
 }
 
 export default function PasswordScreen() {
+  const { t } = useTranslation();
   const clear = useAuth((s) => s.clear);
   const [form, setForm] = useReducer(formReducer, {
     oldPassword: "",
@@ -68,49 +70,49 @@ export default function PasswordScreen() {
 
   return (
     <KeyboardForm>
-      <ModalTopBar label="修改密码 · PASSWORD" />
+      <ModalTopBar label={t("profile.password.topBar")} />
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Display size={26} italic style={styles.title}>
-          修改密码.
+          {t("profile.password.title")}
         </Display>
         <DoubleRule />
         <Serif size={13} italic style={styles.hint}>
-          修改后, 所有设备会被退出登录, 你需要用新密码重新登录。
+          {t("profile.password.hint")}
         </Serif>
 
         <Sans size={11} weight="600" style={styles.label}>
-          原密码
+          {t("profile.password.oldLabel")}
         </Sans>
         <NativeField
           value={form.oldPassword}
           onChangeText={(text) => setForm({ oldPassword: text })}
           secure
-          placeholder="当前密码"
+          placeholder={t("profile.password.oldPlaceholder")}
           autoComplete="current-password"
           textContentType="password"
         />
 
         <Sans size={11} weight="600" style={styles.label}>
-          新密码
+          {t("profile.password.newLabel")}
         </Sans>
         <NativeField
           value={form.newPassword}
           onChangeText={(text) => setForm({ newPassword: text })}
           secure
-          placeholder="至少 8 位"
+          placeholder={t("profile.password.newPlaceholder")}
           autoComplete="new-password"
           textContentType="newPassword"
         />
 
         <Sans size={11} weight="600" style={styles.label}>
-          确认新密码
+          {t("profile.password.confirmLabel")}
         </Sans>
         <NativeField
           value={form.confirm}
           onChangeText={(text) => setForm({ confirm: text })}
           secure
-          placeholder="再输一次"
+          placeholder={t("profile.password.confirmPlaceholder")}
           autoComplete="new-password"
           textContentType="newPassword"
           returnKeyType="go"
@@ -119,7 +121,7 @@ export default function PasswordScreen() {
 
         {form.confirm.length > 0 && form.confirm !== form.newPassword ? (
           <Serif size={12} italic style={styles.errorSoft}>
-            两次输入不一致。
+            {t("profile.password.mismatch")}
           </Serif>
         ) : null}
 
@@ -138,7 +140,7 @@ export default function PasswordScreen() {
           disabled={!canSubmit}
         >
           <Sans size={11} weight="700" style={styles.signLabel}>
-            {form.pending ? "保存中…" : "保存并退出"}
+            {form.pending ? t("profile.saving") : t("profile.password.saveAndExit")}
           </Sans>
         </TapEffect>
       </View>

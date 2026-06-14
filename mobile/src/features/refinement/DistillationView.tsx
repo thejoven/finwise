@@ -7,6 +7,7 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { Mono, PaperCard, Sans, Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -33,6 +34,7 @@ export function DistilledContent({ content }: { content: string }) {
 
 /** 单个受益标的卡. */
 export function BeneficiaryTargetCard({ target }: { target: BeneficiaryTarget }) {
+  const { t } = useTranslation();
   return (
     <PaperCard style={styles.card}>
       <View style={styles.cardTop}>
@@ -50,9 +52,15 @@ export function BeneficiaryTargetCard({ target }: { target: BeneficiaryTarget })
         {target.thesis}
       </Serif>
       <View style={styles.metaBlock}>
-        {target.valuation ? <MetaRow label="估值" value={target.valuation} /> : null}
-        {target.catalyst ? <MetaRow label="催化" value={target.catalyst} /> : null}
-        {target.risk ? <MetaRow label="风险" value={target.risk} danger /> : null}
+        {target.valuation ? (
+          <MetaRow label={t("refinement.beneficiary.valuation")} value={target.valuation} />
+        ) : null}
+        {target.catalyst ? (
+          <MetaRow label={t("refinement.beneficiary.catalyst")} value={target.catalyst} />
+        ) : null}
+        {target.risk ? (
+          <MetaRow label={t("refinement.beneficiary.risk")} value={target.risk} danger />
+        ) : null}
       </View>
     </PaperCard>
   );
@@ -73,10 +81,11 @@ function MetaRow({ label, value, danger }: { label: string; value: string; dange
 
 /** 受益推演留白 (推演完无标的时). */
 export function BeneficiarySilence({ note }: { note: string | null }) {
+  const { t } = useTranslation();
   return (
     <View style={styles.silence}>
       <Serif size={15} italic style={styles.silenceText}>
-        {note || "这条信号没有清晰的受益映射。系统选择不说。"}
+        {note || t("refinement.distilled.silence")}
       </Serif>
     </View>
   );

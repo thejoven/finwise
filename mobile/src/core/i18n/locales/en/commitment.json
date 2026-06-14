@@ -1,0 +1,63 @@
+{
+  "header": {
+    "stamp": "Commitment"
+  },
+  "loading": "Opening your commitment…",
+  "error": "Couldn't open this commitment. Try again later.",
+  "status": {
+    "signedOn": "Signed · {{date}}",
+    "postponed": "Set aside · {{count}}/3",
+    "draft": "Draft · awaiting your signature"
+  },
+  "meta": "{{action}} · {{pct}}% position · {{months}} months",
+  "section": {
+    "entry": "Entry",
+    "exit": "Exit Conditions",
+    "reasons": "For Your Future Self"
+  },
+  "signed": {
+    "holding": "Holding",
+    "signedDate": "Signed {{date}}",
+    "note": "This commitment is filed. The exit conditions have been copied into the position's state machine — it watches quietly. There's nothing for you to do."
+  },
+  "decision": {
+    "stamp": "DECISION · Your Final Call",
+    "asDrafted": {
+      "label": "Sign it as drafted",
+      "hint": "{{action}} · {{pct}}% · {{months}} months"
+    },
+    "lowerPosition": {
+      "label": "More conservative — smaller position",
+      "hint": "Position down to {{pct}}% (nothing else changes)"
+    },
+    "longerHold": {
+      "label": "More patient — longer hold",
+      "hint": "Hold extended to {{months}} months"
+    },
+    "userInput": {
+      "label": "I see it differently — let me say so",
+      "hint": "In your own words, at least 10 characters",
+      "placeholder": "e.g. I'll buy, but only 3% — this signal hasn't crossed the supply-chain layer yet"
+    }
+  },
+  "slowSign": "Still signing it in…",
+  "signing": "Signing…",
+  "signButton": {
+    "asDrafted": "Sign and Commit",
+    "lowerPosition": "Sign the More Conservative Call",
+    "longerHold": "Sign the More Patient Call",
+    "userInput": "Sign My Call"
+  },
+  "postpone": "Leave it for now",
+  "action": {
+    "buy": "Buy",
+    "sell": "Sell",
+    "hold": "Hold"
+  },
+  "companion": {
+    "stampAnxiety5x": "E4 · Anxious Day · 5th Time",
+    "stampAnxiety": "E4 · Anxious Day",
+    "intro": "You've opened this a few times today. Here's what you wrote back then:",
+    "outro": "No exit condition has been triggered. That's the rule."
+  }
+}

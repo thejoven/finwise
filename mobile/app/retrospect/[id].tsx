@@ -11,10 +11,11 @@
  * 重开 APP 不丢: server state 是真相, useRetrospect 自动 hydrate.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import {
   Display,
@@ -28,9 +29,10 @@ import {
 } from "@/shared/components";
 import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
+import i18nSingleton from "@/core/i18n";
 
 import {
-  RETROSPECT_QUESTIONS,
+  getRetrospectQuestions,
   useFinalizeRetrospect,
   useRetrospect,
   useSubmitRetrospectAnswer,
@@ -38,16 +40,19 @@ import {
 } from "@/features/retrospect";
 
 export default function RetrospectScreen() {
+  const { t, i18n } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: retro, isLoading, isError } = useRetrospect(id);
   const { submit, isSubmitting } = useSubmitRetrospectAnswer(id);
   const { finalize, isFinalizing } = useFinalizeRetrospect(id);
 
+  // 四问文案随语言解析; 语言切换时 i18n.language 变 → 重新取一份.
+  const questions = useMemo(() => getRetrospectQuestions(), [i18n.language]);
   const currentIdx = retro ? retro.answers.length : 0;
   const finalized = retro?.state === "finalized";
   const allAnswered = (retro?.answers.length ?? 0) >= 4;
   const currentQ: RetrospectQuestion | undefined =
-    currentIdx < 4 ? RETROSPECT_QUESTIONS[currentIdx] : undefined;
+    currentIdx < 4 ? questions[currentIdx] : undefined;
 
   const [choice, setChoice] = useState<string | null>(null);
   const [openText, setOpenText] = useState("");
@@ -78,11 +83,11 @@ export default function RetrospectScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {isLoading ? (
           <Serif size={13} italic style={styles.muted}>
-            正在打开复盘...
+            {t("retrospect.loading")}
           </Serif>
         ) : isError || !retro ? (
           <Serif size={13} italic style={styles.error}>
-            读不到这次复盘, 稍后再试.
+            {t("retrospect.error")}
           </Serif>
         ) : finalized ? (
           <Finalized retro={retro} />
@@ -100,18 +105,26 @@ export default function RetrospectScreen() {
       </ScrollView>
 
       {finalized ? (
-        <Footer label="回到信箱" onPress={() => router.replace("/(tabs)/caizhi")} enabled />
+        <Footer
+          label={t("retrospect.footer.backToInbox")}
+          onPress={() => router.replace("/(tabs)/caizhi")}
+          enabled
+        />
       ) : currentQ ? (
         <Footer
           label={
-            isSubmitting ? "正在记下..." : currentIdx === 3 ? "记下第 4 题" : "记下这一答 · 下一题"
+            isSubmitting
+              ? t("retrospect.footer.submitting")
+              : currentIdx === 3
+                ? t("retrospect.footer.submitLast")
+                : t("retrospect.footer.submitNext")
           }
           onPress={handleSubmit}
           enabled={!!choice && !isSubmitting}
         />
       ) : allAnswered ? (
         <Footer
-          label={isFinalizing ? "正在收尾..." : "结束复盘 · 看见自己"}
+          label={isFinalizing ? t("retrospect.footer.finalizing") : t("retrospect.footer.finalize")}
           onPress={handleFinalize}
           enabled={!isFinalizing}
         />
@@ -121,12 +134,15 @@ export default function RetrospectScreen() {
 }
 
 function Header({ step, finalized }: { step: number; finalized: boolean }) {
-  const label = finalized ? "复盘 · 已收尾" : `复盘 · 第 ${Math.min(step + 1, 4)}/4`;
+  const { t } = useTranslation();
+  const label = finalized
+    ? t("retrospect.header.finalized")
+    : t("retrospect.header.step", { step: Math.min(step + 1, 4) });
   return (
     <View style={styles.header}>
       <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
         <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-        <Serif size={13}>返回</Serif>
+        <Serif size={13}>{t("common.back")}</Serif>
       </TapEffect>
       <Sans size={9} weight="600" style={styles.headerStamp}>
         {label}
@@ -151,10 +167,11 @@ function QuestionBlock({
   onChoiceChange,
   onOpenTextChange,
 }: QuestionBlockProps) {
+  const { t } = useTranslation();
   return (
     <View style={styles.qBlock}>
       <Mono size={9} style={styles.qStamp}>
-        {dimLabel(q.dim)} · 第 {q.no}/4 题
+        {t("retrospect.questionStamp", { dim: dimLabel(q.dim), no: q.no })}
       </Mono>
       <Display size={20} style={styles.qTitle}>
         {q.title}
@@ -185,7 +202,7 @@ function QuestionBlock({
           <NativeField
             value={openText}
             onChangeText={onOpenTextChange}
-            placeholder="(可选)"
+            placeholder={t("retrospect.openPlaceholder")}
             multiline
             minHeight={96}
             bare
@@ -199,23 +216,25 @@ function QuestionBlock({
 }
 
 function ReadyToFinalize() {
+  const { t } = useTranslation();
   return (
     <View style={styles.completedBlock}>
-      <SectionHeader label="四问已答完" meta="ready" />
+      <SectionHeader label={t("retrospect.ready.header")} meta={t("retrospect.ready.meta")} />
       <Serif size={14} italic style={styles.muted}>
-        准备好了就按下面那个按钮. 不急.
+        {t("retrospect.ready.body")}
       </Serif>
     </View>
   );
 }
 
 function Finalized({ retro }: { retro: NonNullable<ReturnType<typeof useRetrospect>["data"]> }) {
+  const { t } = useTranslation();
   const dim = retro.focus_dim ?? "inference_depth";
-  const text = retro.focus_text ?? "下一次, 把推演链多走一步.";
+  const text = retro.focus_text ?? t("retrospect.finalized.fallbackText");
   return (
     <View style={styles.completedBlock}>
       <Mono size={9} style={styles.qStamp}>
-        TRAINING FOCUS · 下一次的训练重点
+        {t("retrospect.finalized.stamp")}
       </Mono>
       <Display size={18} style={styles.focusTitle}>
         {focusDimLabel(dim)}
@@ -225,7 +244,7 @@ function Finalized({ retro }: { retro: NonNullable<ReturnType<typeof useRetrospe
         {text}
       </Serif>
       <Serif size={12} italic style={styles.muted}>
-        这条会被写进你的训练档案, 下次五轮追问时, AI 会把它放在第一句.
+        {t("retrospect.finalized.note")}
       </Serif>
     </View>
   );
@@ -259,13 +278,13 @@ function Footer({
 function dimLabel(d: string): string {
   switch (d) {
     case "perception":
-      return "感知";
+      return i18nSingleton.t("retrospect.dim.perception");
     case "inference":
-      return "推演";
+      return i18nSingleton.t("retrospect.dim.inference");
     case "evaluation":
-      return "判定";
+      return i18nSingleton.t("retrospect.dim.evaluation");
     case "execution":
-      return "执行";
+      return i18nSingleton.t("retrospect.dim.execution");
     default:
       return d.toUpperCase();
   }
@@ -274,17 +293,17 @@ function dimLabel(d: string): string {
 function focusDimLabel(d: string): string {
   switch (d) {
     case "perception_speed":
-      return "录入速度";
+      return i18nSingleton.t("retrospect.focusDim.perception_speed");
     case "inference_depth":
-      return "推演深度";
+      return i18nSingleton.t("retrospect.focusDim.inference_depth");
     case "decision_speed":
-      return "决策速度";
+      return i18nSingleton.t("retrospect.focusDim.decision_speed");
     case "holding_patience":
-      return "持仓耐心";
+      return i18nSingleton.t("retrospect.focusDim.holding_patience");
     case "exit_quality":
-      return "退出质量";
+      return i18nSingleton.t("retrospect.focusDim.exit_quality");
     case "thesis_evolution":
-      return "命题演化";
+      return i18nSingleton.t("retrospect.focusDim.thesis_evolution");
     default:
       return d;
   }

@@ -74,6 +74,7 @@ export async function runAttentionAnalyze(
     signalTags: [], // 简化: 当前 SessionView 没暴露 inference_tags; 让 LLM 从 summary 推断
     projectName: view.project_name,
     projectGuidance: view.project_guidance,
+    language: view.language,
     rounds: view.rounds.map((r) => {
       // server 实际 user_answer JSON 含 time_ms; SessionView 类型上没暴露, 这里 cast.
       const ua = r.user_answer as { choice_ids?: string[]; open_text?: string; time_ms?: number };

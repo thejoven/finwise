@@ -14,6 +14,8 @@
  */
 
 import { StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { type TFunction } from "i18next";
 import { Display, Mono, RichText, Serif } from "@/shared/components";
 import { theme } from "@/core/theme";
 import type { QuestionOption, RoundView } from "@/core/api/refinement";
@@ -25,10 +27,11 @@ interface Props {
 }
 
 export function AnsweredRoundCard({ round }: Props) {
+  const { t } = useTranslation();
   return (
     <View style={styles.root}>
       <Mono size={9} style={styles.roundStamp}>
-        ROUND {round.round} · {kindLabel(round.question_kind)} · 已答
+        ROUND {round.round} · {kindLabel(round.question_kind, t)} · {t("refinement.answered.stampSuffix")}
       </Mono>
       <Display size={20} style={styles.questionText}>
         <RichText text={round.question_text} />
@@ -40,6 +43,7 @@ export function AnsweredRoundCard({ round }: Props) {
 }
 
 function Body({ round }: Props) {
+  const { t } = useTranslation();
   const { question_kind, options, user_answer } = round;
   const chosen = new Set(user_answer.choice_ids ?? []);
 
@@ -52,7 +56,7 @@ function Body({ round }: Props) {
           </Serif>
         ) : (
           <Serif size={13} italic style={styles.openEmpty}>
-            (留空)
+            {t("refinement.answered.empty")}
           </Serif>
         )}
       </View>
@@ -65,15 +69,15 @@ function Body({ round }: Props) {
     return (
       <View style={styles.commitWrap}>
         <Mono size={9} style={styles.groupLabel}>
-          A · 操作
+          {t("refinement.answered.groupAction")}
         </Mono>
         <OptionList opts={actionOpts} chosen={chosen} marker="dot" />
         <Mono size={9} style={[styles.groupLabel, styles.groupLabelSpaced]}>
-          B · 持仓时长
+          {t("refinement.answered.groupDuration")}
         </Mono>
         <OptionList opts={durationOpts} chosen={chosen} marker="dot" />
         <Mono size={9} style={[styles.groupLabel, styles.groupLabelSpaced]}>
-          C · 你的理由 + 退出条件
+          {t("refinement.answered.groupReason")}
         </Mono>
         {user_answer.open_text ? (
           <Serif size={14} style={styles.openTextAnswer}>
@@ -81,7 +85,7 @@ function Body({ round }: Props) {
           </Serif>
         ) : (
           <Serif size={13} italic style={styles.openEmpty}>
-            (留空)
+            {t("refinement.answered.empty")}
           </Serif>
         )}
       </View>
@@ -99,7 +103,7 @@ function Body({ round }: Props) {
       {user_answer.open_text ? (
         <View style={styles.userInputBlock}>
           <Mono size={9} style={styles.groupLabel}>
-            你写的:
+            {t("refinement.answered.youWrote")}
           </Mono>
           <Serif size={13} style={styles.userInputText}>
             {user_answer.open_text}
@@ -161,18 +165,18 @@ function OptionList({
   );
 }
 
-function kindLabel(k: RoundView["question_kind"]): string {
+function kindLabel(k: RoundView["question_kind"], t: TFunction): string {
   switch (k) {
     case "single":
-      return "推演 · 单选";
+      return t("refinement.kind.single");
     case "multi":
-      return "漏选 · 多选";
+      return t("refinement.kind.multi");
     case "ordering":
-      return "排序 · 哪个先发生";
+      return t("refinement.kind.ordering");
     case "open":
-      return "收尾 · 你自己写";
+      return t("refinement.kind.open");
     case "commitment_setup":
-      return "签字 · 承诺要素";
+      return t("refinement.kind.commitmentSetup");
   }
 }
 

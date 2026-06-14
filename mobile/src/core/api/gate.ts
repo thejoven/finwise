@@ -7,6 +7,7 @@
 
 import { z } from "zod";
 import { api } from "./client";
+import i18n from "@/core/i18n";
 
 const ArchivePool = z.enum(["observation", "lesson", "calendar", "discard"]);
 export type ArchivePoolT = z.infer<typeof ArchivePool>;
@@ -77,21 +78,31 @@ export type GateEvaluation = z.infer<typeof GateEvaluation>;
 /**
  * 分析师审核团 · 用户看到的命名 (替代抽象的"门 1 / 门 2").
  * 与后端 service.go / mastra analysts.ts 一致; 底层数据仍用 g1..g4 键.
+ * 展示名/职责走 i18n (analystName / analystRole), 故此处只存稳定的 i18n key.
  */
 export const ANALYSTS = [
-  { gate: 1 as const, key: "g1_thickness" as const, name: "佐证分析师", role: "证据够不够厚" },
-  {
-    gate: 2 as const,
-    key: "g2_anti_consensus" as const,
-    name: "共识分析师",
-    role: "市场是否已定价",
-  },
-  { gate: 3 as const, key: "g3_window" as const, name: "时机分析师", role: "时机对不对" },
-  { gate: 4 as const, key: "g4_edge" as const, name: "能力圈分析师", role: "你是否真的懂" },
+  { gate: 1 as const, key: "g1_thickness" as const, i18nKey: "thickness" as const },
+  { gate: 2 as const, key: "g2_anti_consensus" as const, i18nKey: "antiConsensus" as const },
+  { gate: 3 as const, key: "g3_window" as const, i18nKey: "window" as const },
+  { gate: 4 as const, key: "g4_edge" as const, i18nKey: "edge" as const },
 ];
+
+export type Analyst = (typeof ANALYSTS)[number];
 
 export function analystByGate(gate: number | null | undefined) {
   return ANALYSTS.find((a) => a.gate === gate);
+}
+
+/** 分析师展示名 (随语言切换). 传 undefined → 通用"分析师". */
+export function analystName(analyst: Analyst | null | undefined): string {
+  if (!analyst) return i18n.t("gate.committee.analyst");
+  return i18n.t(`gate.committee.analysts.${analyst.i18nKey}.name`);
+}
+
+/** 分析师职责一行 (随语言切换). */
+export function analystRole(analyst: Analyst | null | undefined): string {
+  if (!analyst) return "";
+  return i18n.t(`gate.committee.analysts.${analyst.i18nKey}.role`);
 }
 
 const PoolListResponse = z.object({
@@ -159,15 +170,15 @@ export async function sendGateChat(
  */
 export function gateVerdictText(ev: GateEvaluation): string {
   const g = ev.failed_gate;
-  if (g === 1) return ev.gates.g1_thickness.detail ?? "目前看到的独立证据还不够厚.";
+  if (g === 1) return ev.gates.g1_thickness.detail ?? i18n.t("gate.verdict.thickness");
   if (g === 2) {
     const d = ev.gates.g2_anti_consensus.detail ?? "";
     const m = d.match(/summary:\s*([\s\S]+)$/);
     if (m?.[1]) return m[1].trim();
-    return d || "这件事市场已经讨论得很热了, 你看见的不算 leading.";
+    return d || i18n.t("gate.verdict.antiConsensus");
   }
-  if (g === 3) return ev.gates.g3_window.detail ?? "时机不在你的窗口里.";
-  if (g === 4) return ev.gates.g4_edge.detail ?? "这一条超出你目前的能力圈半径.";
+  if (g === 3) return ev.gates.g3_window.detail ?? i18n.t("gate.verdict.window");
+  if (g === 4) return ev.gates.g4_edge.detail ?? i18n.t("gate.verdict.edge");
   return "";
 }
 

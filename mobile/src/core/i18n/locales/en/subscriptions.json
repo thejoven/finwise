@@ -1,0 +1,89 @@
+{
+  "masthead": {
+    "title": "Subscriptions",
+    "manage": "Manage",
+    "subtitle": "The people you follow, watching for you."
+  },
+  "unread": "{{count}} unread",
+  "filter": {
+    "all": "All",
+    "markAllRead": "Mark all read"
+  },
+  "chips": {
+    "all": "All accounts"
+  },
+  "unknownDate": "Unknown date",
+  "empty": {
+    "noSubs": {
+      "title": "This paper has no wires yet.",
+      "cta": "Add your first account"
+    },
+    "allRead": {
+      "stamp": "✓ All caught up",
+      "body": "You've seen everything from your subscriptions today."
+    },
+    "loading": "Setting the type…",
+    "noContent": "Nothing yet. New posts will show up here."
+  },
+  "manage": {
+    "title": "Manage Subscriptions",
+    "sourceTypeLabel": "Source type",
+    "type": {
+      "x": "X account",
+      "telegram": "Telegram channel",
+      "rss": "News feed",
+      "available": "Available",
+      "planned": "Planned"
+    },
+    "plannedTitle": "On the way",
+    "plannedBody": "{{label}} subscriptions are still planned — get your X accounts dialed in first.",
+    "addLabel": "Add subscription · X account",
+    "handlePlaceholder": "elonmusk or @elonmusk",
+    "resolve": "Resolve",
+    "resolving": "Resolving…",
+    "subscribe": "Confirm Subscription",
+    "subscribing": "Subscribing…",
+    "subscribed": "Subscribed. Backfilling recent posts — new content will appear in your paper.",
+    "listLabel": "X accounts · {{count}}",
+    "dead": "Inactive",
+    "subUnread": "{{count}} unread",
+    "lastPolled": "updated {{time}}",
+    "unsubscribe": "Unsubscribe",
+    "footer": "X accounts {{count}} / {{limit}} — finish what you have before adding more."
+  },
+  "errors": {
+    "notFound": "Couldn't find that account",
+    "quota": "Finish what you have before adding more.",
+    "collectorUnavailable": "Collection service is unavailable, try again later",
+    "generic": "Something went wrong, try again"
+  },
+  "promote": {
+    "title": "Convert to Signal",
+    "doneDuplicate": "This one's already been converted.",
+    "doneOk": "Filed to your inbox, alongside your own signals.",
+    "goSignal": "View signal →",
+    "noteLabel": "Say it in your own words (optional)",
+    "notePlaceholder": "e.g. The bag-holder structure at the rate top — worth watching allocators' moves",
+    "hint": "Leave it blank to pass the original through; the source is tagged via @{{handle}} automatically",
+    "confirm": "Convert to Signal",
+    "confirming": "Converting…",
+    "error": "Couldn't convert, try again."
+  },
+  "row": {
+    "retweet": "RT · ",
+    "aiReading": "AI is reading…",
+    "photo": "[Photo]",
+    "video": "[Video]"
+  },
+  "detail": {
+    "stamp": "Subscriptions",
+    "loading": "Loading…",
+    "notFound": "This post doesn't exist.",
+    "retweet": "RT · ",
+    "playOnX": "▶ Play on X",
+    "aiEditor": "AI Editor",
+    "aiPending": "AI is reading…",
+    "promote": "Convert to Signal",
+    "openOnX": "Open on X"
+  }
+}

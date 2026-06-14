@@ -1,0 +1,127 @@
+{
+  "header": {
+    "stamp": "五轮追问",
+    "progress": "{{done}}/5"
+  },
+  "current": {
+    "stamp": "◆ 当前 · ROUND {{round}}"
+  },
+  "waiting": {
+    "nextQuestion": "你的答案收到了. 正在出下一题…",
+    "firstQuestion": "正在准备第一道题…"
+  },
+  "error": {
+    "load": "读取这次追问遇到了问题, 下拉或稍后再开."
+  },
+  "footer": {
+    "submitting": "正在记下...",
+    "submit": "提交这一轮",
+    "viewDistilled": "看这条信号的降噪"
+  },
+  "completed": {
+    "label": "完成",
+    "metaTraining": "训练",
+    "metaEligible": "可入分析师评审",
+    "bodyTraining": "这一次主要是训练. 你看见自己的几个盲点. 接下来去降噪页, 看看把噪音滤掉之后, 这条信号还剩什么.",
+    "bodyEligible": "五轮答完了. 把噪音滤掉之后这条信号还剩什么, 在降噪页等你. 看完, 由你来决定要不要交给四位分析师 (佐证 · 共识 · 时机 · 能力圈) 各审一遍."
+  },
+  "kind": {
+    "single": "推演 · 单选",
+    "multi": "漏选 · 多选",
+    "ordering": "排序 · 哪个先发生",
+    "orderingShort": "排序",
+    "open": "收尾 · 你自己写",
+    "commitmentSetup": "签字 · 承诺要素"
+  },
+  "answered": {
+    "stampSuffix": "已答",
+    "empty": "(留空)",
+    "groupAction": "A · 操作",
+    "groupDuration": "B · 持仓时长",
+    "groupReason": "C · 你的理由 + 退出条件",
+    "youWrote": "你写的:"
+  },
+  "question": {
+    "openPlaceholder": "一句话写下你的回答",
+    "groupAction": "A · 操作",
+    "groupDuration": "B · 持仓时长",
+    "groupReason": "C · 你的理由 + 退出条件",
+    "commitmentPlaceholder": "为什么是这个操作 + 时长? 写下退出条件 (价格 + 时间 + 一条外部信号).",
+    "commitmentModalTitle": "你的理由 + 退出条件",
+    "userInputPlaceholder": "写下你看到的那条链 — 哪个被忽略的环节, 哪个角度被市场漏掉",
+    "userInputModalTitle": "你看到的那条链",
+    "userInputModalPlaceholder": "哪个被忽略的环节, 哪个角度被市场漏掉"
+  },
+  "clues": {
+    "label": "相关线索",
+    "triggerLabel": "线索",
+    "triggerCount": "线索 · {{count}}",
+    "triggerLoading": "线索 · …",
+    "metaSources": "· {{count}} 条来源",
+    "metaLoading": "· 加载中…",
+    "metaNone": "· 未检索到",
+    "statusStamp": "STATUS · {{status}}",
+    "statusFetching": "FETCHING",
+    "statusEmpty": "EMPTY",
+    "drawerLoading": "Mastra 还在拉外部资料, 一两秒…",
+    "drawerEmpty": "这条信号没找到匹配的外部新闻 — 推演会直接用你写下的原文."
+  },
+  "learning": {
+    "metaSources": "{{count}} 条来源",
+    "metaLoading": "加载中…",
+    "metaNone": "未检索到外部资料",
+    "nodeBackground": "背景检索",
+    "nodeRound": "本轮线索 · R{{round}}",
+    "emptyHint": "这条信号没找到匹配的外部新闻 — 推演会直接用你写下的原文.",
+    "volume": "成交 {{amount}}"
+  },
+  "history": {
+    "label": "五轮追问 · 档案",
+    "completedAt": "完成于 {{date}}",
+    "metaRounds": "{{count}} 轮",
+    "yourAnswer": "你的回答",
+    "diagnosis": "诊断",
+    "tagDistractor": "诱导",
+    "tagRequired": "必选",
+    "tagUser": "自填",
+    "decisionTraining": "训练",
+    "decisionEligible": "进入分析师评审"
+  },
+  "diagnosis": {
+    "correct": "贴近",
+    "partialMiss": "有漏",
+    "distractor": "被带偏",
+    "weak": "偏轻"
+  },
+  "input": {
+    "stamp": "输入",
+    "charCount": "{{count}} 字",
+    "tapToEdit": "点击编辑 · {{count}} 字",
+    "tapToExpand": "点击展开输入"
+  },
+  "distilled": {
+    "header": "降噪",
+    "label": "降噪",
+    "meta": "这条信号",
+    "distilling": "正在把噪音滤掉…",
+    "distillingStamp": "DISTILLING",
+    "beneficiaryLabel": "收益标的",
+    "beneficiaryMeta": "金融推演",
+    "analysing": "金融受益链还在推演…",
+    "analysingStamp": "ANALYSING",
+    "silence": "这条信号没有清晰的受益映射。系统选择不说。",
+    "proceeding": "正在上会…",
+    "proceed": "上投决会",
+    "defer": "先放着"
+  },
+  "beneficiary": {
+    "valuation": "估值",
+    "catalyst": "催化",
+    "risk": "风险"
+  },
+  "retry": {
+    "hint": "◆ 等下一题超过 {{seconds}}s — 大概率 Socratic 输出格式偶发不稳, 让它重试一次.",
+    "busy": "正在重新出题...",
+    "action": "让它再出一次"
+  }
+}

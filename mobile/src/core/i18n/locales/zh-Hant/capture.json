@@ -1,0 +1,45 @@
+{
+  "compose": {
+    "title": "一句話, 30 秒.",
+    "hint": "一次只記一件事。\n選個分類放好, 字句不必精確。",
+    "placeholder": "今天看到什麼…",
+    "submit": "記下",
+    "cancel": "再想想"
+  },
+  "category": {
+    "stamp": "◆ 歸到哪個分類",
+    "empty": "還沒有分類，先建一個",
+    "add": "新建分類"
+  },
+  "denoise": {
+    "subtitle": "推斷、分析後的金融訊號，按時間倒序。",
+    "loading": "正在拉取記錄…",
+    "empty": "還沒有推演出標的的訊號。\nAI 把你的觀察降噪出標的後，會出現在這裡。",
+    "earlier": "更早的記錄…"
+  },
+  "denoisedRow": {
+    "order": {
+      "first": "一階",
+      "second": "二階",
+      "third": "三階"
+    },
+    "origin": "緣起：{{text}}"
+  },
+  "status": {
+    "unsynced": "◆ 未同步 · 點開重試",
+    "retrying": "◆ 重試中",
+    "inferring": "◆ AI 推演中",
+    "inferred": "◆ AI 已推演",
+    "inferFailed": "◆ 推演失敗"
+  },
+  "silence": {
+    "label": "今日狀態",
+    "silent": "沉默",
+    "count": "{{count}} 條新記錄"
+  },
+  "toast": {
+    "stamp": "AI 推演完成",
+    "fallbackTitle": "你的訊號已推演完成",
+    "subtitle": "點開看完整推演 ↗"
+  }
+}

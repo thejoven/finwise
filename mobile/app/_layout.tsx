@@ -15,6 +15,7 @@ import { useAuth } from "@/core/auth/store";
 import { useNotifications } from "@/features/notifications";
 import { useActiveProject } from "@/features/project/store";
 import { useAppearance } from "@/core/theme/store";
+import { useLanguage } from "@/core/i18n";
 import { resolveColors } from "@/core/theme";
 import { ToastRoot } from "@/shared/toast";
 import {
@@ -78,6 +79,7 @@ export default function RootLayout() {
   const hydrateNotifications = useNotifications((s) => s.hydrate);
   const hydrateActiveProject = useActiveProject((s) => s.hydrate);
   const hydrateAppearance = useAppearance((s) => s.hydrate);
+  const hydrateLanguage = useLanguage((s) => s.hydrate);
   const [storageReady, setStorageReady] = useState(false);
   // JS splash 是否还在演动画. 字体/hydrate 完成后, 我们把 native splash 收掉,
   // 由本 JS splash 接管, 演完动画再卸载, 把下层 Stack 露出来.
@@ -101,13 +103,23 @@ export default function RootLayout() {
       hydrateAppearance().catch((err) => {
         console.warn("[appearance] hydrate failed:", err);
       }),
+      hydrateLanguage().catch((err) => {
+        console.warn("[language] hydrate failed:", err);
+      }),
     ]).finally(() => {
       if (mounted) setStorageReady(true);
     });
     return () => {
       mounted = false;
     };
-  }, [hydratePending, hydrateAuth, hydrateNotifications, hydrateActiveProject, hydrateAppearance]);
+  }, [
+    hydratePending,
+    hydrateAuth,
+    hydrateNotifications,
+    hydrateActiveProject,
+    hydrateAppearance,
+    hydrateLanguage,
+  ]);
 
   const [loaded] = useFonts(FONTS);
 

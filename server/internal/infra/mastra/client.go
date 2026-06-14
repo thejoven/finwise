@@ -56,6 +56,7 @@ func (c *Client) IsConfigured() bool {
 // ───── ConsensusCheck (M6 G2) ─────
 
 type ConsensusRequest struct {
+	Language        string `json:"language,omitempty"` // 输出语言: zh-Hans|zh-Hant|en; 空=默认简体
 	Asset           string `json:"asset"`
 	SignalText      string `json:"signal_text"`
 	ProjectName     string `json:"project_name,omitempty"`
@@ -91,6 +92,7 @@ func (c *Client) ConsensusCheck(ctx context.Context, req ConsensusRequest) (*Con
 // ───── ThicknessCheck (M6 G1) ─────
 
 type ThicknessRequest struct {
+	Language        string   `json:"language,omitempty"`
 	UserID          string   `json:"user_id"`
 	SignalID        string   `json:"signal_id"`
 	RawText         string   `json:"raw_text"`
@@ -125,6 +127,7 @@ func (c *Client) ThicknessCheck(ctx context.Context, req ThicknessRequest) (*Thi
 // ───── TimingCheck (时机分析师 · 原 G3 窗口) ─────
 
 type TimingRequest struct {
+	Language        string  `json:"language,omitempty"`
 	Asset           string  `json:"asset"`
 	SignalText      string  `json:"signal_text"`
 	StatedAction    string  `json:"stated_action,omitempty"`
@@ -156,6 +159,7 @@ func (c *Client) TimingCheck(ctx context.Context, req TimingRequest) (*TimingRes
 // ───── CompetenceCheck (能力圈分析师 · 原 G4 能力圈) ─────
 
 type CompetenceRequest struct {
+	Language        string `json:"language,omitempty"`
 	Asset           string `json:"asset"`
 	SignalText      string `json:"signal_text"`
 	Direct          bool   `json:"direct"`
@@ -186,6 +190,7 @@ func (c *Client) CompetenceCheck(ctx context.Context, req CompetenceRequest) (*C
 // ───── Editor (M9) ─────
 
 type EditorRequest struct {
+	Language             string   `json:"language,omitempty"`
 	UserID               string   `json:"user_id"`
 	AssetName            string   `json:"asset_name"`
 	OpensToday           int      `json:"opens_today"`
@@ -220,6 +225,7 @@ type DiagnosticianAnswer struct {
 }
 
 type DiagnosticianRequest struct {
+	Language                string                `json:"language,omitempty"`
 	UserID                  string                `json:"user_id"`
 	CommitmentAsset         string                `json:"commitment_asset"`
 	CommitmentThesisSummary string                `json:"commitment_thesis_summary"`
@@ -252,6 +258,7 @@ type AnalystChatMessage struct {
 }
 
 type AnalystChatRequest struct {
+	Language string `json:"language,omitempty"`
 	// Analyst: thickness | consensus | timing | competence (按 failed_gate 映射)
 	Analyst         string               `json:"analyst"`
 	Asset           string               `json:"asset"`
@@ -290,7 +297,8 @@ func (c *Client) AnalystChat(ctx context.Context, req AnalystChatRequest) (*Anal
 type TweetClassifyRequest struct {
 	TweetText    string `json:"tweet_text"`
 	AuthorHandle string `json:"author_handle,omitempty"`
-	Lang         string `json:"lang,omitempty"`
+	Lang         string `json:"lang,omitempty"`     // 推文原文语言 (classifier 参考, 非输出语言)
+	Language     string `json:"language,omitempty"` // 输出语言: 标签/总结写哪门语言
 }
 
 type TweetClassifyResponse struct {

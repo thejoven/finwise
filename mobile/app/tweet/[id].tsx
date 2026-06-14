@@ -3,6 +3,7 @@ import { Linking, ScrollView, StyleSheet, View } from "react-native";
 import { Image } from "expo-image";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
+import { useTranslation } from "react-i18next";
 
 import { DoubleRule, Icon, Mono, Sans, SectionHeader, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
@@ -17,6 +18,7 @@ import { useMarkTweetRead, useTweetDetail } from "@/features/subscriptions/hooks
  * 进入即已读 (乐观更新, 无需手点). 转为信号走 PromoteSheet (§8.5).
  */
 export default function TweetDetailScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: tweet, isLoading, isError } = useTweetDetail(id);
   const markRead = useMarkTweetRead();
@@ -44,10 +46,11 @@ export default function TweetDetailScreen() {
       <View style={styles.header}>
         <TapEffect style={styles.backButton} onPress={() => router.back()} disableEffect>
           <Icon name="chevronLeft" size={18} color={theme.color.ink} strokeWidth={1.5} />
-          <Serif size={13}>返回</Serif>
+          <Serif size={13}>{t("common.back")}</Serif>
         </TapEffect>
         <Sans size={9} weight="600" style={styles.headerStamp}>
-          订阅{tweet ? ` · @${tweet.handle}` : ""}
+          {t("subscriptions.detail.stamp")}
+          {tweet ? ` · @${tweet.handle}` : ""}
         </Sans>
         <View style={styles.headerSpacer} />
       </View>
@@ -55,11 +58,11 @@ export default function TweetDetailScreen() {
       <ScrollView contentContainerStyle={styles.scroll}>
         {isLoading ? (
           <Serif size={13} italic style={styles.mutedText}>
-            正在加载…
+            {t("subscriptions.detail.loading")}
           </Serif>
         ) : isError || !tweet ? (
           <Serif size={13} italic style={styles.mutedText}>
-            没有这条推文。
+            {t("subscriptions.detail.notFound")}
           </Serif>
         ) : (
           <View style={styles.body}>
@@ -75,7 +78,7 @@ export default function TweetDetailScreen() {
                   {tweet.display_name || tweet.handle}
                 </Sans>
                 <Mono size={10} style={styles.authorMeta}>
-                  {tweet.is_retweet ? "RT · " : ""}@{tweet.handle} ·{" "}
+                  {tweet.is_retweet ? t("subscriptions.detail.retweet") : ""}@{tweet.handle} ·{" "}
                   {formatShortDateTime(tweet.tweet_created_at)}
                 </Mono>
               </View>
@@ -111,7 +114,7 @@ export default function TweetDetailScreen() {
                 )}
                 <View style={styles.playBadge}>
                   <Sans size={11} weight="600" style={styles.playText}>
-                    ▶ 在 X 播放
+                    {t("subscriptions.detail.playOnX")}
                   </Sans>
                 </View>
               </TapEffect>
@@ -121,22 +124,22 @@ export default function TweetDetailScreen() {
             <View style={styles.aiBlock}>
               <DoubleRule />
               <View style={styles.aiInner}>
-                <SectionHeader label="AI 编辑" meta={tweet.category ?? ""} />
+                <SectionHeader label={t("subscriptions.detail.aiEditor")} meta={tweet.category ?? ""} />
                 {tweet.summary ? (
                   <Serif size={13} italic style={styles.summary}>
                     {tweet.summary}
                   </Serif>
                 ) : tweet.classify_status === "pending" ? (
                   <Mono size={10} style={styles.aiPending}>
-                    AI 正在读…
+                    {t("subscriptions.detail.aiPending")}
                   </Mono>
                 ) : null}
                 {(tweet.tags ?? []).length > 0 ? (
                   <View style={styles.tagRow}>
-                    {(tweet.tags ?? []).map((t) => (
-                      <View key={t} style={styles.pill}>
+                    {(tweet.tags ?? []).map((tag) => (
+                      <View key={tag} style={styles.pill}>
                         <Sans size={9} style={styles.pillText}>
-                          {t}
+                          {tag}
                         </Sans>
                       </View>
                     ))}
@@ -149,12 +152,12 @@ export default function TweetDetailScreen() {
             <View style={styles.actions}>
               <TapEffect onPress={() => setPromoteOpen(true)} style={styles.primaryBtn}>
                 <Sans size={13} weight="600" style={styles.primaryText}>
-                  转为信号
+                  {t("subscriptions.detail.promote")}
                 </Sans>
               </TapEffect>
               <TapEffect onPress={openInX} style={styles.secondaryBtn}>
                 <Sans size={13} weight="600" style={styles.secondaryText}>
-                  在 X 打开
+                  {t("subscriptions.detail.openOnX")}
                 </Sans>
               </TapEffect>
             </View>

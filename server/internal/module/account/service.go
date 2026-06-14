@@ -80,6 +80,7 @@ type PublicUser struct {
 	DisplayName *string
 	AvatarURL   *string
 	Bio         *string
+	Language    *string
 	IsAdmin     bool
 	CreatedAt   time.Time
 }
@@ -91,6 +92,7 @@ func toPublic(u *User) *PublicUser {
 		DisplayName: u.DisplayName,
 		AvatarURL:   u.AvatarURL,
 		Bio:         u.Bio,
+		Language:    u.Language,
 		IsAdmin:     u.IsAdmin,
 		CreatedAt:   u.CreatedAt,
 	}
@@ -243,9 +245,23 @@ type UpdateMeCommand struct {
 	DisplayName *string
 	Bio         *string
 	AvatarURL   *string
+	Language    *string // nil = 不动; 否则须是受支持语言
 }
 
+// SupportedLanguages 是 users.language 的合法取值 (与 mobile SupportedLanguage / 迁移 023 CHECK 对齐).
+var SupportedLanguages = map[string]bool{"zh-Hans": true, "zh-Hant": true, "en": true}
+
 func (c *UpdateMeCommand) normalize() error {
+	if c.Language != nil {
+		v := strings.TrimSpace(*c.Language)
+		if v == "" {
+			c.Language = nil // 空串当"不动", 不会去清掉已有偏好
+		} else if !SupportedLanguages[v] {
+			return fmt.Errorf("%w: unsupported language %q", ErrInvalidInput, v)
+		} else {
+			c.Language = &v
+		}
+	}
 	clamp := func(p **string, max int, name string) error {
 		if *p == nil {
 			return nil
@@ -278,6 +294,7 @@ func (s *Service) UpdateMe(ctx context.Context, userID uuid.UUID, cmd UpdateMeCo
 		DisplayName: cmd.DisplayName,
 		Bio:         cmd.Bio,
 		AvatarURL:   cmd.AvatarURL,
+		Language:    cmd.Language,
 	})
 	if err != nil {
 		return nil, err

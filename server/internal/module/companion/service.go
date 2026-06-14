@@ -55,9 +55,9 @@ func (c *OpenCommand) Validate() error {
 }
 
 // RecordOpen: 两段式.
-//   1. 快速 tx: 记录 open event + 累加 fingerprint, 看是否到 anxiety 阈值
-//   2. 若到阈值: 调 Mastra Editor (15s 超时), 失败 fallback 随机 reason; 然后单独 tx
-//      写 companion.shown event + 标 fingerprint.companion_shown=true
+//  1. 快速 tx: 记录 open event + 累加 fingerprint, 看是否到 anxiety 阈值
+//  2. 若到阈值: 调 Mastra Editor (15s 超时), 失败 fallback 随机 reason; 然后单独 tx
+//     写 companion.shown event + 标 fingerprint.companion_shown=true
 func (s *Service) RecordOpen(ctx context.Context, cmd OpenCommand) (*OpenResult, error) {
 	if err := cmd.Validate(); err != nil {
 		return nil, err
@@ -120,6 +120,7 @@ func (s *Service) runEditorWithFallback(ctx context.Context, userID, commitID uu
 	callCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 	resp, err := s.mastra.Editor(callCtx, mastra.EditorRequest{
+		Language:             s.repo.UserLanguage(ctx, userID),
 		UserID:               userID.String(),
 		AssetName:            assetName,
 		OpensToday:           opens,

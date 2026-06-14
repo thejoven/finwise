@@ -1,0 +1,89 @@
+{
+  "masthead": {
+    "title": "訂閱",
+    "manage": "管理",
+    "subtitle": "你訂的人, 替你盯的事。"
+  },
+  "unread": "未讀 {{count}}",
+  "filter": {
+    "all": "全部",
+    "markAllRead": "全部已讀"
+  },
+  "chips": {
+    "all": "全部帳號"
+  },
+  "unknownDate": "未知日期",
+  "empty": {
+    "noSubs": {
+      "title": "這份報紙還沒有通訊社。",
+      "cta": "新增第一個帳號"
+    },
+    "allRead": {
+      "stamp": "✓ 都讀完了",
+      "body": "今天訂閱裡的事, 你都過目了。"
+    },
+    "loading": "正在排版…",
+    "noContent": "還沒有內容。新推文會出現在這裡。"
+  },
+  "manage": {
+    "title": "管理訂閱",
+    "sourceTypeLabel": "訊號源類型",
+    "type": {
+      "x": "X 帳號",
+      "telegram": "Telegram 頻道",
+      "rss": "新聞源",
+      "available": "可用",
+      "planned": "規劃中"
+    },
+    "plannedTitle": "在路上了",
+    "plannedBody": "{{label}}訂閱還在規劃中, 先把 X 帳號讀順。",
+    "addLabel": "新增訂閱 · X 帳號",
+    "handlePlaceholder": "elonmusk 或 @elonmusk",
+    "resolve": "解析",
+    "resolving": "解析中…",
+    "subscribe": "確認訂閱",
+    "subscribing": "訂閱中…",
+    "subscribed": "已訂閱。正在回填最近的推文, 新內容會出現在你的報紙裡。",
+    "listLabel": "X 帳號 · {{count}}",
+    "dead": "已失效",
+    "subUnread": "未讀 {{count}}",
+    "lastPolled": "{{time}}更新",
+    "unsubscribe": "取消訂閱",
+    "footer": "X 帳號 {{count}} / {{limit}} —— 先讀完手頭的, 再添新的。"
+  },
+  "errors": {
+    "notFound": "沒有找到這個帳號",
+    "quota": "先讀完手頭的, 再添新的。",
+    "collectorUnavailable": "採集服務暫不可用, 稍後再試",
+    "generic": "出了點問題, 再試一次"
+  },
+  "promote": {
+    "title": "轉為訊號",
+    "doneDuplicate": "這條已經轉過了。",
+    "doneOk": "已落入信箱, 與手錄訊號同列。",
+    "goSignal": "去看訊號 →",
+    "noteLabel": "用你的話說一句 (可選)",
+    "notePlaceholder": "例: 利率頂部的接盤結構, 值得盯配置盤動向",
+    "hint": "不填則原文直通, 出處自動帶上 via @{{handle}}",
+    "confirm": "確認轉為訊號",
+    "confirming": "正在轉…",
+    "error": "沒轉成功, 再試一次。"
+  },
+  "row": {
+    "retweet": "RT · ",
+    "aiReading": "AI 正在讀…",
+    "photo": "[圖]",
+    "video": "[影片]"
+  },
+  "detail": {
+    "stamp": "訂閱",
+    "loading": "正在載入…",
+    "notFound": "沒有這條推文。",
+    "retweet": "RT · ",
+    "playOnX": "▶ 在 X 播放",
+    "aiEditor": "AI 編輯",
+    "aiPending": "AI 正在讀…",
+    "promote": "轉為訊號",
+    "openOnX": "在 X 開啟"
+  }
+}
