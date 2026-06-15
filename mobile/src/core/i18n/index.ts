@@ -10,6 +10,9 @@
  * 组件里用 `useTranslation()` 拿 `t` —— 语言切换时(changeLanguage)订阅方自动重渲染.
  * 非组件代码(toast / api 错误文案)可直接 `import i18n from "@/core/i18n"; i18n.t(...)`.
  */
+// Hermes (RN) 不一定带 Intl.PluralRules —— i18next v4 复数解析依赖它. 这个 polyfill 必须
+// 在 i18n.init() 之前加载, 否则 i18next 退回 v3 复数格式, 我们的 _one/_other key 失配.
+import "intl-pluralrules";
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 

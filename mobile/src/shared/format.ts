@@ -81,14 +81,24 @@ export function isSameLocalDay(iso: string, today = new Date()): boolean {
   );
 }
 
+// 手写本地化表 —— 不走 Intl.DateTimeFormat: Hermes 的 Intl 在部分环境不完整 (见 i18n/index 的
+// PluralRules polyfill). 日期戳只需星期 + 月日, 手写表最稳, 跨环境零依赖.
+const WEEKDAYS_HANS = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+const WEEKDAYS_HANT = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+const WEEKDAYS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 /** 本地化星期(短) — 报刊头日期戳, 跟随当前 i18n 语言 (周一 / 週一 / Mon). */
 export function weekdayLabel(d: Date = new Date()): string {
-  return new Intl.DateTimeFormat(i18n.language, { weekday: "short" }).format(d);
+  const arr =
+    i18n.language === "en" ? WEEKDAYS_EN : i18n.language === "zh-Hant" ? WEEKDAYS_HANT : WEEKDAYS_HANS;
+  return arr[d.getDay()]!;
 }
 
 /** 本地化"月日" — 报刊头中间的日期戳 (5月15日 / May 15). */
 export function monthDayLabel(d: Date = new Date()): string {
-  return new Intl.DateTimeFormat(i18n.language, { month: "long", day: "numeric" }).format(d);
+  if (i18n.language === "en") return `${MONTHS_EN[d.getMonth()]!} ${d.getDate()}`;
+  return `${d.getMonth() + 1}月${d.getDate()}日`; // 简体 / 繁体同形
 }
 
 /** 中文相对时间 — 列表 meta 行用; 超过一周退回日期. */
