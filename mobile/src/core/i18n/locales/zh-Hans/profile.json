@@ -3,7 +3,8 @@
   "title": "个人资料.",
   "sections": {
     "account": "账号",
-    "preferences": "偏好"
+    "preferences": "偏好",
+    "settings": "设置"
   },
   "account": {
     "editProfile": "编辑资料",
@@ -13,7 +14,8 @@
   },
   "preferences": {
     "colophon": "卷首语 · 关于",
-    "search": "搜索观察记录"
+    "title": "偏好.",
+    "topBar": "偏好 · PREFERENCES"
   },
   "joinedOn": "加入于 {{date}}",
   "bioEmpty": "还没写个人签名。",

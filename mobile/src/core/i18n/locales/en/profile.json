@@ -3,7 +3,8 @@
   "title": "Profile.",
   "sections": {
     "account": "Account",
-    "preferences": "Preferences"
+    "preferences": "Preferences",
+    "settings": "Settings"
   },
   "account": {
     "editProfile": "Edit Profile",
@@ -13,7 +14,8 @@
   },
   "preferences": {
     "colophon": "Colophon · About",
-    "search": "Search Observations"
+    "title": "Preferences.",
+    "topBar": "Preferences"
   },
   "joinedOn": "Joined {{date}}",
   "bioEmpty": "No bio yet.",

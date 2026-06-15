@@ -155,6 +155,7 @@ export default function RootLayout() {
             <Stack.Screen name="capture" options={bottomModalScreen} />
             <Stack.Screen name="profile/edit" options={bottomModalScreen} />
             <Stack.Screen name="profile/password" options={bottomModalScreen} />
+            <Stack.Screen name="profile/preferences" options={pushDetailScreen} />
             <Stack.Screen name="search" options={bottomModalScreen} />
             <Stack.Screen name="subscriptions/manage" options={bottomModalScreen} />
             <Stack.Screen name="signal/[id]" options={pushDetailScreen} />

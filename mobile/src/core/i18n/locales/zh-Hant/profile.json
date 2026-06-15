@@ -3,7 +3,8 @@
   "title": "個人資料.",
   "sections": {
     "account": "帳號",
-    "preferences": "偏好"
+    "preferences": "偏好",
+    "settings": "設定"
   },
   "account": {
     "editProfile": "編輯資料",
@@ -13,7 +14,8 @@
   },
   "preferences": {
     "colophon": "卷首語 · 關於",
-    "search": "搜尋觀察記錄"
+    "title": "偏好.",
+    "topBar": "偏好 · PREFERENCES"
   },
   "joinedOn": "加入於 {{date}}",
   "bioEmpty": "還沒寫個人簽名。",

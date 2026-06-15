@@ -11,6 +11,7 @@ import {
   ChevronUp,
   Pencil,
   Plus,
+  Search,
   X,
 } from "lucide-react-native";
 
@@ -52,7 +53,8 @@ export type IconName =
   | "close"
   | "arrowUp"
   | "arrowUpRight"
-  | "book";
+  | "book"
+  | "search";
 
 /** 语义名 → SF Symbol (iOS) + lucide 组件 (兜底). SF 名见 Apple「SF Symbols」app. */
 const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
@@ -68,6 +70,7 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   arrowUpRight: { sf: "arrow.up.right", lucide: ArrowUpRight },
   // BookOpen → `book` (iOS 13+, 全版本可用). 若只跑 iOS 16+ 想要"翻开"感可换 `book.pages`.
   book: { sf: "book", lucide: BookOpen },
+  search: { sf: "magnifyingglass", lucide: Search },
 };
 
 /** lucide strokeWidth → SF Symbol weight. 项目描边只用 1.5 / 1.75 / 2. */

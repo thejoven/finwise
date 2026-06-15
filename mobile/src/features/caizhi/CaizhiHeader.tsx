@@ -11,7 +11,7 @@ import { monthDayLabel, weekdayLabel } from "@/shared/format";
 /**
  * 财知页固定报头 (不折叠版).
  *
- * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 book → 卷首语, 中日期,
+ * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 放大镜 → 搜索, 中日期,
  * 右 ＋ → 记录) + 常驻刊名「财知」. 区别: 这里**始终固定**, 不随滚动折叠 (滚动折叠交给各子页
  * 自己的列表, host 的报头/分段栏常驻). 装饰性副线 (WiseFlow / slogan) 略去, 给三页腾出高度.
  *
@@ -31,11 +31,11 @@ export function CaizhiHeader() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <View style={styles.topRow}>
         <TapEffect
-          onPress={() => router.push("/colophon")}
+          onPress={() => router.push("/search")}
           style={styles.iconButton}
-          accessibilityLabel={t("caizhi.header.colophon")}
+          accessibilityLabel={t("caizhi.header.search")}
         >
-          <Icon name="book" size={18} color={theme.color.ink} strokeWidth={1.5} />
+          <Icon name="search" size={18} color={theme.color.ink} strokeWidth={1.5} />
         </TapEffect>
         <Sans size={9} weight="600" style={styles.topStrip}>
           {date} · {weekday}

@@ -19,8 +19,6 @@ import { UI, MODS, hasNativeUI } from "@/shared/native";
 import { theme, useThemeColors } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
 import { useAuth, type AuthUser } from "@/core/auth/store";
-import { useAppearance, type AppearancePref } from "@/core/theme/store";
-import { useLanguage, LANGUAGE_ENDONYMS, type LanguagePref } from "@/core/i18n";
 import { useNotifications } from "@/features/notifications";
 
 /**
@@ -222,20 +220,14 @@ function ProfileHeader({
   );
 }
 
-const APPEARANCE_KEYS = ["light", "dark", "system"] as const satisfies readonly AppearancePref[];
-const LANGUAGE_KEYS = ["system", "zh-Hans", "zh-Hant", "en"] as const satisfies readonly LanguagePref[];
-
-/** 语言行/选项的展示名: system 走翻译, 具体语言用本族写法(endonym). */
-function languageLabel(key: LanguagePref, systemLabel: string): string {
-  return key === "system" ? systemLabel : LANGUAGE_ENDONYMS[key];
-}
-
 /**
  * 原生 iOS 设置表 —— 真·原生 SwiftUI `Form` (@expo/ui). 仅在 `hasNativeUI` 时渲染, 故内部
- * 放心用 `UI!` / `MODS!`. 两组:
+ * 放心用 `UI!` / `MODS!`. 分模块:
  *   · 账号  —— 编辑资料 / 修改密码 / 消息通知 (未读数红字)
- *   · 偏好  —— 外观 (菜单选择器: 光亮/暗黑/跟随系统) / 卷首语·关于 / 搜索观察记录
+ *   · 设置  —— 偏好 (二级页: 外观 / 语言) / 卷首语·关于
  *   · 退出登录 —— 独立 destructive section
+ *
+ * 偏好(外观/语言)挪进二级页 app/profile/preferences, 主页只留导航入口, 让设置项分模块更清爽.
  *
  * 配色: 原生修饰符只吃 hex 字符串, 故用 `useThemeColors()` 拿当前明暗的纯 hex (外观切换会
  *   重渲染). 画到 paper/paper2 上 (而非系统灰), 与全 App 纸感统一; 结构 (分组卡 / 分隔线 /
@@ -244,24 +236,12 @@ function languageLabel(key: LanguagePref, systemLabel: string): string {
 function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogout: () => void }) {
   const c = useThemeColors();
   const { t } = useTranslation();
-  const pref = useAppearance((s) => s.pref);
-  const setPref = useAppearance((s) => s.setAppearance);
-  const langPref = useLanguage((s) => s.pref);
-  const setLang = useLanguage((s) => s.setLanguage);
   const items = useNotifications((s) => s.items);
   const unread = items.filter((n) => !n.read).length;
 
-  const { Host, Form, Section, Button, Picker, HStack, Spacer, Text: T, Image } = UI!;
-  const {
-    buttonStyle,
-    foregroundStyle,
-    tint,
-    pickerStyle,
-    tag,
-    listRowBackground,
-    scrollContentBackground,
-    bold,
-  } = MODS!;
+  const { Host, Form, Section, Button, HStack, Spacer, Text: T, Image } = UI!;
+  const { buttonStyle, foregroundStyle, tint, listRowBackground, scrollContentBackground, bold } =
+    MODS!;
 
   /** 标准导航行: 主标题 + 可选尾随值 + 灰 chevron, 整行可点 (List 行里 Button 天然全宽命中). */
   const navRow = (label: string, onPress: () => void, trailing?: ReactElement) => (
@@ -288,33 +268,9 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
           )}
         </Section>
 
-        <Section title={t("profile.sections.preferences")} modifiers={[listRowBackground(c.paper2)]}>
-          <Picker
-            label={t("settings.appearance.title")}
-            selection={pref}
-            onSelectionChange={(value) => void setPref(value as AppearancePref)}
-            modifiers={[pickerStyle("menu")]}
-          >
-            {APPEARANCE_KEYS.map((k) => (
-              <T key={k} modifiers={[tag(k)]}>
-                {t(`settings.appearance.${k}`)}
-              </T>
-            ))}
-          </Picker>
-          <Picker
-            label={t("settings.language.title")}
-            selection={langPref}
-            onSelectionChange={(value) => void setLang(value as LanguagePref)}
-            modifiers={[pickerStyle("menu")]}
-          >
-            {LANGUAGE_KEYS.map((k) => (
-              <T key={k} modifiers={[tag(k)]}>
-                {languageLabel(k, t("settings.language.system"))}
-              </T>
-            ))}
-          </Picker>
+        <Section title={t("profile.sections.settings")} modifiers={[listRowBackground(c.paper2)]}>
+          {navRow(t("profile.sections.preferences"), () => router.push("/profile/preferences"))}
           {navRow(t("profile.preferences.colophon"), () => router.push("/colophon"))}
-          {navRow(t("profile.preferences.search"), () => router.push("/search"))}
         </Section>
 
         {token ? (
@@ -357,11 +313,12 @@ function FallbackSettings({ token, onLogout }: { token: string | null; onLogout:
       </View>
 
       <View style={styles.section}>
-        <SectionHeader label={t("profile.sections.preferences")} />
-        <FallbackAppearanceRows />
-        <FallbackLanguageRows />
+        <SectionHeader label={t("profile.sections.settings")} />
+        <RowLink
+          label={t("profile.sections.preferences")}
+          onPress={() => router.push("/profile/preferences")}
+        />
         <RowLink label={t("profile.preferences.colophon")} onPress={() => router.push("/colophon")} />
-        <RowLink label={t("profile.preferences.search")} onPress={() => router.push("/search")} />
       </View>
 
       {token ? (
@@ -373,58 +330,6 @@ function FallbackSettings({ token, onLogout }: { token: string | null; onLogout:
           </TapEffect>
         </View>
       ) : null}
-    </>
-  );
-}
-
-/** 外观选择器 (自绘回退) — 光亮 / 暗黑 / 跟随系统, 各一行带红菱形选中点. */
-function FallbackAppearanceRows() {
-  const { t } = useTranslation();
-  const pref = useAppearance((s) => s.pref);
-  const setPref = useAppearance((s) => s.setAppearance);
-  return (
-    <>
-      {APPEARANCE_KEYS.map((k) => (
-        <TapEffect
-          key={k}
-          style={styles.row}
-          onPress={() => {
-            void setPref(k);
-          }}
-          pressedStyle={{ backgroundColor: theme.color.paperPressed }}
-        >
-          <Serif size={14} style={styles.rowLabel}>
-            {t(`settings.appearance.${k}`)}
-          </Serif>
-          {pref === k ? <View style={styles.badgeDot} /> : null}
-        </TapEffect>
-      ))}
-    </>
-  );
-}
-
-/** 语言选择器 (自绘回退) — 跟随系统 / 简体 / 繁体 / English, 各一行带红菱形选中点. */
-function FallbackLanguageRows() {
-  const { t } = useTranslation();
-  const pref = useLanguage((s) => s.pref);
-  const setLang = useLanguage((s) => s.setLanguage);
-  return (
-    <>
-      {LANGUAGE_KEYS.map((k) => (
-        <TapEffect
-          key={k}
-          style={styles.row}
-          onPress={() => {
-            void setLang(k);
-          }}
-          pressedStyle={{ backgroundColor: theme.color.paperPressed }}
-        >
-          <Serif size={14} style={styles.rowLabel}>
-            {languageLabel(k, t("settings.language.system"))}
-          </Serif>
-          {pref === k ? <View style={styles.badgeDot} /> : null}
-        </TapEffect>
-      ))}
     </>
   );
 }
