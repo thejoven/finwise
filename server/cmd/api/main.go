@@ -32,6 +32,7 @@ import (
 	gatemod "wiseflow/server/internal/module/gate"
 	invitemod "wiseflow/server/internal/module/invite"
 	projectmod "wiseflow/server/internal/module/project"
+	recommendmod "wiseflow/server/internal/module/recommend"
 	refinementmod "wiseflow/server/internal/module/refinement"
 	researchmod "wiseflow/server/internal/module/research"
 	retrospectmod "wiseflow/server/internal/module/retrospect"
@@ -231,6 +232,13 @@ func run() error {
 		}, logger)
 	subscriptionHandler := subscriptionmod.NewHandler(subscriptionSvc)
 
+	// recommend: 主动信号推荐. P0「画像底座」—— builder 从既有行为轨迹 (signals/gate/
+	// commitments/holdings/retrospects/转信号 tweets) 派生每用户 alpha 画像, 落 user_alpha_profile.
+	// 本期只有一个内部端点 (手动触发重算, 供验证); 策展漏斗 + cron 留待 P1.
+	recommendRepo := recommendmod.NewRepository(pool)
+	recommendSvc := recommendmod.NewService(recommendRepo, logger)
+	recommendHandler := recommendmod.NewHandler(recommendSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -254,6 +262,7 @@ func run() error {
 			attentionHandler.Register(v1, internal)
 			distillationHandler.Register(v1, internal)
 			subscriptionHandler.Register(v1)
+			recommendHandler.Register(internal)
 		},
 	})
 
