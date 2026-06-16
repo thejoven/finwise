@@ -357,6 +357,150 @@ func (r *Repository) ListUserIDsWithBehavior(ctx context.Context) ([]uuid.UUID, 
 	return out, rows.Err()
 }
 
+// ───────────────────────── W2 · 策展漏斗的源读 ─────────────────────────
+
+// CommitmentTarget — 一条活跃已签命题 (策展的锚: 只对你已押下的命题召情报, 几乎不可能是噪音).
+type CommitmentTarget struct {
+	ID             uuid.UUID
+	Asset          string // thesis.asset_ticker
+	AssetName      string // thesis.asset_name
+	Action         string // thesis.action
+	ExitConditions []string
+	Reasons        []string // thesis.reasons_for_future_self (供 W3 Mastra 精排)
+}
+
+// thesisFullJSON — W2 需要的 thesis 字段 (比 P0 thesisJSON 多 exit_conditions/reasons).
+type thesisFullJSON struct {
+	AssetTicker    string   `json:"asset_ticker"`
+	AssetName      string   `json:"asset_name"`
+	Action         string   `json:"action"`
+	ExitConditions []string `json:"exit_conditions"`
+	Reasons        []string `json:"reasons_for_future_self"`
+}
+
+// ActiveSignedCommitments 取该用户在持的已签命题 (commitments.signed + holdings active/triggered).
+func (r *Repository) ActiveSignedCommitments(ctx context.Context, userID uuid.UUID) ([]CommitmentTarget, error) {
+	const q = `
+		SELECT c.id, c.thesis
+		FROM commitments c
+		JOIN holdings h ON h.id = c.id
+		WHERE c.user_id = $1 AND c.status = 'signed' AND h.status IN ('active', 'triggered')
+		ORDER BY h.expires_at ASC NULLS LAST
+	`
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil, fmt.Errorf("active signed commitments: %w", err)
+	}
+	defer rows.Close()
+	var out []CommitmentTarget
+	for rows.Next() {
+		var id uuid.UUID
+		var thesisRaw []byte
+		if err := rows.Scan(&id, &thesisRaw); err != nil {
+			return nil, err
+		}
+		var tj thesisFullJSON
+		if len(thesisRaw) > 0 {
+			_ = json.Unmarshal(thesisRaw, &tj) // 容错: 文书异常不阻断策展
+		}
+		out = append(out, CommitmentTarget{
+			ID: id, Asset: tj.AssetTicker, AssetName: tj.AssetName, Action: tj.Action,
+			ExitConditions: tj.ExitConditions, Reasons: tj.Reasons,
+		})
+	}
+	return out, rows.Err()
+}
+
+// CandidateTweet — 进粗排的候选推文.
+type CandidateTweet struct {
+	ID        string
+	Text      string
+	Summary   string
+	Relevance float64
+	CreatedAt time.Time
+	Tags      []string
+}
+
+// CandidateTweetsForAsset 取与某命题标的相关的候选推文 (红线: 紧贴持仓标的, 宁可不推).
+// 候选 = 用户订阅源里、近 windowDays 天、relevance≥min、未读、未对该命题推过、
+//
+//	且文本/标签命中 terms (命题的 ticker/名) 的已分类推文.
+//
+// (13 标的归一落地后, 可换成按 signal_assets 精确 ticker 匹配 — 见计划 §7 依赖.)
+func (r *Repository) CandidateTweetsForAsset(ctx context.Context, userID, commitmentID uuid.UUID, terms []string, relevanceMin float64, windowDays, limit int) ([]CandidateTweet, error) {
+	const q = `
+		SELECT t.id, t.text, COALESCE(t.summary,''), COALESCE(t.relevance,0),
+		       t.tweet_created_at, COALESCE(t.tags,'{}')
+		FROM tweets t
+		JOIN subscriptions s ON s.source_type='twitter' AND s.source_id=t.twitter_account_id
+		     AND s.user_id=$1 AND s.active
+		WHERE t.classify_status='done'
+		  AND COALESCE(t.relevance,0) >= $2
+		  AND t.tweet_created_at >= now() - make_interval(days => $3)
+		  AND NOT EXISTS (SELECT 1 FROM tweet_reads r WHERE r.tweet_id=t.id AND r.user_id=$1)
+		  AND NOT EXISTS (SELECT 1 FROM recommendations rec
+		                  WHERE rec.user_id=$1 AND rec.source_id=t.id
+		                    AND rec.context_type='commitment' AND rec.target_ref=$4)
+		  AND EXISTS (SELECT 1 FROM unnest($5::text[]) term
+		              WHERE term <> '' AND (t.text ILIKE '%'||term||'%' OR term = ANY(t.tags)))
+		ORDER BY COALESCE(t.relevance,0) DESC, t.tweet_created_at DESC
+		LIMIT $6
+	`
+	rows, err := r.pool.Query(ctx, q, userID, relevanceMin, windowDays, commitmentID, terms, limit)
+	if err != nil {
+		return nil, fmt.Errorf("candidate tweets: %w", err)
+	}
+	defer rows.Close()
+	var out []CandidateTweet
+	for rows.Next() {
+		var t CandidateTweet
+		if err := rows.Scan(&t.ID, &t.Text, &t.Summary, &t.Relevance, &t.CreatedAt, &t.Tags); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// GetProfileTagAffinity 读该用户画像的 tag_affinity (粗排加权用). 无画像 → 空图 (COALESCE 兜底).
+func (r *Repository) GetProfileTagAffinity(ctx context.Context, userID uuid.UUID) (map[string]float64, error) {
+	var raw []byte
+	err := r.pool.QueryRow(ctx,
+		`SELECT COALESCE((SELECT tag_affinity FROM user_alpha_profile WHERE user_id=$1), '{}'::jsonb)`,
+		userID).Scan(&raw)
+	if err != nil {
+		return nil, fmt.Errorf("get tag affinity: %w", err)
+	}
+	out := map[string]float64{}
+	if len(raw) > 0 {
+		_ = json.Unmarshal(raw, &out)
+	}
+	return out, nil
+}
+
+// ListUsersWithActiveCommitments 取有活跃已签命题的用户 (策展全量遍历的范围).
+func (r *Repository) ListUsersWithActiveCommitments(ctx context.Context) ([]uuid.UUID, error) {
+	const q = `
+		SELECT DISTINCT c.user_id
+		FROM commitments c JOIN holdings h ON h.id = c.id
+		WHERE c.status = 'signed' AND h.status IN ('active', 'triggered')
+	`
+	rows, err := r.pool.Query(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("list users with active commitments: %w", err)
+	}
+	defer rows.Close()
+	var out []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // ───────────────────────── 写: upsert 画像 ─────────────────────────
 
 // UpsertProfile 幂等写入画像 (user_id 主键冲突即整行覆盖). lens_preference 不在此写 —

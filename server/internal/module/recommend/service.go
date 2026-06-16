@@ -8,16 +8,22 @@ import (
 	"go.uber.org/zap"
 )
 
-// Service 是 recommend 模块对外的应用层. P0 只暴露画像重算 (供内部端点手动触发);
-// P1 起会在此挂上策展漏斗 + cron. builder 是其内部依赖.
+// Service 是 recommend 模块对外的应用层. P0 暴露画像重算; P1 起加策展(curator)+呈现/反馈.
+// builder(画像) 与 curator(策展漏斗) 是其内部依赖.
 type Service struct {
 	repo    *Repository
 	builder *Builder
+	curator *Curator
 	logger  *zap.Logger
 }
 
-func NewService(repo *Repository, logger *zap.Logger) *Service {
-	return &Service{repo: repo, builder: NewBuilder(repo), logger: logger}
+func NewService(repo *Repository, cfg CuratorConfig, logger *zap.Logger) *Service {
+	return &Service{
+		repo:    repo,
+		builder: NewBuilder(repo),
+		curator: NewCurator(repo, cfg, logger),
+		logger:  logger,
+	}
 }
 
 // RebuildUser 重算并落库单个用户的画像, 返回新画像 (供端点回显人工核对).
@@ -71,4 +77,32 @@ func (s *Service) RebuildAll(ctx context.Context) (*RebuildAllResult, error) {
 	s.logger.Info("rebuild all profiles done",
 		zap.Int("total", res.Total), zap.Int("succeeded", res.Succeeded), zap.Int("failed", res.Failed))
 	return res, nil
+}
+
+// ───────────────────────── P1 · 策展 + 呈现/反馈 ─────────────────────────
+
+// CurateUser 对单用户跑策展漏斗 (供内部端点 / 画像重算后增量触发).
+func (s *Service) CurateUser(ctx context.Context, userID uuid.UUID) (CurateResult, error) {
+	return s.curator.CurateForUser(ctx, userID)
+}
+
+// CurateAll 全量策展 (有活跃命题的用户).
+func (s *Service) CurateAll(ctx context.Context) (CurateAllResult, error) {
+	return s.curator.CurateAll(ctx)
+}
+
+// RelatedForCommitment 取某命题的相关情报. user-scoped: 只回该 user 自己 commitment 的推荐;
+// 非本人/不存在的 commitmentID 自然返回空 —— 不泄漏, 无需单独 owner 校验.
+func (s *Service) RelatedForCommitment(ctx context.Context, userID, commitmentID uuid.UUID) ([]RelatedItem, error) {
+	return s.repo.ListCommitmentRelated(ctx, userID, commitmentID)
+}
+
+// Dismiss 用户点"不相关": 负反馈, 该条不再复现 (候选 NOT EXISTS 已排除已推过的).
+func (s *Service) Dismiss(ctx context.Context, userID, recID uuid.UUID) error {
+	return s.repo.MarkRecommendationStatus(ctx, userID, recID, StatusDismissed)
+}
+
+// Seen 标记已呈现 (展开即调).
+func (s *Service) Seen(ctx context.Context, userID, recID uuid.UUID) error {
+	return s.repo.MarkRecommendationStatus(ctx, userID, recID, StatusSurfaced)
 }
