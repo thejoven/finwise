@@ -13,5 +13,8 @@ func TestRegisterNoRouteConflict(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()
 	g := r.Group("/v1")
-	NewHandler(nil).Register(g, g, g)
+	// adminV1 must be a SEPARATE group (prod: /v1 vs /v1/admin); passing the same
+	// /v1 group would make admin GET /projects collide with the public list route.
+	admin := r.Group("/v1/admin")
+	NewHandler(nil).Register(g, g, admin)
 }

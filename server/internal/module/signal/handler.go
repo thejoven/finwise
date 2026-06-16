@@ -35,6 +35,10 @@ func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	internalV1.POST("/inferences", h.recordInference)
 
 	adminV1.GET("/signals", h.adminList)
+	// 运营按需重推 (失败/卡住的推断兜底). 静态 /signals/reinfer 与参数 /signals/:id/reinfer
+	// 同级共存 — gin 1.10 支持 (参照 /commitments/active vs /commitments/:id).
+	adminV1.POST("/signals/:id/reinfer", h.adminReinfer)
+	adminV1.POST("/signals/reinfer", h.adminReinferFailed)
 }
 
 // ───────── DTOs (kept inside the package — module-private contract) ─────────

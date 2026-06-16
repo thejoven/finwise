@@ -6,6 +6,7 @@ package signal
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -13,6 +14,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"wiseflow/server/internal/domain"
 )
 
 type AdminSignalFilter struct {
@@ -199,4 +203,160 @@ func (h *Handler) adminList(c *gin.Context) {
 		out[i] = d
 	}
 	c.JSON(http.StatusOK, adminListResponse{Signals: out, HasMore: hasMore})
+}
+
+// ───── 运营按需重推 (POST /v1/admin/signals/:id/reinfer · POST /v1/admin/signals/reinfer) ─────
+//
+// 信号已有 recovery sweeper 自动复活卡住的推断 (migration 027 + recovery 模块); 这里是
+// 给「按需 / recovery_exhausted 兜底」的手动重推. 复用用户域同一条链路 —— Reinfer 经
+// EnqueueReinferOutbox 复用 source_event_id 重发 signal.captured 进 NATS, mastra 重跑
+// analyst. 与用户域唯一区别: 不按 user_id 校验 ownership (运营跨用户).
+
+// GetAny 跨用户按 id 取信号 (无 user 过滤). 用户域 Get 会 WHERE user_id; 运营重推不校验
+// 归属, 故单开一个. 无行 → ErrNotFound.
+func (r *Repository) GetAny(ctx context.Context, id uuid.UUID) (*domain.Signal, error) {
+	const q = `
+		SELECT id, user_id, project_id, project_auto_assigned, raw_text, captured_at, source_event_id,
+		       inference_status, inference_summary, inference_tags,
+		       inference_model, inference_done_at, inference_related_assets,
+		       created_at, updated_at
+		FROM signals
+		WHERE id = $1
+	`
+	s, err := scanSignal(r.pool.QueryRow(ctx, q, id))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("admin get signal: %w", err)
+	}
+	return s, nil
+}
+
+// ListFailedForReinfer 加载 inference_status='failed' 的信号 (可选按 user 收窄), 取全字段
+// 以便 EnqueueReinferOutbox 重投. 不分页 —— 失败集应很小; 仍加 500 cap 防病态全表扫.
+func (r *Repository) ListFailedForReinfer(ctx context.Context, userID *uuid.UUID) ([]*domain.Signal, error) {
+	q := `
+		SELECT id, user_id, project_id, project_auto_assigned, raw_text, captured_at, source_event_id,
+		       inference_status, inference_summary, inference_tags,
+		       inference_model, inference_done_at, inference_related_assets,
+		       created_at, updated_at
+		FROM signals
+		WHERE inference_status = 'failed'`
+	args := []any{}
+	if userID != nil {
+		args = append(args, *userID)
+		q += fmt.Sprintf(" AND user_id = $%d", len(args))
+	}
+	q += " ORDER BY captured_at ASC LIMIT 500"
+
+	rows, err := r.pool.Query(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("admin list failed signals: %w", err)
+	}
+	defer rows.Close()
+	out := make([]*domain.Signal, 0)
+	for rows.Next() {
+		s, err := scanSignal(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan failed signal: %w", err)
+		}
+		out = append(out, s)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iter: %w", err)
+	}
+	return out, nil
+}
+
+// ───── service ─────
+
+// AdminReinfer 运营按需重推单条 (跨用户, 不校验 ownership). 复用 EnqueueReinferOutbox.
+// 已 done → ErrInferenceDone: 推演回写在 event 层用 signal_id 派生的 SHA1 幂等键去重,
+// 重投 done 信号是 no-op, 拒绝比假装成功更诚实. 不存在 → ErrNotFound.
+func (s *Service) AdminReinfer(ctx context.Context, signalID uuid.UUID) (*domain.Signal, error) {
+	sig, err := s.repo.GetAny(ctx, signalID)
+	if err != nil {
+		return nil, err
+	}
+	if sig.InferenceStatus == domain.InferenceStatusDone {
+		return nil, ErrInferenceDone
+	}
+	if err := s.repo.EnqueueReinferOutbox(ctx, sig); err != nil {
+		return nil, fmt.Errorf("enqueue reinfer: %w", err)
+	}
+	return sig, nil
+}
+
+// AdminReinferFailed 批量重推全部 failed 信号 (可选按 user). 逐条复用 EnqueueReinferOutbox
+// (沿用其"未分类/provisional 下发候选分类"逻辑), 返回实际入队条数. 中途某条失败即停并
+// 返回已入队数 + err —— 已写入的 outbox 行不回滚 (各自独立, 重复入队也幂等无害).
+func (s *Service) AdminReinferFailed(ctx context.Context, userID *uuid.UUID) (int, error) {
+	sigs, err := s.repo.ListFailedForReinfer(ctx, userID)
+	if err != nil {
+		return 0, err
+	}
+	n := 0
+	for _, sig := range sigs {
+		if err := s.repo.EnqueueReinferOutbox(ctx, sig); err != nil {
+			return n, fmt.Errorf("enqueue reinfer %s: %w", sig.ID, err)
+		}
+		n++
+	}
+	return n, nil
+}
+
+// ───── handlers ─────
+
+// adminReinfer POST /v1/admin/signals/:id/reinfer — 运营按需重推单条 (跨用户).
+// 不存在 → 404; 已 done → 409; 否则 202 + {signal_id, inference_status}.
+func (h *Handler) adminReinfer(c *gin.Context) {
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	sig, err := h.svc.AdminReinfer(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, ErrInferenceDone) {
+			c.JSON(http.StatusConflict, gin.H{"error": "inference already done"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{
+		"signal_id":        sig.ID.String(),
+		"inference_status": string(sig.InferenceStatus),
+	})
+}
+
+// adminReinferFailed POST /v1/admin/signals/reinfer — 批量重推全部 failed.
+// body 可选 {user_id}: 给定则只重推该用户的失败信号 (尊重前端"聚焦用户"). 空 body 全量.
+func (h *Handler) adminReinferFailed(c *gin.Context) {
+	var body struct {
+		UserID string `json:"user_id"`
+	}
+	_ = c.ShouldBindJSON(&body) // body 可选; 空 / 非 JSON 都当全量
+	var userID *uuid.UUID
+	if body.UserID != "" {
+		uid, err := uuid.Parse(body.UserID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "user_id not a uuid"})
+			return
+		}
+		userID = &uid
+	}
+	n, err := h.svc.AdminReinferFailed(c.Request.Context(), userID)
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"reinfered": n})
 }

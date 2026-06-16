@@ -526,6 +526,19 @@ export const wiseflow = {
         const qs = sp.toString();
         return api<AdminSignalListResponse>(`/v1/admin/signals${qs ? `?${qs}` : ""}`);
       },
+      // 运营按需重推单条 (跨用户, 不校验 ownership). 202 + {signal_id, inference_status};
+      // 已 done → 409; 不存在 → 404. 给"按需 / recovery_exhausted 兜底".
+      reinfer: (id: string) =>
+        api<{ signal_id: string; inference_status: string }>(
+          `/v1/admin/signals/${id}/reinfer`,
+          { method: "POST" },
+        ),
+      // 批量重推全部 failed (可选 user_id 收窄到聚焦用户). 返回 {reinfered: N}.
+      reinferFailed: (params?: { user_id?: string }) =>
+        api<{ reinfered: number }>("/v1/admin/signals/reinfer", {
+          method: "POST",
+          body: params?.user_id ? { user_id: params.user_id } : {},
+        }),
     },
     subscriptions: {
       // 按账号 (订阅数/推文数/轮询). user_id 过滤 = 该用户订阅的账号 (聚焦用户).

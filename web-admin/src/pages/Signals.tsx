@@ -1,5 +1,6 @@
 import * as React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RotateCw } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
 import { wiseflow } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
+import { useToast } from "@/components/ui/toaster";
 
 type Status = "" | "pending" | "done" | "failed";
 const STATUSES: { v: Status; label: string }[] = [
@@ -32,6 +34,8 @@ function statusVariant(s: string): "success" | "destructive" | "warning" {
 
 export function SignalsPage() {
   const { focused } = useFocusedUser();
+  const qc = useQueryClient();
+  const { toast } = useToast();
   const [status, setStatus] = React.useState<Status>("");
   const [q, setQ] = React.useState("");
   const [submittedQ, setSubmittedQ] = React.useState("");
@@ -44,6 +48,25 @@ export function SignalsPage() {
         status: status || undefined,
         q: submittedQ || undefined,
         limit: 50,
+      }),
+  });
+
+  // 行内按需重推失败信号. 重推不立即改 status (经 outbox 重发, mastra 重跑后才回写); 刷新列表.
+  const reinfer = useMutation({
+    mutationFn: (id: string) => wiseflow.admin.signals.reinfer(id),
+    onSuccess: (r) => {
+      toast({
+        title: "已入队重推",
+        description: `信号 ${r.signal_id.slice(0, 8)}… · 稍后刷新看结果`,
+        variant: "success",
+      });
+      qc.invalidateQueries({ queryKey: ["admin", "signals"] });
+    },
+    onError: (err) =>
+      toast({
+        title: "重推失败",
+        description: err instanceof Error ? err.message : String(err),
+        variant: "destructive",
       }),
   });
 
@@ -108,6 +131,7 @@ export function SignalsPage() {
                   <TableHead>分类</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="whitespace-nowrap">时间</TableHead>
+                  <TableHead className="text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -138,6 +162,25 @@ export function SignalsPage() {
                     </TableCell>
                     <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
                       {formatDate(s.captured_at)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {s.inference_status === "failed" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => reinfer.mutate(s.id)}
+                          disabled={reinfer.isPending && reinfer.variables === s.id}
+                        >
+                          <RotateCw
+                            className={`mr-1 h-3.5 w-3.5 ${
+                              reinfer.isPending && reinfer.variables === s.id
+                                ? "animate-spin"
+                                : ""
+                            }`}
+                          />
+                          重推
+                        </Button>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}
