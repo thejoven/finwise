@@ -7,66 +7,18 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"wiseflow/server/internal/infra/xsource"
 )
+
+// 领域类型 (Account/Tweet/Media/Metrics/TweetsPage) 与哨兵错误已上移到 xsource —— 跨供应商
+// 共用. 本包只负责把 twtapi 的信封/字段映射成 xsource.* (字段映射: 开发文档 §3.3).
 
 // twTimeLayout — Twitter 的 ruby 风格时间 ("Tue Jun 09 06:50:58 +0000 2026").
 const twTimeLayout = "Mon Jan 02 15:04:05 -0700 2006"
 
 // errSkipTweet — 容器里的占位/墓碑条目 (TweetTombstone 等), 跳过不报错.
 var errSkipTweet = errors.New("twtapi: not a parseable tweet")
-
-// ───────────────────────── 对外结构 ─────────────────────────
-
-// Account 是账号资料 (订阅预览卡 + tweets 作者).
-type Account struct {
-	RestID      string `json:"rest_id"`
-	Handle      string `json:"handle"`
-	DisplayName string `json:"display_name"`
-	AvatarURL   string `json:"avatar_url"`
-	Bio         string `json:"bio,omitempty"`
-}
-
-// Media — 推文媒体项. photo: URL=大图; video/animated_gif: URL=最高码率 mp4, Thumb=封面.
-type Media struct {
-	Type   string `json:"type"`
-	URL    string `json:"url"`
-	Thumb  string `json:"thumb,omitempty"`
-	Width  int    `json:"width,omitempty"`
-	Height int    `json:"height,omitempty"`
-}
-
-// Metrics — 互动计数. Views 上游是 string, 解析成 int64.
-type Metrics struct {
-	Likes     int   `json:"likes"`
-	Retweets  int   `json:"retweets"`
-	Replies   int   `json:"replies"`
-	Quotes    int   `json:"quotes"`
-	Bookmarks int   `json:"bookmarks"`
-	Views     int64 `json:"views,omitempty"`
-}
-
-// ParsedTweet 是 <TWEET> 解析结果 (字段映射: 开发文档 §3.3).
-type ParsedTweet struct {
-	ID             string
-	Text           string
-	Lang           string
-	CreatedAt      time.Time
-	ConversationID string
-	IsRetweet      bool
-	IsQuote        bool
-	QuotedID       string
-	Quoted         *ParsedTweet // 引用原推 (嵌套同构, 只展开一层语义但递归解析)
-	Media          []Media
-	Metrics        Metrics
-	Author         Account
-	Raw            json.RawMessage // 原始 <TWEET>, 入库 raw_payload 兜底重解析
-}
-
-// TweetsPage 是一页推文 + 翻页游标.
-type TweetsPage struct {
-	Tweets       []ParsedTweet
-	BottomCursor string
-}
 
 // ───────────────────────── <TWEET> 解码 ─────────────────────────
 
@@ -107,8 +59,8 @@ type userResultJSON struct {
 	} `json:"legacy"`
 }
 
-func (u *userResultJSON) toAccount() Account {
-	a := Account{
+func (u *userResultJSON) toAccount() xsource.Account {
+	a := xsource.Account{
 		RestID:      u.RestID,
 		Handle:      u.Core.ScreenName,
 		DisplayName: u.Core.Name,
@@ -146,17 +98,17 @@ type tweetJSON struct {
 		} `json:"user_result"`
 	} `json:"core"`
 	Legacy struct {
-		FullText             string `json:"full_text"`
-		CreatedAt            string `json:"created_at"`
-		Lang                 string `json:"lang"`
-		ConversationIDStr    string `json:"conversation_id_str"`
-		IsQuoteStatus        bool   `json:"is_quote_status"`
-		QuotedStatusIDStr    string `json:"quoted_status_id_str"`
-		FavoriteCount        int    `json:"favorite_count"`
-		RetweetCount         int    `json:"retweet_count"`
-		ReplyCount           int    `json:"reply_count"`
-		QuoteCount           int    `json:"quote_count"`
-		BookmarkCount        int    `json:"bookmark_count"`
+		FullText              string `json:"full_text"`
+		CreatedAt             string `json:"created_at"`
+		Lang                  string `json:"lang"`
+		ConversationIDStr     string `json:"conversation_id_str"`
+		IsQuoteStatus         bool   `json:"is_quote_status"`
+		QuotedStatusIDStr     string `json:"quoted_status_id_str"`
+		FavoriteCount         int    `json:"favorite_count"`
+		RetweetCount          int    `json:"retweet_count"`
+		ReplyCount            int    `json:"reply_count"`
+		QuoteCount            int    `json:"quote_count"`
+		BookmarkCount         int    `json:"bookmark_count"`
 		RetweetedStatusResult *struct {
 			Result json.RawMessage `json:"result"`
 		} `json:"retweeted_status_result"`
@@ -176,7 +128,7 @@ type tweetJSON struct {
 }
 
 // ParseTweet 解析单个 <TWEET> 对象 (三端点同构复用).
-func ParseTweet(raw json.RawMessage) (*ParsedTweet, error) {
+func ParseTweet(raw json.RawMessage) (*xsource.Tweet, error) {
 	var t tweetJSON
 	if err := json.Unmarshal(raw, &t); err != nil {
 		return nil, fmt.Errorf("twtapi parse tweet: %w", err)
@@ -189,7 +141,7 @@ func ParseTweet(raw json.RawMessage) (*ParsedTweet, error) {
 		return nil, errSkipTweet // tombstone / 不可用条目
 	}
 
-	p := &ParsedTweet{
+	p := &xsource.Tweet{
 		ID:             t.RestID,
 		Text:           t.Legacy.FullText,
 		Lang:           t.Legacy.Lang,
@@ -198,7 +150,7 @@ func ParseTweet(raw json.RawMessage) (*ParsedTweet, error) {
 		QuotedID:       t.Legacy.QuotedStatusIDStr,
 		IsRetweet: strings.HasPrefix(t.Legacy.FullText, "RT @") ||
 			(t.Legacy.RetweetedStatusResult != nil && len(t.Legacy.RetweetedStatusResult.Result) > 0),
-		Metrics: Metrics{
+		Metrics: xsource.Metrics{
 			Likes:     t.Legacy.FavoriteCount,
 			Retweets:  t.Legacy.RetweetCount,
 			Replies:   t.Legacy.ReplyCount,
@@ -236,7 +188,7 @@ func ParseTweet(raw json.RawMessage) (*ParsedTweet, error) {
 	return p, nil
 }
 
-func pickAuthor(t tweetJSON) Account {
+func pickAuthor(t tweetJSON) xsource.Account {
 	a := t.Core.UserResults.Result.toAccount()
 	if a.Handle != "" || a.RestID != "" {
 		return a
@@ -244,8 +196,8 @@ func pickAuthor(t tweetJSON) Account {
 	return t.Core.UserResult.Result.toAccount()
 }
 
-func convertMedia(m mediaJSON) Media {
-	out := Media{
+func convertMedia(m mediaJSON) xsource.Media {
+	out := xsource.Media{
 		Type:   m.Type,
 		URL:    m.MediaURLHTTPS,
 		Width:  m.OriginalInfo.Width,
@@ -300,7 +252,7 @@ type timelineEntryJSON struct {
 
 // ParseUserTweets 解 /UserTweets 响应:
 // data.user_result_by_rest_id.result.profile_timeline_v2.timeline.instructions[].entries[].
-func ParseUserTweets(body []byte) (*TweetsPage, error) {
+func ParseUserTweets(body []byte) (*xsource.TweetsPage, error) {
 	var env struct {
 		Data struct {
 			UserResultByRestID struct {
@@ -322,7 +274,7 @@ func ParseUserTweets(body []byte) (*TweetsPage, error) {
 		return nil, fmt.Errorf("twtapi parse UserTweets envelope: %w", err)
 	}
 
-	page := &TweetsPage{}
+	page := &xsource.TweetsPage{}
 	var entries []timelineEntryJSON
 	for _, ins := range env.Data.UserResultByRestID.Result.ProfileTimelineV2.Timeline.Instructions {
 		entries = append(entries, ins.Entries...)
@@ -351,7 +303,7 @@ func ParseUserTweets(body []byte) (*TweetsPage, error) {
 	return page, nil
 }
 
-func appendTweet(page *TweetsPage, raw json.RawMessage) {
+func appendTweet(page *xsource.TweetsPage, raw json.RawMessage) {
 	if len(raw) == 0 {
 		return
 	}
@@ -363,7 +315,7 @@ func appendTweet(page *TweetsPage, raw json.RawMessage) {
 }
 
 // ParseSearch 解 /Search 响应 — 走 twtapi 的 _normalized (只有 Search 有).
-func ParseSearch(body []byte) (*TweetsPage, error) {
+func ParseSearch(body []byte) (*xsource.TweetsPage, error) {
 	var env struct {
 		Normalized struct {
 			Tweets []struct {
@@ -375,7 +327,7 @@ func ParseSearch(body []byte) (*TweetsPage, error) {
 	if err := json.Unmarshal(body, &env); err != nil {
 		return nil, fmt.Errorf("twtapi parse Search envelope: %w", err)
 	}
-	page := &TweetsPage{BottomCursor: env.Normalized.NextCursor}
+	page := &xsource.TweetsPage{BottomCursor: env.Normalized.NextCursor}
 	for _, t := range env.Normalized.Tweets {
 		appendTweet(page, t.Result)
 	}
@@ -383,7 +335,7 @@ func ParseSearch(body []byte) (*TweetsPage, error) {
 }
 
 // ParseTweetDetail 解 /TweetDetail 响应: data.tweet_result.result.
-func ParseTweetDetail(body []byte) (*ParsedTweet, error) {
+func ParseTweetDetail(body []byte) (*xsource.Tweet, error) {
 	var env struct {
 		Data struct {
 			TweetResult struct {
@@ -395,13 +347,13 @@ func ParseTweetDetail(body []byte) (*ParsedTweet, error) {
 		return nil, fmt.Errorf("twtapi parse TweetDetail envelope: %w", err)
 	}
 	if len(env.Data.TweetResult.Result) == 0 {
-		return nil, ErrNotFound
+		return nil, xsource.ErrNotFound
 	}
 	return ParseTweet(env.Data.TweetResult.Result)
 }
 
 // ParseAccount 解 /UserResultByScreenName 响应: data.user_results.result.
-func ParseAccount(body []byte) (*Account, error) {
+func ParseAccount(body []byte) (*xsource.Account, error) {
 	var env struct {
 		Data struct {
 			UserResults struct {
@@ -414,7 +366,7 @@ func ParseAccount(body []byte) (*Account, error) {
 		return nil, fmt.Errorf("twtapi parse UserResultByScreenName: %w", err)
 	}
 	if env.Data.UserResults.Result == nil {
-		return nil, ErrNotFound
+		return nil, xsource.ErrNotFound
 	}
 	a := env.Data.UserResults.Result.toAccount()
 	if a.RestID == "" {
@@ -424,19 +376,4 @@ func ParseAccount(body []byte) (*Account, error) {
 		return nil, fmt.Errorf("twtapi UserResultByScreenName: missing rest_id/handle")
 	}
 	return &a, nil
-}
-
-// ───────────────────────── 工具 ─────────────────────────
-
-// CompareIDs 按数值比较两个 tweet id (十进制字符串, 长度不同先比长度).
-// 返回 -1/0/1. 增量采集的 high-water 判断用 (开发文档 §3.4).
-func CompareIDs(a, b string) int {
-	a, b = strings.TrimSpace(a), strings.TrimSpace(b)
-	if len(a) != len(b) {
-		if len(a) < len(b) {
-			return -1
-		}
-		return 1
-	}
-	return strings.Compare(a, b)
 }

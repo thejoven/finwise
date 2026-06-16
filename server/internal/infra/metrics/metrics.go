@@ -148,6 +148,47 @@ var (
 	)
 )
 
+// ─────────────────── Recovery sweeper ───────────────────
+//
+// 自动恢复巡检: 复活被 LLM 偶发抽风搁浅的 signal/tweet. 关键可观测点是
+// RecoveryExhausted —— 它把"反复重试仍恢复不了, 已放弃"的静默永久失败显式化,
+// 直接对它告警 (>0 即需人工介入).
+var (
+	// RecoveryRevivals 累计复活的记录数, 按 kind=signal|tweet.
+	// 持续上涨说明 LLM 抽风率偏高 (值得查上游), 但本身不是错误.
+	RecoveryRevivals = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Namespace: namespace,
+			Subsystem: "recovery",
+			Name:      "revivals_total",
+			Help:      "Stranded records re-enqueued by the recovery sweeper, by kind (signal|tweet).",
+		},
+		[]string{"kind"},
+	)
+
+	// RecoveryExhausted 每轮巡检采样: 已达复活上限仍卡住的记录数, 按 kind.
+	// 这是"放弃"的可见信号 —— 持续 >0 应告警, 留给人工处理.
+	RecoveryExhausted = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: namespace,
+			Subsystem: "recovery",
+			Name:      "exhausted",
+			Help:      "Records stuck past the revival cap (gave up; needs human attention), by kind.",
+		},
+		[]string{"kind"},
+	)
+
+	RecoveryScanDuration = prometheus.NewHistogram(
+		prometheus.HistogramOpts{
+			Namespace: namespace,
+			Subsystem: "recovery",
+			Name:      "scan_duration_seconds",
+			Help:      "Time taken by one recovery sweep cycle.",
+			Buckets:   []float64{0.01, 0.05, 0.1, 0.5, 1, 5, 10},
+		},
+	)
+)
+
 // ─────────────────── init ───────────────────
 
 func init() {
@@ -157,6 +198,7 @@ func init() {
 		GateEvaluations, GateDuration,
 		MastraCalls, MastraDuration,
 		ExitTransitions, ExitScanDuration,
+		RecoveryRevivals, RecoveryExhausted, RecoveryScanDuration,
 	)
 }
 

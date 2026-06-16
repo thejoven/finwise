@@ -1,11 +1,13 @@
 // Package twtapi is the HTTP client for twtapi.com (Twitter/X 数据代理).
 //
+// 实现 xsource.Provider —— 订阅模块只认 xsource 接口, 不直接依赖本包 (装配在 cmd/api).
+//
 // 实测行为 (2026-06-09, 样本在 docs/api/samples/twtapi/, 字段映射见
 // docs/技术文档/10_推文订阅_开发文档.md §3.3 — 文档站的信封描述不可信, 以实测为准):
 //   - UsernameToUserId 直接返 {id, id_str} (无信封)
 //   - UserTweets / TweetDetail / UserResultByScreenName 返 {data: ...} 包 x.com GraphQL 原始结构
 //   - Search 额外带 twtapi 自加的 _normalized (铺平 tweets[] + next_cursor)
-//   - 错误按 HTTP 状态码: 402 余额不足 / 429 限流 / 404 不存在
+//   - 错误按 HTTP 状态码归一到 xsource.Err*: 402 余额不足 / 429 限流 / 404 不存在
 //
 // 单条推文 <TWEET> 三端点同构 — parse.go 一份解析器复用, 换端点只换容器解包.
 package twtapi
@@ -13,29 +15,26 @@ package twtapi
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
-)
 
-var (
-	ErrNotConfigured = errors.New("twtapi: api key not set")
-	ErrQuotaExceeded = errors.New("twtapi: quota exceeded (402)")
-	ErrRateLimited   = errors.New("twtapi: rate limited (429)")
-	ErrNotFound      = errors.New("twtapi: resource not found (404)")
+	"wiseflow/server/internal/infra/xsource"
 )
 
 const defaultBaseURL = "https://api.twtapi.com/api/v1/twitter"
 
+// Client 实现 xsource.Provider.
 type Client struct {
 	baseURL string
 	apiKey  string
 	hc      *http.Client
 }
+
+var _ xsource.Provider = (*Client)(nil)
 
 func New(apiKey string) *Client {
 	return NewWithBaseURL(apiKey, defaultBaseURL)
@@ -57,7 +56,7 @@ func (c *Client) IsConfigured() bool {
 
 func (c *Client) get(ctx context.Context, path string, q url.Values) ([]byte, error) {
 	if !c.IsConfigured() {
-		return nil, ErrNotConfigured
+		return nil, xsource.ErrNotConfigured
 	}
 	u := c.baseURL + path
 	if len(q) > 0 {
@@ -84,11 +83,11 @@ func (c *Client) get(ctx context.Context, path string, q url.Values) ([]byte, er
 	case http.StatusOK:
 		return body, nil
 	case http.StatusPaymentRequired:
-		return nil, ErrQuotaExceeded
+		return nil, xsource.ErrQuotaExceeded
 	case http.StatusTooManyRequests:
-		return nil, ErrRateLimited
+		return nil, xsource.ErrRateLimited
 	case http.StatusNotFound:
-		return nil, ErrNotFound
+		return nil, xsource.ErrNotFound
 	default:
 		snippet := body
 		if len(snippet) > 512 {
@@ -98,7 +97,34 @@ func (c *Client) get(ctx context.Context, path string, q url.Values) ([]byte, er
 	}
 }
 
-// UsernameToUserId 解析 @handle → rest id. 每账号一次, 调用方缓存到 twitter_accounts.rest_id.
+// LookupAccount 拉账号资料 (GET /UserResultByScreenName) — 订阅时的解析预览卡. [xsource.Provider]
+func (c *Client) LookupAccount(ctx context.Context, handle string) (*xsource.Account, error) {
+	body, err := c.get(ctx, "/UserResultByScreenName", url.Values{"username": {handle}})
+	if err != nil {
+		return nil, err
+	}
+	return ParseAccount(body)
+}
+
+// UserTweets 拉账号时间线第一页 (cursor 翻页). 采集主力 — 完整性第一 (产品承诺
+// "订阅都读完了"), Search 只作回填/对账备选. [xsource.Provider]
+func (c *Client) UserTweets(ctx context.Context, restID, cursor string) (*xsource.TweetsPage, error) {
+	q := url.Values{"user_id": {restID}}
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	body, err := c.get(ctx, "/UserTweets", q)
+	if err != nil {
+		return nil, err
+	}
+	return ParseUserTweets(body)
+}
+
+// ─────────────── 扩展能力 (暂不在 xsource.Provider 契约内) ───────────────
+// 已实测可用且有测试覆盖; 待详情页/对账等跨供应商消费方出现时, 再把所需方法提升进接口.
+
+// UsernameToUserId 解析 @handle → rest id. LookupAccount 已带 rest id, 通常用不上;
+// 保留作备选 (只要 id 不要资料的场景). 每账号一次, 调用方缓存到 twitter_accounts.rest_id.
 func (c *Client) UsernameToUserId(ctx context.Context, username string) (string, error) {
 	body, err := c.get(ctx, "/UsernameToUserId", url.Values{"username": {username}})
 	if err != nil {
@@ -120,32 +146,9 @@ func (c *Client) UsernameToUserId(ctx context.Context, username string) (string,
 	return "", fmt.Errorf("twtapi UsernameToUserId: empty id for %q", username)
 }
 
-// UserResultByScreenName 拉账号资料 (订阅时的解析预览卡).
-func (c *Client) UserResultByScreenName(ctx context.Context, username string) (*Account, error) {
-	body, err := c.get(ctx, "/UserResultByScreenName", url.Values{"username": {username}})
-	if err != nil {
-		return nil, err
-	}
-	return ParseAccount(body)
-}
-
-// UserTweets 拉账号时间线第一页 (cursor 翻页). 采集主力 — 完整性第一 (产品承诺
-// "订阅都读完了"), Search 只作回填/对账备选.
-func (c *Client) UserTweets(ctx context.Context, userID, cursor string) (*TweetsPage, error) {
-	q := url.Values{"user_id": {userID}}
-	if cursor != "" {
-		q.Set("cursor", cursor)
-	}
-	body, err := c.get(ctx, "/UserTweets", q)
-	if err != nil {
-		return nil, err
-	}
-	return ParseUserTweets(body)
-}
-
 // SearchFrom 搜某 handle 的最新推 (q=from:handle [since:YYYY-MM-DD]).
 // 响应走 twtapi 的 _normalized, 好解析但完整性弱 — 只用于初始回填 / 对账.
-func (c *Client) SearchFrom(ctx context.Context, handle, since, cursor string) (*TweetsPage, error) {
+func (c *Client) SearchFrom(ctx context.Context, handle, since, cursor string) (*xsource.TweetsPage, error) {
 	query := "from:" + handle
 	if since != "" {
 		query += " since:" + since
@@ -162,7 +165,7 @@ func (c *Client) SearchFrom(ctx context.Context, handle, since, cursor string) (
 }
 
 // TweetDetail 拉单条推文 (详情页线程展开).
-func (c *Client) TweetDetail(ctx context.Context, tweetID string) (*ParsedTweet, error) {
+func (c *Client) TweetDetail(ctx context.Context, tweetID string) (*xsource.Tweet, error) {
 	body, err := c.get(ctx, "/TweetDetail", url.Values{"tweet_id": {tweetID}})
 	if err != nil {
 		return nil, err

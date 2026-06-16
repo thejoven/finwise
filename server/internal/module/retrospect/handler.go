@@ -20,7 +20,8 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(publicV1, _ *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, _, adminV1 *gin.RouterGroup) {
+	adminV1.GET("/retrospects", h.adminList)
 	g := publicV1.Group("/retrospects")
 	g.POST("", h.start)
 	g.GET("", h.list)

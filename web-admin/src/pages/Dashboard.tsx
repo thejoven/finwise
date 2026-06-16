@@ -2,93 +2,98 @@ import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { PageHeader } from "@/components/PageHeader";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { wiseflow } from "@/lib/api";
-import { Loading, ErrorBox } from "@/components/QueryState";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowRight, ClipboardCheck, Inbox, Briefcase, History } from "lucide-react";
+import { Loading, ErrorBox } from "@/components/QueryState";
+import { wiseflow } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
+import { Cpu, Rss } from "lucide-react";
 
-function CountCard({
-  title,
-  count,
-  href,
-  hint,
-  icon: Icon,
+function Stat({
+  label,
+  value,
+  sub,
 }: {
-  title: string;
-  count: number | string;
-  href: string;
-  hint?: string;
-  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
 }) {
   return (
-    <Link to={href}>
-      <Card className="transition-colors hover:bg-accent">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
-          <div>
-            <CardDescription>{title}</CardDescription>
-            <CardTitle className="mt-1 text-3xl font-semibold">{count}</CardTitle>
-          </div>
-          <div className="rounded-md bg-primary/10 p-2 text-primary">
-            <Icon className="h-5 w-5" />
-          </div>
-        </CardHeader>
-        <CardContent className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>{hint}</span>
-          <ArrowRight className="h-3.5 w-3.5" />
-        </CardContent>
-      </Card>
-    </Link>
+    <div className="rounded-lg border bg-card p-4">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="mt-1.5 text-2xl font-bold leading-none tabular-nums">{value}</p>
+      {sub && <p className="mt-1.5 text-[11px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+}
+
+function FunnelRow({
+  label,
+  count,
+  pct,
+}: {
+  label: string;
+  count: number;
+  pct: number;
+}) {
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <span className="w-20 shrink-0 text-muted-foreground">{label}</span>
+      <div className="h-2.5 flex-1 overflow-hidden rounded-full bg-muted">
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${Math.min(100, Math.max(pct, 1.5))}%` }}
+        />
+      </div>
+      <span className="w-24 shrink-0 text-right tabular-nums">
+        {count} · {pct}%
+      </span>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      {value}
+    </div>
   );
 }
 
 export function DashboardPage() {
-  const {
-    data: signalsData,
-    isLoading: signalsLoading,
-    isError: signalsIsError,
-    error: signalsError,
-  } = useQuery({
-    queryKey: ["signals"],
-    queryFn: () => wiseflow.signals.list(),
+  const overview = useQuery({
+    queryKey: ["admin", "overview"],
+    queryFn: wiseflow.admin.stats.overview,
+    refetchInterval: 30_000,
   });
-  const {
-    data: commitmentsData,
-    isLoading: commitmentsLoading,
-    isError: commitmentsIsError,
-  } = useQuery({
-    queryKey: ["commitments-active"],
-    queryFn: wiseflow.commitments.active,
+  const health = useQuery({
+    queryKey: ["admin", "inference-health"],
+    queryFn: wiseflow.admin.inference.health,
+    refetchInterval: 30_000,
   });
-  const {
-    data: holdingsData,
-    isLoading: holdingsLoading,
-    isError: holdingsIsError,
-  } = useQuery({
-    queryKey: ["holdings-active"],
-    queryFn: wiseflow.holdings.active,
-  });
-  const {
-    data: retrospectsData,
-    isLoading: retrospectsLoading,
-    isError: retrospectsIsError,
-  } = useQuery({
-    queryKey: ["retrospects"],
-    queryFn: wiseflow.retrospects.list,
-  });
-  const { data: healthData } = useQuery({
+  const sys = useQuery({
     queryKey: ["dashboard-health"],
     queryFn: wiseflow.health,
-    refetchInterval: 10_000,
+    refetchInterval: 15_000,
   });
+
+  const o = overview.data;
+  const base = o?.pipeline.signals_30d ?? 0;
+  const pct = (n: number) => (base > 0 ? Math.round((n / base) * 100) : 0);
 
   return (
     <div>
       <PageHeader
-        title="概览"
-        description="wiseflow 后台. 数据走 /v1/* 端点, 实时透传 Postgres + NATS 状态."
+        title="系统总览"
+        description="跨用户全局视图 · 实时透传 Postgres。"
         actions={
-          healthData?.status === "ok" ? (
+          sys.data?.status === "ok" ? (
             <Badge variant="success">backend healthy</Badge>
           ) : (
             <Badge variant="destructive">backend issue</Badge>
@@ -96,132 +101,121 @@ export function DashboardPage() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <CountCard
-          title="Signals 总数"
-          count={
-            signalsLoading
-              ? "…"
-              : signalsIsError
-              ? "—"
-              : (signalsData?.signals.length ?? 0)
-          }
-          href="/signals"
-          hint="原始信号事件"
-          icon={Inbox}
-        />
-        <CountCard
-          title="活跃 Commitments"
-          count={
-            commitmentsLoading
-              ? "…"
-              : commitmentsIsError
-              ? "—"
-              : commitmentsData
-              ? 1
-              : 0
-          }
-          href="/commitments"
-          hint="待签字 / 已签字"
-          icon={ClipboardCheck}
-        />
-        <CountCard
-          title="活跃 Holdings"
-          count={
-            holdingsLoading
-              ? "…"
-              : holdingsIsError
-              ? "—"
-              : holdingsData
-              ? 1
-              : 0
-          }
-          href="/holdings"
-          hint="陪伴中持仓"
-          icon={Briefcase}
-        />
-        <CountCard
-          title="复盘 Retrospects"
-          count={
-            retrospectsLoading
-              ? "…"
-              : retrospectsIsError
-              ? "—"
-              : (retrospectsData?.retrospects.length ?? 0)
-          }
-          href="/retrospects"
-          hint="所有训练"
-          icon={History}
-        />
-      </div>
+      {overview.isLoading && <Loading />}
+      {overview.isError && <ErrorBox error={overview.error} />}
 
-      <div className="mt-8 grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>最近 5 条信号</CardTitle>
-            <CardDescription>按 captured_at 倒序</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {signalsLoading && <Loading />}
-            {signalsIsError && <ErrorBox error={signalsError} />}
-            {signalsData &&
-              signalsData.signals.slice(0, 5).map((s) => (
-                <Link
-                  key={s.id}
-                  to={`/signals/${s.id}`}
-                  className="block rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {s.id.slice(0, 8)}
-                    </span>
-                    <Badge
-                      variant={
-                        s.inference_status === "done"
-                          ? "success"
-                          : s.inference_status === "failed"
-                          ? "destructive"
-                          : "warning"
-                      }
-                    >
-                      {s.inference_status}
-                    </Badge>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-sm">{s.raw_text}</p>
-                </Link>
-              ))}
-            {signalsData && signalsData.signals.length === 0 && (
-              <p className="rounded-md border border-dashed py-6 text-center text-xs text-muted-foreground">
-                暂无信号
-              </p>
-            )}
-          </CardContent>
-        </Card>
+      {o && (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+            <Stat
+              label="用户总数"
+              value={o.users.total}
+              sub={`7 日活跃 ${o.users.active_7d} · 管理员 ${o.users.admins}`}
+            />
+            <Stat label="今日信号" value={o.signals.today} sub={`累计 ${o.signals.total}`} />
+            <Stat
+              label="今日推文采集"
+              value={o.tweets.today}
+              sub={`累计 ${o.tweets.total}`}
+            />
+            <Stat
+              label="过会率 · 30天"
+              value={`${Math.round(o.gate_pass_rate_30d * 100)}%`}
+              sub={`${o.pipeline.gate_passed}/${o.pipeline.gate_total} 通过`}
+            />
+            <Stat label="待推断" value={o.signals.pending} />
+            <Stat label="失败推断" value={o.signals.failed} />
+            <Stat label="活跃持仓" value={o.pipeline.holdings_active} />
+            <Stat
+              label="订阅账号"
+              value={o.subscriptions.accounts}
+              sub={`${o.subscriptions.active_subs} 个活跃订阅`}
+            />
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>系统</CardTitle>
-            <CardDescription>healthz 探测</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">backend status</span>
-              <span className="font-mono">{healthData?.status ?? "—"}</span>
+          <div className="mt-6 grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>研判漏斗 · 近 30 天</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2.5">
+                <FunnelRow label="信号" count={o.pipeline.signals_30d} pct={pct(o.pipeline.signals_30d)} />
+                <FunnelRow label="追问完成" count={o.pipeline.refine_done} pct={pct(o.pipeline.refine_done)} />
+                <FunnelRow label="降噪" count={o.pipeline.distilled} pct={pct(o.pipeline.distilled)} />
+                <FunnelRow label="过会" count={o.pipeline.gate_passed} pct={pct(o.pipeline.gate_passed)} />
+                <FunnelRow label="承诺签字" count={o.pipeline.signed} pct={pct(o.pipeline.signed)} />
+                <FunnelRow label="持仓" count={o.pipeline.holdings_active} pct={pct(o.pipeline.holdings_active)} />
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Cpu className="h-4 w-4" />
+                    AI 推断健康
+                  </CardTitle>
+                  <Link to="/inference" className="text-xs text-primary hover:underline">
+                    详情 →
+                  </Link>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <Row
+                    label="待处理"
+                    value={
+                      <Badge variant={health.data && health.data.pending > 0 ? "warning" : "outline"}>
+                        {health.data?.pending ?? "—"}
+                      </Badge>
+                    }
+                  />
+                  <Row
+                    label="失败"
+                    value={
+                      <Badge variant={health.data && health.data.failed > 0 ? "destructive" : "outline"}>
+                        {health.data?.failed ?? "—"}
+                      </Badge>
+                    }
+                  />
+                  <Row label="已完成" value={<span className="tabular-nums">{health.data?.done ?? "—"}</span>} />
+                  <Row
+                    label="平均时延"
+                    value={<span className="tabular-nums">{health.data ? `${health.data.avg_latency_seconds}s` : "—"}</span>}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Rss className="h-4 w-4" />
+                    订阅轮询
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  <Row label="订阅账号" value={<span className="tabular-nums">{o.subscriptions.accounts}</span>} />
+                  <Row label="活跃订阅" value={<span className="tabular-nums">{o.subscriptions.active_subs}</span>} />
+                  <Row
+                    label="上次轮询"
+                    value={
+                      <span className="text-xs text-muted-foreground">
+                        {o.subscriptions.poller_last_at ? formatDate(o.subscriptions.poller_last_at) : "—"}
+                      </span>
+                    }
+                  />
+                  <Row
+                    label="推文分类失败"
+                    value={
+                      <Badge variant={o.tweets.classify_failed > 0 ? "destructive" : "outline"}>
+                        {o.tweets.classify_failed}
+                      </Badge>
+                    }
+                  />
+                </CardContent>
+              </Card>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">db</span>
-              <span className="font-mono">{healthData?.db ?? "ok"}</span>
-            </div>
-            <div className="mt-4 rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-              <p>路线图: Phase 1 (安静) · M1 数据底座 → M4 端到端.</p>
-              <p className="mt-1">
-                后端跑在 <span className="font-mono">root@192.168.1.205</span>,
-                见 SERVER.md.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

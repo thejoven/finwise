@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"wiseflow/server/internal/infra/xsource"
 )
 
 func TestClientStatusMapping(t *testing.T) {
@@ -13,9 +15,9 @@ func TestClientStatusMapping(t *testing.T) {
 		status int
 		want   error
 	}{
-		{http.StatusPaymentRequired, ErrQuotaExceeded},
-		{http.StatusTooManyRequests, ErrRateLimited},
-		{http.StatusNotFound, ErrNotFound},
+		{http.StatusPaymentRequired, xsource.ErrQuotaExceeded},
+		{http.StatusTooManyRequests, xsource.ErrRateLimited},
+		{http.StatusNotFound, xsource.ErrNotFound},
 	}
 	for _, c := range cases {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -38,7 +40,7 @@ func TestClientNotConfigured(t *testing.T) {
 	if cl.IsConfigured() {
 		t.Fatal("empty key should not be configured")
 	}
-	if _, err := cl.UserTweets(context.Background(), "1", ""); !errors.Is(err, ErrNotConfigured) {
+	if _, err := cl.UserTweets(context.Background(), "1", ""); !errors.Is(err, xsource.ErrNotConfigured) {
 		t.Fatalf("err = %v, want ErrNotConfigured", err)
 	}
 }

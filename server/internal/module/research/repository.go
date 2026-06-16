@@ -108,20 +108,34 @@ func (r *Repository) Save(ctx context.Context, in SaveInput) (*Record, error) {
 	id := uuid.New()
 	now := time.Now().UTC()
 
+	// signal-scope 幂等: 每个 signal_id 至多一条 (uq_signal_research_signal, migration 028).
+	// 重跑推演 (recovery sweeper / 人工重发 outbox) 会重调本 Save —— ON CONFLICT 把已有
+	// 那条的内容刷成最新检索, 而非再插一条冗余行. created_at 不动 (留作首次记录时刻,
+	// mobile 排序稳定). refinement_round 行带 signal_id 但 scope≠'signal', 不在该部分
+	// 索引内, 永不冲突, 照常 INSERT.
 	const insert = `
 		INSERT INTO signal_research
 			(id, user_id, scope, signal_id, refinement_id, round, query, results, model, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		ON CONFLICT (signal_id) WHERE scope = 'signal'
+			DO UPDATE SET query   = EXCLUDED.query,
+			              results = EXCLUDED.results,
+			              model   = EXCLUDED.model
+		RETURNING id, created_at
 	`
-	if _, err := r.pool.Exec(ctx, insert,
+	var gotID uuid.UUID
+	var gotCreated time.Time
+	if err := r.pool.QueryRow(ctx, insert,
 		id, in.UserID, string(in.Scope), in.SignalID, in.RefinementID, in.Round,
 		in.Query, resultsJSON, in.Model, now,
-	); err != nil {
+	).Scan(&gotID, &gotCreated); err != nil {
 		return nil, fmt.Errorf("insert research: %w", err)
 	}
 
+	// gotID/gotCreated 来自实际落库的行 (新插=本次; 冲突=既有那条). query/results/model
+	// 与持久化值一致 (新插=本次, 冲突=刚 DO UPDATE 成本次).
 	return &Record{
-		ID:           id,
+		ID:           gotID,
 		UserID:       in.UserID,
 		Scope:        in.Scope,
 		SignalID:     in.SignalID,
@@ -130,7 +144,7 @@ func (r *Repository) Save(ctx context.Context, in SaveInput) (*Record, error) {
 		Query:        in.Query,
 		Results:      in.Results,
 		Model:        in.Model,
-		CreatedAt:    now,
+		CreatedAt:    gotCreated,
 	}, nil
 }
 

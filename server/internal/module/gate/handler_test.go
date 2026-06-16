@@ -74,10 +74,10 @@ func newTestEnv(t *testing.T) *testEnv {
 		DevUserID:        devUserID,
 		InternalToken:    testInternalToken,
 		InternalLoopback: false,
-		RegisterModules: func(_, v1, internalV1, _ *gin.RouterGroup) {
-			sigHandler.Register(v1, internalV1)
-			refHandler.Register(v1, internalV1)
-			gateHandler.Register(v1, internalV1)
+		RegisterModules: func(_, v1, internalV1, adminV1 *gin.RouterGroup) {
+			sigHandler.Register(v1, internalV1, adminV1)
+			refHandler.Register(v1, internalV1, adminV1)
+			gateHandler.Register(v1, internalV1, adminV1)
 		},
 	})
 	return &testEnv{router: router, pool: pool, devUserID: devUserID}

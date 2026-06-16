@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 
 	"wiseflow/server/internal/infra/mastra"
-	"wiseflow/server/internal/infra/twtapi"
+	"wiseflow/server/internal/infra/xsource"
 )
 
 var (
@@ -24,9 +24,9 @@ var (
 	ErrInvalidHandle = errors.New("subscription: invalid handle")
 	// ErrLimitReached — 软上限 (产品哲学兼成本闸门: 先读完手头的, 再添新的).
 	ErrLimitReached = errors.New("subscription: limit reached")
-	// ErrAccountNotFound — twtapi 查不到该账号 (404 / 受保护).
+	// ErrAccountNotFound — 数据源查不到该账号 (404 / 受保护).
 	ErrAccountNotFound = errors.New("subscription: twitter account not found")
-	// ErrSourceUnavailable — twtapi 未配置或配额耗尽, 暂时无法解析新订阅.
+	// ErrSourceUnavailable — 数据源未配置或配额耗尽, 暂时无法解析新订阅.
 	ErrSourceUnavailable = errors.New("subscription: source temporarily unavailable")
 )
 
@@ -49,14 +49,14 @@ type CaptureSignalFn func(ctx context.Context, userID, clientEventID uuid.UUID, 
 
 type Service struct {
 	repo          *Repository
-	twt           *twtapi.Client
+	provider      xsource.Provider
 	mastra        *mastra.Client
 	captureSignal CaptureSignalFn
 	logger        *zap.Logger
 }
 
-func NewService(repo *Repository, twt *twtapi.Client, mastraClient *mastra.Client, captureSignal CaptureSignalFn, logger *zap.Logger) *Service {
-	return &Service{repo: repo, twt: twt, mastra: mastraClient, captureSignal: captureSignal, logger: logger}
+func NewService(repo *Repository, provider xsource.Provider, mastraClient *mastra.Client, captureSignal CaptureSignalFn, logger *zap.Logger) *Service {
+	return &Service{repo: repo, provider: provider, mastra: mastraClient, captureSignal: captureSignal, logger: logger}
 }
 
 // ───────────────────────── 订阅 ─────────────────────────
@@ -76,7 +76,7 @@ func NormalizeHandle(raw string) (string, error) {
 }
 
 // ResolveHandle — 管理页「解析预览」: 只查资料不建订阅 (防错订重名号, UX 规格 §8.3 第 2 步).
-func (s *Service) ResolveHandle(ctx context.Context, rawHandle string) (*twtapi.Account, error) {
+func (s *Service) ResolveHandle(ctx context.Context, rawHandle string) (*xsource.Account, error) {
 	handle, err := NormalizeHandle(rawHandle)
 	if err != nil {
 		return nil, err
@@ -84,16 +84,16 @@ func (s *Service) ResolveHandle(ctx context.Context, rawHandle string) (*twtapi.
 	return s.lookupAccount(ctx, handle)
 }
 
-func (s *Service) lookupAccount(ctx context.Context, handle string) (*twtapi.Account, error) {
-	acct, err := s.twt.UserResultByScreenName(ctx, handle)
+func (s *Service) lookupAccount(ctx context.Context, handle string) (*xsource.Account, error) {
+	acct, err := s.provider.LookupAccount(ctx, handle)
 	if err != nil {
 		switch {
-		case errors.Is(err, twtapi.ErrNotFound):
+		case errors.Is(err, xsource.ErrNotFound):
 			return nil, ErrAccountNotFound
-		case errors.Is(err, twtapi.ErrNotConfigured),
-			errors.Is(err, twtapi.ErrQuotaExceeded),
-			errors.Is(err, twtapi.ErrRateLimited):
-			s.logger.Warn("twtapi unavailable", zap.Error(err))
+		case errors.Is(err, xsource.ErrNotConfigured),
+			errors.Is(err, xsource.ErrQuotaExceeded),
+			errors.Is(err, xsource.ErrRateLimited):
+			s.logger.Warn("x source unavailable", zap.Error(err))
 			return nil, ErrSourceUnavailable
 		default:
 			return nil, fmt.Errorf("resolve handle: %w", err)
@@ -232,9 +232,9 @@ func truncateRunes(s string, max int) string {
 
 // ───────────────────────── 采集 (poller 调) ─────────────────────────
 
-// PollDue 认领一批到点账号并采集. 返回 twtapi.ErrQuotaExceeded 时 poller 全局暂停.
+// PollDue 认领一批到点账号并采集. 返回 xsource.ErrQuotaExceeded 时 poller 全局暂停.
 func (s *Service) PollDue(ctx context.Context, batch int) error {
-	if !s.twt.IsConfigured() {
+	if !s.provider.IsConfigured() {
 		return nil
 	}
 	accounts, err := s.repo.ClaimDueAccounts(ctx, batch)
@@ -243,7 +243,7 @@ func (s *Service) PollDue(ctx context.Context, batch int) error {
 	}
 	for _, a := range accounts {
 		if err := s.pollAccount(ctx, a); err != nil {
-			if errors.Is(err, twtapi.ErrQuotaExceeded) {
+			if errors.Is(err, xsource.ErrQuotaExceeded) {
 				return err // 上抛 → poller 全局暂停, 别空转烧配额
 			}
 			s.logger.Warn("poll account failed", zap.String("handle", a.Handle), zap.Error(err))
@@ -258,24 +258,24 @@ func (s *Service) PollDue(ctx context.Context, batch int) error {
 // pollAccount — 单账号增量采集 (开发文档 §3.4):
 // 自上而下收新推 (id > 高水位), 整页全新且有积压才翻页 (≤5 页); 首采只取第一页.
 func (s *Service) pollAccount(ctx context.Context, a DueAccount) error {
-	page, err := s.twt.UserTweets(ctx, a.RestID, "")
+	page, err := s.provider.UserTweets(ctx, a.RestID, "")
 	if err != nil {
 		return s.handlePollError(ctx, a, err)
 	}
 
-	var fresh []twtapi.ParsedTweet
+	var fresh []xsource.Tweet
 	newest := a.HighWater
 	pages := 1
 	for {
 		allNew := len(page.Tweets) > 0
 		for _, tw := range page.Tweets {
 			// 置顶推/RT 会乱序 — 旧推跳过不 break, 整页扫完 (按 id 判断, 不靠位置).
-			if a.HighWater != "" && twtapi.CompareIDs(tw.ID, a.HighWater) <= 0 {
+			if a.HighWater != "" && xsource.CompareIDs(tw.ID, a.HighWater) <= 0 {
 				allNew = false
 				continue
 			}
 			fresh = append(fresh, tw)
-			if newest == "" || twtapi.CompareIDs(tw.ID, newest) > 0 {
+			if newest == "" || xsource.CompareIDs(tw.ID, newest) > 0 {
 				newest = tw.ID
 			}
 		}
@@ -283,7 +283,7 @@ func (s *Service) pollAccount(ctx context.Context, a DueAccount) error {
 		if !allNew || a.HighWater == "" || page.BottomCursor == "" || pages >= maxBackfillPages {
 			break
 		}
-		page, err = s.twt.UserTweets(ctx, a.RestID, page.BottomCursor)
+		page, err = s.provider.UserTweets(ctx, a.RestID, page.BottomCursor)
 		if err != nil {
 			s.logger.Warn("backfill page failed", zap.String("handle", a.Handle), zap.Error(err))
 			break
@@ -321,10 +321,10 @@ func (s *Service) pollAccount(ctx context.Context, a DueAccount) error {
 
 func (s *Service) handlePollError(ctx context.Context, a DueAccount, err error) error {
 	switch {
-	case errors.Is(err, twtapi.ErrNotFound):
+	case errors.Is(err, xsource.ErrNotFound):
 		s.logger.Warn("account gone, stop polling", zap.String("handle", a.Handle))
 		return s.repo.MarkAccountStatus(ctx, a.ID, "not_found")
-	case errors.Is(err, twtapi.ErrRateLimited):
+	case errors.Is(err, xsource.ErrRateLimited):
 		// 退避: 间隔翻倍, 本轮放弃.
 		interval := a.PollIntervalSec * 2
 		if interval > pollIntervalMax {

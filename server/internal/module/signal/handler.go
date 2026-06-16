@@ -22,16 +22,19 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// Register attaches routes to the two route groups.
-// - publicV1: /v1, requires the dev bearer (single-user Phase 1 auth)
+// Register attaches routes to the route groups.
+// - publicV1: /v1, requires the dev bearer / session token
 // - internalV1: /v1/internal, requires the shared internal secret
-func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
+// - adminV1: /v1/admin, requires Bearer + RequireAdmin
+func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	publicV1.POST("/signals", h.capture)
 	publicV1.GET("/signals", h.list)
 	publicV1.GET("/signals/:id", h.get)
 	publicV1.POST("/signals/:id/reinfer", h.reinfer)
 
 	internalV1.POST("/inferences", h.recordInference)
+
+	adminV1.GET("/signals", h.adminList)
 }
 
 // ───────── DTOs (kept inside the package — module-private contract) ─────────

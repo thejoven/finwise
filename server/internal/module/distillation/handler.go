@@ -20,9 +20,10 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	publicV1.GET("/distillations/:refinementID", h.get)
 	internalV1.POST("/distillation", h.upsert)
+	adminV1.GET("/distillations", h.adminList)
 }
 
 // ───── DTOs ─────

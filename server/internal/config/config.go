@@ -41,12 +41,26 @@ type Config struct {
 	// 空 → 走 stub (Go 侧的启发式 fallback), 不阻塞主流程.
 	MastraHTTPURL string
 
-	// TwtAPIKey — twtapi.com 的 X-API-Key (订阅模块采集推文用).
+	// XProvider — 选哪个 X 数据源实现 (X_PROVIDER, 默认 "twtapi"). 由 cmd/api 的
+	// provider 工厂解析; 加新供应商在那里加一个 case, 订阅模块无感.
+	XProvider string
+
+	// TwtAPIKey — twtapi.com 的 X-API-Key (XProvider="twtapi" 时采集推文用).
 	// 空 → poller 不启动, 订阅 REST 仍可读历史数据 (优雅降级).
 	TwtAPIKey string
 
+	// TwitterDataToken — pro.twitterdata.com 的 token (XProvider="twitterdata" 时用, query 参数鉴权).
+	TwitterDataToken string
+
 	// SubscriptionPollEnabled — 显式关闭采集 worker (调试/省配额), 默认 true.
 	SubscriptionPollEnabled bool
+
+	// Recovery sweeper — 自动复活被 LLM 偶发抽风搁浅的 signal/tweet (见 module/recovery).
+	RecoveryEnabled       bool          // RECOVERY_ENABLED, default true
+	RecoverySweepInterval time.Duration // RECOVERY_SWEEP_MS, default 120000 (2min)
+	RecoveryCooldown      time.Duration // RECOVERY_COOLDOWN_MS, default 300000 (5min)
+	RecoveryMaxRevivals   int           // RECOVERY_MAX_REVIVALS, default 5
+	RecoveryBatchSize     int           // RECOVERY_BATCH, default 50
 }
 
 func Load() (*Config, error) {
@@ -98,13 +112,45 @@ func Load() (*Config, error) {
 	c.OutboxMaxAttempts = maxAttempts
 
 	c.MastraHTTPURL = os.Getenv("MASTRA_HTTP_URL") // optional
-	c.TwtAPIKey = os.Getenv("TWTAPI_API_KEY")      // optional
+	c.XProvider = strings.ToLower(getDefault("X_PROVIDER", "twtapi"))
+	c.TwtAPIKey = os.Getenv("TWTAPI_API_KEY")           // optional
+	c.TwitterDataToken = os.Getenv("TWITTERDATA_TOKEN") // optional (XProvider=twitterdata 时需要)
 
 	if v := os.Getenv("SUBSCRIPTION_POLL_ENABLED"); v != "" {
 		c.SubscriptionPollEnabled = strings.EqualFold(v, "true") || v == "1"
 	} else {
 		c.SubscriptionPollEnabled = true
 	}
+
+	if v := os.Getenv("RECOVERY_ENABLED"); v != "" {
+		c.RecoveryEnabled = strings.EqualFold(v, "true") || v == "1"
+	} else {
+		c.RecoveryEnabled = true
+	}
+
+	recSweepMs, err := strconv.Atoi(getDefault("RECOVERY_SWEEP_MS", "120000"))
+	if err != nil || recSweepMs < 1000 {
+		return nil, fmt.Errorf("RECOVERY_SWEEP_MS must be int ≥ 1000: %v", err)
+	}
+	c.RecoverySweepInterval = time.Duration(recSweepMs) * time.Millisecond
+
+	recCooldownMs, err := strconv.Atoi(getDefault("RECOVERY_COOLDOWN_MS", "300000"))
+	if err != nil || recCooldownMs < 1000 {
+		return nil, fmt.Errorf("RECOVERY_COOLDOWN_MS must be int ≥ 1000: %v", err)
+	}
+	c.RecoveryCooldown = time.Duration(recCooldownMs) * time.Millisecond
+
+	recMaxRevivals, err := strconv.Atoi(getDefault("RECOVERY_MAX_REVIVALS", "5"))
+	if err != nil || recMaxRevivals < 1 {
+		return nil, fmt.Errorf("RECOVERY_MAX_REVIVALS must be int ≥ 1: %v", err)
+	}
+	c.RecoveryMaxRevivals = recMaxRevivals
+
+	recBatch, err := strconv.Atoi(getDefault("RECOVERY_BATCH", "50"))
+	if err != nil || recBatch < 1 || recBatch > 1000 {
+		return nil, fmt.Errorf("RECOVERY_BATCH must be int in [1, 1000]: %v", err)
+	}
+	c.RecoveryBatchSize = recBatch
 
 	var missing []string
 	if c.DatabaseURL == "" {

@@ -21,9 +21,9 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-// Register — 全部挂 publicV1 (Bearer). 本模块无 internal 端点 (分类回写是
-// Go 主动调 Mastra 后直接 UPDATE, 见开发计划 §0).
-func (h *Handler) Register(publicV1 *gin.RouterGroup) {
+// Register — publicV1 (Bearer) + adminV1 (RequireAdmin). 本模块无 internal 端点
+// (分类回写是 Go 主动调 Mastra 后直接 UPDATE, 见开发计划 §0).
+func (h *Handler) Register(publicV1, adminV1 *gin.RouterGroup) {
 	publicV1.GET("/subscriptions", h.listSubscriptions)
 	publicV1.GET("/subscriptions/resolve", h.resolve)
 	publicV1.POST("/subscriptions", h.subscribe)
@@ -35,6 +35,9 @@ func (h *Handler) Register(publicV1 *gin.RouterGroup) {
 	publicV1.GET("/tweets/:id", h.getTweet)
 	publicV1.POST("/tweets/:id/read", h.markRead)
 	publicV1.POST("/tweets/:id/promote", h.promote)
+
+	// 运营后台跨用户订阅源 (按账号).
+	adminV1.GET("/subscriptions", h.adminListAccounts)
 }
 
 // ───── DTOs ─────

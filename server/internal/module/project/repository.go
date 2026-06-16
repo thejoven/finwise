@@ -120,6 +120,34 @@ func (r *Repository) ListActive(ctx context.Context, userID uuid.UUID) ([]Projec
 	return out, rows.Err()
 }
 
+// ListArchived 拉某 user 的已归档分类, 最近归档的排前 (归档页倒序看更顺手).
+// 与 ListActive 互补: 后者只取 archived_at IS NULL, 此处只取 IS NOT NULL.
+func (r *Repository) ListArchived(ctx context.Context, userID uuid.UUID) ([]Project, error) {
+	const q = `
+		SELECT id, user_id, name, color, emoji, sort_order, guidance, archived_at, created_at, updated_at
+		FROM projects
+		WHERE user_id = $1 AND archived_at IS NOT NULL
+		ORDER BY archived_at DESC
+	`
+	rows, err := r.pool.Query(ctx, q, userID)
+	if err != nil {
+		return nil, fmt.Errorf("query archived projects: %w", err)
+	}
+	defer rows.Close()
+	out := make([]Project, 0)
+	for rows.Next() {
+		var p Project
+		if err := rows.Scan(
+			&p.ID, &p.UserID, &p.Name, &p.Color, &p.Emoji,
+			&p.SortOrder, &p.Guidance, &p.ArchivedAt, &p.CreatedAt, &p.UpdatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan archived project: %w", err)
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // Get 拿单个 project, 强制 user_id 匹配. 不区分归档 — 调用方按需判断.
 func (r *Repository) Get(ctx context.Context, userID, id uuid.UUID) (*Project, error) {
 	const q = `
@@ -196,6 +224,36 @@ func (r *Repository) Archive(ctx context.Context, userID, id uuid.UUID) error {
 		}
 		// 已归档 — 幂等成功.
 		_ = p
+	}
+	return nil
+}
+
+// Restore 取消归档 — archived_at 置空, 分类重回活跃列表 (历史 signals 上的 project_id 一直在,
+// 故恢复后老数据自然归位). 归档只为减少注意力干扰, 不丢训练资料.
+//
+// 命中 unique (user_id, name) WHERE archived_at IS NULL → 已有同名活跃分类占着名字, 转
+// ErrDuplicateName (调用方提示用户先改名). 目标不存在 → ErrNotFound; 本就未归档 → 幂等成功.
+func (r *Repository) Restore(ctx context.Context, userID, id uuid.UUID) error {
+	const q = `
+		UPDATE projects SET
+			archived_at = NULL,
+			updated_at  = NOW()
+		WHERE user_id = $1 AND id = $2 AND archived_at IS NOT NULL
+	`
+	tag, err := r.pool.Exec(ctx, q, userID, id)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return ErrDuplicateName
+		}
+		return fmt.Errorf("restore project: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		// 不存在 or 本就未归档. 用 Get 区分.
+		if _, gerr := r.Get(ctx, userID, id); gerr != nil {
+			return gerr // ErrNotFound or other
+		}
+		// 已是活跃 — 幂等成功.
 	}
 	return nil
 }
