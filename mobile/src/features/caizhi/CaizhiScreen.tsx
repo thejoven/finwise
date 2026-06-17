@@ -10,6 +10,8 @@ import PagerView, {
 import { InboxView } from "@/features/inbox";
 import { DenoiseView } from "@/features/capture";
 import { ArchiveView } from "@/features/archive";
+import { AttentionView } from "@/features/attention";
+import { TrackHubView } from "@/features/track";
 import { haptic } from "@/core/haptics";
 import { theme } from "@/core/theme";
 
@@ -18,10 +20,10 @@ import { SegmentedTabs } from "./SegmentedTabs";
 import { useCaizhiNav } from "./store";
 
 /**
- * 财知 tab —— 信箱 · 降噪 · 归档 合三为一 (本轮整合, 见 GOAL).
+ * 财知 tab —— 信箱 · 降噪 · 归档 · 统计 合四为一 (统计本轮从底部 tab 并入, 见 GOAL).
  *
- * 结构: 固定报头 (CaizhiHeader) + 吸顶分段栏 (SegmentedTabs) + 原生 PagerView 三页.
- *   报头与分段栏是 pager 的兄弟节点, 天然常驻在顶部, 无需 sticky / absolute 协调; 三张子页
+ * 结构: 固定报头 (CaizhiHeader) + 吸顶分段栏 (SegmentedTabs) + 原生 PagerView 四页.
+ *   报头与分段栏是 pager 的兄弟节点, 天然常驻在顶部, 无需 sticky / absolute 协调; 四张子页
  *   在其下方各自独立滚动.
  *
  * 滑动: 用 react-native-pager-view (iOS UIPageViewController / Android ViewPager2), 左右滑动
@@ -37,7 +39,13 @@ export default function CaizhiScreen() {
   const progress = useSharedValue(0);
 
   const tabs = useMemo(
-    () => [t("caizhi.tabs.inbox"), t("caizhi.tabs.distill"), t("caizhi.tabs.archive")],
+    () => [
+      t("caizhi.tabs.inbox"),
+      t("caizhi.tabs.distill"),
+      t("caizhi.tabs.targets"),
+      t("caizhi.tabs.archive"),
+      t("caizhi.tabs.stats"),
+    ],
     [t],
   );
 
@@ -89,8 +97,14 @@ export default function CaizhiScreen() {
         <View key="signals" style={styles.page} collapsable={false}>
           <DenoiseView />
         </View>
+        <View key="targets" style={styles.page} collapsable={false}>
+          <TrackHubView />
+        </View>
         <View key="archive" style={styles.page} collapsable={false}>
           <ArchiveView />
+        </View>
+        <View key="stats" style={styles.page} collapsable={false}>
+          <AttentionView />
         </View>
       </PagerView>
     </View>

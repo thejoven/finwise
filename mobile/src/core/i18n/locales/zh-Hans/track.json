@@ -1,0 +1,98 @@
+{
+  "section": {
+    "label": "标的走势",
+    "meta": "TRACK",
+    "signalIntro": "以你发现这条的那一刻为锚点。"
+  },
+  "since": {
+    "discovery": "发现至今",
+    "sign": "签字至今"
+  },
+  "anchor": {
+    "discovery": "发现",
+    "sign": "签字",
+    "both": "发现 · 签字"
+  },
+  "close": {
+    "anchor": "发现时 {{value}}",
+    "sign": "签字时 {{value}}",
+    "latest": "最新 {{value}}"
+  },
+  "state": {
+    "loading": "读取走势…",
+    "error": "走势暂时读不到。",
+    "empty": "这条还没指向可追踪的标的。",
+    "untrackable": "无法追踪此标的",
+    "untrackableHint": "加密、未上市、海外或篮子标的，暂未接入行情。",
+    "noBars": "暂无行情数据。"
+  },
+  "asOf": "数据截至 {{date}} · {{source}}",
+  "commitment": {
+    "label": "标的表现",
+    "meta": "PERFORMANCE"
+  },
+  "market": {
+    "a": "A股",
+    "hk": "港股",
+    "us": "美股",
+    "other": "其他"
+  },
+  "role": {
+    "primary": "主标的",
+    "beneficiary": "受益",
+    "mentioned": "提及"
+  },
+  "asset": {
+    "back": "返回",
+    "headerStamp": "标的档案",
+    "pricesLabel": "价格走势",
+    "pricesMeta": "PRICES",
+    "thesesLabel": "你碰过它的命题",
+    "thesesMeta": "DOSSIER",
+    "thesesEmpty": "还没有命题指向它。",
+    "delisted": "已退市",
+    "kind": {
+      "signal": "信号",
+      "commitment": "承诺"
+    },
+    "commitmentStatus": {
+      "drafted": "草拟",
+      "signed": "已签字",
+      "postponed": "已搁置",
+      "abandoned": "已放弃"
+    },
+    "discoveredOn": "发现于 {{date}}",
+    "signedOn": "签字于 {{date}}",
+    "loading": "读取标的…",
+    "error": "标的读取失败。"
+  },
+  "archive": {
+    "since": "放下至今"
+  },
+  "hub": {
+    "intro": "你在追踪的一切，最新在前。",
+    "loading": "读取追踪…",
+    "error": "追踪暂时读不到。",
+    "empty": "还没有可追踪的内容。当某条信号带上具体标的，就会出现在这里。",
+    "more": "+{{count}}",
+    "thesisCount_other": "{{count}} 个命题",
+    "noPrice": "暂无价",
+    "relevance": "相关 {{pct}}%",
+    "assets": {
+      "label": "关联标的",
+      "meta": "ASSETS",
+      "empty": "还没有在场的标的。"
+    },
+    "signals": {
+      "label": "信号",
+      "meta": "SIGNALS",
+      "empty": "还没有带标的的信号。",
+      "noSummary": "未命名信号"
+    },
+    "tweets": {
+      "label": "订阅信息",
+      "meta": "FEED",
+      "empty": "还没有订阅推文。"
+    }
+  }
+}

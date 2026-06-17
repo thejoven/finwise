@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import { Mono, Sans, Serif, TapEffect } from "@/shared/components";
 import { theme } from "@/core/theme";
+import { CompactTrackStrip } from "@/features/track";
 
 import { formatMonthDay } from "@/shared/format";
 import type { MergedSignal } from "./hooks";
@@ -72,6 +73,9 @@ export function DenoisedRow({ signal }: Props) {
           ))}
         </View>
       ) : null}
+
+      {/* 价格条 (P3): 可追踪标的的 micro sparkline + 涨跌, 一眼"这条读对没". */}
+      <CompactTrackStrip signalId={signal.id} max={3} />
 
       {signal.raw_text ? (
         <Serif size={11} italic style={styles.origin} numberOfLines={1}>

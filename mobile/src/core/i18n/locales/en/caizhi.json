@@ -7,7 +7,9 @@
   "tabs": {
     "inbox": "Inbox",
     "distill": "Distill",
-    "archive": "Archive"
+    "archive": "Archive",
+    "stats": "Stats",
+    "targets": "Assets"
   },
   "inbox": {
     "thisWeek": "This Week",

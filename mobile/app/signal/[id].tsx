@@ -32,6 +32,7 @@ import {
   useStartRefinement,
 } from "@/features/refinement";
 import { GateFeedback, useGateByRefinement } from "@/features/archive";
+import { SignalTrackSection } from "@/features/track";
 import { ProjectBadge } from "@/features/project/ProjectBadge";
 
 /**
@@ -159,7 +160,10 @@ export default function SignalDetailScreen() {
         <DoubleRule />
 
         <View style={styles.statusBlock}>
-          <SectionHeader label={t("gate.signal.inference.title")} meta={statusLabel(inferenceStatus)} />
+          <SectionHeader
+            label={t("gate.signal.inference.title")}
+            meta={statusLabel(inferenceStatus)}
+          />
           {summary ? (
             <Serif size={14} style={styles.summary}>
               {summary}
@@ -200,6 +204,9 @@ export default function SignalDetailScreen() {
         </View>
 
         <FinancialTargets assets={relatedAssets} />
+
+        {/* 标的走势 (P3): 各标的 sparkline + 发现至今 %. 仅当有可追踪标的才出区块. */}
+        <SignalTrackSection signalId={id} />
 
         {pendingItem?.status === "failed" || pendingItem?.status === "exhausted" ? (
           <TapEffect
@@ -245,7 +252,10 @@ export default function SignalDetailScreen() {
           <View style={styles.distillBlock}>
             {distillation.distilled_content ? (
               <View>
-                <SectionHeader label={t("gate.signal.distill.label")} meta={t("gate.signal.distill.meta")} />
+                <SectionHeader
+                  label={t("gate.signal.distill.label")}
+                  meta={t("gate.signal.distill.meta")}
+                />
                 <DoubleRule />
                 <DistilledContent content={distillation.distilled_content} />
               </View>
@@ -316,7 +326,10 @@ function FinancialTargets({
   if (assets.length === 0) return null;
   return (
     <View style={styles.faBlock}>
-      <SectionHeader label={t("gate.signal.financial.label")} meta={t("gate.signal.financial.meta")} />
+      <SectionHeader
+        label={t("gate.signal.financial.label")}
+        meta={t("gate.signal.financial.meta")}
+      />
       <DoubleRule />
       <View style={styles.faList}>
         {assets.map((a, i) => {

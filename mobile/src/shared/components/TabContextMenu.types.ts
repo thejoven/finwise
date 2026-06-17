@@ -3,14 +3,12 @@ import { type SFSymbol } from "expo-symbols";
 
 /**
  * 底栏 tab 长按菜单的动作回调集 —— 由 `DynamicIslandTabBar` 提供 (它握有 navigation /
- *   queryClient / router / auth 等上下文), 平台实现 (`TabContextMenu.ios`) 只负责把这些回调
+ *   router / auth 等上下文), 平台实现 (`TabContextMenu.ios`) 只负责把这些回调
  *   摆进原生菜单项. 这样 @expo/ui (仅 iOS) 全部收在 .ios 文件里, 共享层不碰它.
  */
 export interface TabMenuActions {
-  /** 跳到「财知」某子页 (0 信箱 / 1 降噪 / 2 归档). */
+  /** 跳到「财知」某子页 (0 信箱 / 1 降噪 / 2 标的 / 3 归档 / 4 统计). */
   jumpCaizhi: (page: number) => void;
-  /** 刷新「统计」数据 (失效 react-query ["attention"]). */
-  refreshAttention: () => void;
   /** 「我」→ 编辑资料. */
   editProfile: () => void;
   /** 「我」→ 修改密码. */
@@ -22,7 +20,7 @@ export interface TabMenuActions {
 }
 
 export interface TabContextMenuProps {
-  /** 当前 tab 的 route name (caizhi / attention / profile). */
+  /** 当前 tab 的 route name (caizhi / profile 有菜单; subscriptions 无). */
   routeName: string;
   actions: TabMenuActions;
   /** 该 tab 的 SF Symbol —— 用于长按"高亮预览"(玻璃卡片上居中的图标). */

@@ -12,7 +12,7 @@ const NAMESPACES = [
   "common", "settings", "profile", "nav", "errors",
   "capture", "caizhi", "refinement", "gate", "archive",
   "project", "subscriptions", "commitment", "retrospect",
-  "attention", "notifications", "auth", "components",
+  "attention", "notifications", "auth", "components", "track",
 ];
 
 for (const lang of LANGS) {

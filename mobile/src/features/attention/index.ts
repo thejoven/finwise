@@ -1,2 +1,2 @@
-export { AttentionScreen } from "./AttentionScreen";
+export { AttentionView } from "./AttentionView";
 export { InsightBlock } from "./InsightBlock";

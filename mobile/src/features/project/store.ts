@@ -9,7 +9,7 @@
  * 切换 active project 会:
  *   1) 持久化到 AsyncStorage (下次启动恢复)
  *   2) 后续 capture 自动绑定 active project_id
- *   3) AttentionScreen 自动按 active project 过滤
+ *   3) AttentionView (财知·统计子页) 自动按 active project 过滤
  *
  * 列表本身从 server 拉, 不在 store 里缓存 — 用 react-query
  * (queryKey ["projects"]) 兜.

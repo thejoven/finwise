@@ -3,7 +3,9 @@ import { Alert, Pressable, StyleSheet, Text, View, useColorScheme } from "react-
 import { SymbolView, type SFSymbol } from "expo-symbols";
 import Animated, {
   Easing,
+  FadeIn,
   FadeOut,
+  LinearTransition,
   ZoomIn,
   runOnJS,
   useAnimatedStyle,
@@ -19,7 +21,6 @@ import { Gesture, GestureDetector } from "react-native-gesture-handler";
 // react-doctor-disable-next-line react-doctor/rn-no-non-native-navigator
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
@@ -42,8 +43,12 @@ import { TabContextMenu, type TabMenuActions } from "./TabContextMenu";
  *
  * 形态: 一行里并排两颗悬浮玻璃药丸, 中间留缝、互不相连:
  *   · 左「分类格」(BottomCategoryCell): 当前分类 + ▴, 点击向上弹分类下拉框.
- *   · 右「tab 岛」: 四个 tab (订阅 · 财知 · 统计 · 我) —— **上图标下文字**, 标签常驻可见.
- *   整行水平居中悬浮, 脱离屏幕边缘. 分类从报头挪到这里 (见 GOAL 本轮调整).
+ *   · 右「tab 岛」: 三个 tab (订阅 · 财知 · 我) —— **上图标下文字**, 标签常驻可见.
+ *   整行水平居中悬浮, 脱离屏幕边缘.
+ *
+ * 分类格只在「财知」tab 显示 (见 GOAL 本轮调整): 分类筛选只作用于财知内的信箱/降噪/归档/统计
+ *   四张子页, 故离开财知时它淡出、岛体平滑归位居中; 回到财知再淡入. 切换走 reanimated
+ *   layout 过渡 (BAR_REFLOW), 不"啪"地跳.
  *
  * 切换特效 (三段叠加, 利落不喧闹):
  *   1) 一颗"透镜"高亮 (highlight) 用弹簧滑到选中格底下 —— tab 等宽 (TAB_WIDTH) 故位置可
@@ -73,8 +78,8 @@ import { TabContextMenu, type TabMenuActions } from "./TabContextMenu";
  *
  * 触感: 切 tab / 横扫跨格都走 selection 触感 (haptic.selection), 见 references/06-haptic-grammar.md.
  *
- * 长按: 每个 tab 各裹一层原生 ContextMenu (iOS 26 液态玻璃快捷菜单) —— 财知跳子页、统计刷新、
- *   我→编辑/密码/通知/退出. 收在 `./TabContextMenu`(.ios), @expo/ui 只在那个 .ios 文件里碰.
+ * 长按: 每个 tab 各裹一层原生 ContextMenu (iOS 26 液态玻璃快捷菜单) —— 财知跳子页 (信箱/降噪/
+ *   归档/统计)、我→编辑/密码/通知/退出. 收在 `./TabContextMenu`(.ios), @expo/ui 只在那个 .ios 文件里碰.
  *
  * @see ./glass
  * @see ./TabContextMenu
@@ -115,6 +120,12 @@ const LENS_RADIUS = PILL_RADIUS - LENS_TOP;
 /** GlassContainer 融合距离: 透镜与胶囊在此距离内开始原生粘连/形变. 偏大=更易"相吸", 需上机调. */
 const LENS_BLEND_SPACING = 18;
 
+/** 分类格进出财知时整行的"重排"过渡 —— 分类格淡入/淡出, tab 岛平滑滑到新的居中位置,
+ *  不"啪"地跳. 走 App 统一的丝滑无回弹手感 (同 shared/motion 的 LIST_LAYOUT). */
+const BAR_REFLOW = LinearTransition.springify().damping(28).stiffness(300);
+/** 分类格的淡入/淡出时长 —— 比重排略短, 让它先到位/先隐去, 视觉利落. */
+const CELL_FADE_MS = 160;
+
 /** worklet 版 clamp —— 横扫手势在 UI 线程算透镜落点用. */
 function clampWorklet(v: number, lo: number, hi: number) {
   "worklet";
@@ -127,10 +138,6 @@ type TabMeta = { icon: SFSymbol; iconSelected: SFSymbol };
 const TAB_META: Record<string, TabMeta> = {
   subscriptions: { icon: "newspaper", iconSelected: "newspaper.fill" },
   caizhi: { icon: "books.vertical", iconSelected: "books.vertical.fill" },
-  attention: {
-    icon: "chart.line.uptrend.xyaxis",
-    iconSelected: "chart.line.uptrend.xyaxis",
-  },
   profile: { icon: "person", iconSelected: "person.fill" },
 };
 
@@ -230,6 +237,10 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
   // 岛宽按等宽栅格算死 (tab 等宽, 故无需 onLayout 量): N 格 + 缝 + 左右留白.
   const tabCount = state.routes.reduce((n, r) => (TAB_META[r.name] ? n + 1 : n), 0);
   const islandWidth = tabCount * TAB_WIDTH + (tabCount - 1) * TAB_GAP + ISLAND_PAD * 2;
+
+  // 分类格只在「财知」显示 (分类筛选只作用于财知内的信箱/降噪/归档/统计四张子页, 见组件头).
+  //   离开财知 → 它淡出, tab 岛经 BAR_REFLOW 平滑滑回正中; 回财知 → 反之.
+  const showCategoryCell = state.routes[state.index]?.name === "caizhi";
 
   // 入场: 整行胶囊从下方浮上来"落座" (弹簧轻微过冲 = 落下的分量感). 只动 translateY 不动
   //   opacity —— 给 UIVisualEffectView (玻璃) 的父层动 alpha 会闪 / 出系统警告.
@@ -346,9 +357,8 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
   }, [capsuleScale]);
 
   // ── 各 tab 长按菜单 (iOS 原生 ContextMenu; iOS 26 自动液态玻璃) 的动作回调 ──────────
-  //   这些回调握有 navigation / queryClient / router / auth 上下文, 注入 TabContextMenu;
+  //   这些回调握有 navigation / router / auth 上下文, 注入 TabContextMenu;
   //   @expo/ui 本身只在 TabContextMenu.ios 里碰 (见该文件), 本组件不直接依赖它.
-  const queryClient = useQueryClient();
   const clearAuth = useAuth((s) => s.clear);
 
   // 订阅未读红点 (60s 慢轮询; 未登录/离线静默失败 → 不显点).
@@ -386,15 +396,12 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
   const tabMenuActions = useMemo<TabMenuActions>(
     () => ({
       jumpCaizhi,
-      refreshAttention: () => {
-        void queryClient.invalidateQueries({ queryKey: ["attention"] });
-      },
       editProfile: () => router.push("/profile/edit"),
       changePassword: () => router.push("/profile/password"),
       openNotifications: () => router.push("/notifications"),
       logout: confirmLogout,
     }),
-    [jumpCaizhi, queryClient, confirmLogout],
+    [jumpCaizhi, confirmLogout],
   );
 
   return (
@@ -404,16 +411,27 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
       style={[styles.host, { bottom: insets.bottom + TAB_BAR_OFFSET }]}
     >
       <Animated.View pointerEvents="box-none" style={[styles.row, enterStyle]}>
-        {/* 左: 独立分类格 (与右侧 tab 岛分离, 中间留缝). */}
-        <BottomCategoryCell isDark={isDark} />
+        {/* 左: 独立分类格 (与右侧 tab 岛分离, 中间留缝) —— 仅财知显示, 进出走淡入/淡出.
+            它增删时, 右侧 tab 岛经自身的 layout=BAR_REFLOW 平滑滑到新居中位 (透明的 row 上做
+            layout 不可见, 故 layout 必须挂在"看得见"的岛框上, 而非这层 row). */}
+        {showCategoryCell ? (
+          <Animated.View
+            pointerEvents="box-none"
+            entering={FadeIn.duration(CELL_FADE_MS)}
+            exiting={FadeOut.duration(CELL_FADE_MS)}
+          >
+            <BottomCategoryCell isDark={isDark} />
+          </Animated.View>
+        ) : null}
 
         {/* 右: tab 岛 —— 三层叠放 (岛框只定尺寸/锚点, 不缩放):
             1) 玻璃胶囊层 (描边 + 玻璃 + 透镜): **单独**做果冻缩放. 图标不在这层, 故缩放重采样
                不会波及图标 —— 解决"按钮图标短暂发虚" (缩放任何含图标的栅格层都会重采样致糊).
             2) tab 内容层 (图标/标签): 独立、**不缩放** → 始终清晰; 透明背景, 让其下玻璃透出.
                外面罩一层 Pan 手势 (GestureDetector) —— 横扫换台 (scrub), 见上.
-            每个 tab 再各裹一层原生 ContextMenu —— 长按弹液态玻璃快捷菜单 (见 ./TabContextMenu). */}
-        <View style={[styles.islandFrame, { width: islandWidth }]}>
+            每个 tab 再各裹一层原生 ContextMenu —— 长按弹液态玻璃快捷菜单 (见 ./TabContextMenu).
+            layout=BAR_REFLOW: 分类格淡入/淡出后, 岛框平滑滑到新的居中落点, 不"啪"地跳. */}
+        <Animated.View style={[styles.islandFrame, { width: islandWidth }]} layout={BAR_REFLOW}>
           <Animated.View
             pointerEvents="none"
             style={[styles.capsuleVisual, { borderColor: overlay.border }, capsuleStyle]}
@@ -478,7 +496,7 @@ export function DynamicIslandTabBar({ state, navigation }: BottomTabBarProps) {
               })}
             </View>
           </GestureDetector>
-        </View>
+        </Animated.View>
       </Animated.View>
     </View>
   );

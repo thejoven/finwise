@@ -45,6 +45,7 @@ import {
 } from "@/core/api/gate";
 import { theme } from "@/core/theme";
 import i18n from "@/core/i18n";
+import { CompactTrackStrip } from "@/features/track";
 import { LIST_LAYOUT } from "@/shared/motion";
 
 // 两个语义组. 每组合并多个底层 pool, 用一句口语说人话.
@@ -115,7 +116,10 @@ export function ArchiveView() {
         ))}
 
         <View style={styles.section}>
-          <SectionHeader label={t("archive.retrospect.label")} meta={t("archive.retrospect.meta")} />
+          <SectionHeader
+            label={t("archive.retrospect.label")}
+            meta={t("archive.retrospect.meta")}
+          />
           {finalizedRetrospects.length === 0 ? (
             <Serif size={13} italic style={styles.muted}>
               {t("archive.retrospect.empty")}
@@ -265,6 +269,11 @@ function PoolCard({ ev, tag }: { ev: GateEvaluation; tag: string }) {
             </Serif>
           ) : null}
         </View>
+
+        {/* 你当时放下的, 后来怎么走 (P4): 标的价格条, 校准四道门否得对不对. */}
+        {ev.signal?.id ? (
+          <CompactTrackStrip signalId={ev.signal.id} max={2} caption={t("track.archive.since")} />
+        ) : null}
 
         {/* 卡脚: 继续对话指引 */}
         <View style={styles.cardFoot}>

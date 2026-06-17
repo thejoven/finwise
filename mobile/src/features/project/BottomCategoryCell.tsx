@@ -18,10 +18,11 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { router } from "expo-router";
 
-import { listProjects, type ProjectView } from "@/core/api/project";
+import { archiveProject, listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
 import { haptic } from "@/core/haptics";
 // 走具体文件而非 "@/shared/components" barrel: 该 barrel 经 DynamicIslandTabBar/Masthead
@@ -59,6 +60,8 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   const pendingFormRef = useRef<{ editingId: string | null; stage: "list" | "create" } | null>(
     null,
   );
+  // 待跳归档管理页: 与 form 同理, 先关下拉等它卸载再 push, 避免 Modal 盖住新栈页.
+  const pendingNavRef = useRef(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [anchor, setAnchor] = useState<DropdownAnchor | null>(null);
 
@@ -78,6 +81,19 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   });
   const usable: ProjectView[] = (projects ?? []).filter((p) => !p.archived_at);
   const active = usable.find((p) => p.id === activeId) ?? null;
+
+  const queryClient = useQueryClient();
+  const archiveMut = useMutation({
+    mutationFn: archiveProject,
+    onSuccess: async (_, id) => {
+      // 归档当前 active 分类时落到下一个可用分类; 一个不剩则置空, useEnsureCategory 兜底建默认.
+      if (activeId === id) {
+        const next = usable.find((p) => p.id !== id);
+        await setActive(next?.id ?? null);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+    },
+  });
 
   const overlay = glassOverlay(isDark);
 
@@ -116,8 +132,26 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
     setDropdownOpen(false);
   };
 
+  // 行内快捷归档: 不关下拉 —— 归档后该行从列表消失 (invalidate 刷新), 可连续清理;
+  //   归档当前 active 分类时 archiveMut 会把 active 切到下一个, 底栏分类格即时跟着变.
+  const handleArchive = (id: string) => {
+    void haptic.light();
+    archiveMut.mutate(id);
+  };
+
+  const handleManageArchive = () => {
+    pendingNavRef.current = true;
+    setDropdownOpen(false);
+  };
+
   // 下拉框退场卸载后才开表单 (rAF 再多让一帧, 确保旧 Modal 收干净), 避开 iOS 双 Modal 报错.
   const handleDropdownClosed = () => {
+    // 归档管理页优先: 下拉卸载后再 push, 避开 iOS Modal 与新栈页同帧呈现的冲突.
+    if (pendingNavRef.current) {
+      pendingNavRef.current = false;
+      requestAnimationFrame(() => router.push("/projects/archived"));
+      return;
+    }
     const intent = pendingFormRef.current;
     if (!intent) return;
     pendingFormRef.current = null;
@@ -172,6 +206,8 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
         onPick={handlePick}
         onCreate={handleCreate}
         onEdit={handleEdit}
+        onArchive={handleArchive}
+        onManageArchive={handleManageArchive}
         onClosed={handleDropdownClosed}
       />
 
