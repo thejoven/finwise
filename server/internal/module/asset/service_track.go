@@ -158,3 +158,108 @@ func (s *Service) AssetTheses(ctx context.Context, userID, assetID uuid.UUID) (*
 	}
 	return &AssetThesesView{Asset: *a, Theses: theses}, nil
 }
+
+// ───────────────────────── 标的追踪 Hub (§6.6) ─────────────────────────
+
+// TweetBrief — Hub「订阅信息」一项 (asset 模块本地类型; main.go 从订阅模块映射注入, 不反向 import).
+type TweetBrief struct {
+	ID             string
+	Handle         string
+	Summary        string
+	Category       string
+	Tags           []string
+	Relevance      *float32
+	TweetCreatedAt time.Time
+}
+
+// LatestTweetsFn — main.go 注入: 取某 user 最新 limit 条订阅推文 (复用 subscription.Feed).
+type LatestTweetsFn func(ctx context.Context, userID uuid.UUID, limit int) ([]TweetBrief, error)
+
+// SetLatestTweets 装配订阅推文取数闭包 (Hub 用; 未装配则 tweets 段为空).
+func (s *Service) SetLatestTweets(fn LatestTweetsFn) { s.latestTweets = fn }
+
+// AssetCard — Hub「关联标的」卡.
+type AssetCard struct {
+	Asset             Asset
+	PriceStatus       string
+	PriceSyncedAt     *time.Time
+	LastTouched       time.Time
+	ThesisCount       int
+	LatestClose       *float64
+	LatestDate        *time.Time
+	PctSinceDiscovery *float64
+}
+
+// AssetRef — Hub 信号卡里的标的简引.
+type AssetRef struct {
+	Canonical string
+	Name      string
+	Market    string
+	Status    string
+}
+
+// SignalCard — Hub「信号」卡.
+type SignalCard struct {
+	SignalID   uuid.UUID
+	CapturedAt time.Time
+	Summary    *string
+	Assets     []AssetRef
+}
+
+// TrackOverviewView — GET /v1/track/overview.
+type TrackOverviewView struct {
+	Assets  []AssetCard
+	Signals []SignalCard
+	Tweets  []TweetBrief
+}
+
+// TrackOverview — 标的追踪着陆页: 一次取齐 最新 关联标的 / 信号 / 订阅推文 (§6.6).
+func (s *Service) TrackOverview(ctx context.Context, userID uuid.UUID, limit int) (*TrackOverviewView, error) {
+	tracked, err := s.repo.TrackedAssets(ctx, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+	assets := make([]AssetCard, 0, len(tracked))
+	for _, t := range tracked {
+		c := AssetCard{
+			Asset: t.Asset, PriceStatus: t.PriceStatus, PriceSyncedAt: t.PriceSyncedAt,
+			LastTouched: t.LastTouched, ThesisCount: t.ThesisCount,
+			LatestClose: t.LatestClose, LatestDate: t.LatestDate,
+		}
+		if t.AnchorClose != nil && *t.AnchorClose != 0 && t.LatestClose != nil {
+			p := (*t.LatestClose)/(*t.AnchorClose) - 1
+			c.PctSinceDiscovery = &p
+		}
+		assets = append(assets, c)
+	}
+
+	rows, err := s.repo.LatestSignalAssets(ctx, userID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var tweets []TweetBrief
+	if s.latestTweets != nil {
+		tweets, _ = s.latestTweets(ctx, userID, limit) // best-effort; 失败则 tweets 段为空, 不拖垮整页
+	}
+
+	return &TrackOverviewView{Assets: assets, Signals: groupSignalCards(rows), Tweets: tweets}, nil
+}
+
+// groupSignalCards 把扁平 (signal,asset) 行按 signal 聚合, 保持 captured_at DESC 顺序.
+func groupSignalCards(rows []LatestSignalAssetRow) []SignalCard {
+	out := make([]SignalCard, 0)
+	idx := make(map[uuid.UUID]int)
+	for _, r := range rows {
+		i, ok := idx[r.SignalID]
+		if !ok {
+			i = len(out)
+			idx[r.SignalID] = i
+			out = append(out, SignalCard{SignalID: r.SignalID, CapturedAt: r.CapturedAt, Summary: r.Summary})
+		}
+		out[i].Assets = append(out[i].Assets, AssetRef{
+			Canonical: r.AssetCanonical, Name: r.AssetName, Market: r.AssetMarket, Status: r.AssetStatus,
+		})
+	}
+	return out
+}

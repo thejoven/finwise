@@ -165,3 +165,107 @@ func (r *Repository) AssetTheses(ctx context.Context, userID, assetID uuid.UUID)
 	}
 	return out, rows.Err()
 }
+
+// ───────────────────────── 标的追踪 Hub 聚合 (§6.6) ─────────────────────────
+
+// TrackedAsset — Hub「关联标的」一项: 用户碰过的标的 + 最新价 + 最早锚点价 (算发现至今涨跌).
+type TrackedAsset struct {
+	Asset         Asset
+	PriceStatus   string
+	PriceSyncedAt *time.Time
+	LastTouched   time.Time
+	ThesisCount   int
+	AnchorClose   *float64
+	LatestClose   *float64
+	LatestDate    *time.Time
+}
+
+// TrackedAssets — 用户碰过的标的 (signal_assets⋈signals 去重), 按 last_touched DESC.
+// LATERAL 取每标的最新 bar + 最早锚点日(含)起首个 bar (anchor_close), pct 在 service 算.
+func (r *Repository) TrackedAssets(ctx context.Context, userID uuid.UUID, limit int) ([]TrackedAsset, error) {
+	const q = `
+		SELECT a.id, a.canonical, a.exchange, a.market, a.name, a.provider_symbol, a.type, a.status,
+		       a.price_status, a.price_synced_at, g.last_touched, g.thesis_count,
+		       lp.close, lp.date, ac.close
+		FROM (
+			SELECT sa.asset_id,
+			       MAX(s.captured_at) AS last_touched,
+			       MIN(sa.anchor_at)  AS earliest_anchor,
+			       count(*)           AS thesis_count
+			FROM signal_assets sa
+			JOIN signals s ON s.id = sa.signal_id AND s.user_id = $1
+			GROUP BY sa.asset_id
+			ORDER BY last_touched DESC
+			LIMIT $2
+		) g
+		JOIN assets a ON a.id = g.asset_id
+		LEFT JOIN LATERAL (
+			SELECT close, date FROM asset_prices WHERE asset_id = a.id ORDER BY date DESC LIMIT 1
+		) lp ON true
+		LEFT JOIN LATERAL (
+			SELECT close FROM asset_prices WHERE asset_id = a.id AND date >= g.earliest_anchor::date
+			ORDER BY date ASC LIMIT 1
+		) ac ON true
+		ORDER BY g.last_touched DESC`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("tracked assets: %w", err)
+	}
+	defer rows.Close()
+	var out []TrackedAsset
+	for rows.Next() {
+		var t TrackedAsset
+		if err := rows.Scan(
+			&t.Asset.ID, &t.Asset.Canonical, &t.Asset.Exchange, &t.Asset.Market, &t.Asset.Name,
+			&t.Asset.ProviderSymbol, &t.Asset.Type, &t.Asset.Status,
+			&t.PriceStatus, &t.PriceSyncedAt, &t.LastTouched, &t.ThesisCount,
+			&t.LatestClose, &t.LatestDate, &t.AnchorClose,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// LatestSignalAssetRow — 一行 (信号, 标的) 扁平结果; service 按 signal 聚合成卡片.
+type LatestSignalAssetRow struct {
+	SignalID       uuid.UUID
+	CapturedAt     time.Time
+	Summary        *string
+	AssetCanonical string
+	AssetName      string
+	AssetMarket    string
+	AssetStatus    string
+}
+
+// LatestSignalAssets — 最近 limit 条"带标的"的信号 (captured_at DESC) + 各自归一后的标的.
+func (r *Repository) LatestSignalAssets(ctx context.Context, userID uuid.UUID, limit int) ([]LatestSignalAssetRow, error) {
+	const q = `
+		SELECT s.id, s.captured_at, s.inference_summary, a.canonical, a.name, a.market, a.status
+		FROM (
+			SELECT id, captured_at, inference_summary FROM signals
+			WHERE user_id = $1
+			  AND EXISTS (SELECT 1 FROM signal_assets sa WHERE sa.signal_id = signals.id)
+			ORDER BY captured_at DESC
+			LIMIT $2
+		) s
+		JOIN signal_assets sa ON sa.signal_id = s.id
+		JOIN assets a         ON a.id = sa.asset_id
+		ORDER BY s.captured_at DESC, a.canonical`
+	rows, err := r.pool.Query(ctx, q, userID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("latest signal assets: %w", err)
+	}
+	defer rows.Close()
+	var out []LatestSignalAssetRow
+	for rows.Next() {
+		var x LatestSignalAssetRow
+		if err := rows.Scan(&x.SignalID, &x.CapturedAt, &x.Summary,
+			&x.AssetCanonical, &x.AssetName, &x.AssetMarket, &x.AssetStatus); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	return out, rows.Err()
+}

@@ -26,9 +26,10 @@ var (
 // Service 编排归一: 别名/规则/LLM 归一 (resolveReference, 见 resolver.go)、存量回填 (Backfill)、
 // 人工兜底 (ManualResolve). 资产是全局的 (非 per-user), 多信号共享一份 (§7 全局去重).
 type Service struct {
-	repo   *Repository
-	mastra *mastra.Client
-	logger *zap.Logger
+	repo         *Repository
+	mastra       *mastra.Client
+	logger       *zap.Logger
+	latestTweets LatestTweetsFn // 标的追踪 Hub 用: 取最新订阅推文 (main.go 注入, 复用订阅模块)
 }
 
 func NewService(repo *Repository, mastraClient *mastra.Client, logger *zap.Logger) *Service {

@@ -3,6 +3,7 @@ package asset
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,6 +29,7 @@ func (h *Handler) Register(publicV1 *gin.RouterGroup) {
 	publicV1.GET("/assets/:id/theses", h.assetTheses)
 	publicV1.GET("/commitments/:id/track", h.commitmentTrack)
 	publicV1.GET("/signals/:id/track", h.signalTrack)
+	publicV1.GET("/track/overview", h.trackOverview)
 }
 
 type assetDTO struct {
@@ -345,4 +347,101 @@ func (h *Handler) assetTheses(c *gin.Context) {
 		out = append(out, d)
 	}
 	c.JSON(http.StatusOK, gin.H{"asset": toAssetDTO(&v.Asset), "theses": out})
+}
+
+// ───────────────────────── 标的追踪 Hub (§6.6) ─────────────────────────
+
+type assetCardDTO struct {
+	Asset             assetDTO   `json:"asset"`
+	PriceStatus       string     `json:"price_status"`
+	PriceSyncedAt     *time.Time `json:"price_synced_at,omitempty"`
+	LastTouched       time.Time  `json:"last_touched"`
+	ThesisCount       int        `json:"thesis_count"`
+	LatestClose       *float64   `json:"latest_close,omitempty"`
+	LatestDate        *string    `json:"latest_date,omitempty"`
+	PctSinceDiscovery *float64   `json:"pct_since_discovery,omitempty"`
+}
+
+type assetRefDTO struct {
+	Canonical string `json:"canonical"`
+	Name      string `json:"name"`
+	Market    string `json:"market"`
+	Status    string `json:"status"`
+}
+
+type signalCardDTO struct {
+	SignalID   string        `json:"signal_id"`
+	CapturedAt time.Time     `json:"captured_at"`
+	Summary    *string       `json:"summary,omitempty"`
+	Assets     []assetRefDTO `json:"assets"`
+}
+
+type tweetBriefDTO struct {
+	ID             string    `json:"id"`
+	Handle         string    `json:"handle"`
+	Summary        string    `json:"summary,omitempty"`
+	Category       string    `json:"category,omitempty"`
+	Tags           []string  `json:"tags,omitempty"`
+	Relevance      *float32  `json:"relevance,omitempty"`
+	TweetCreatedAt time.Time `json:"tweet_created_at"`
+}
+
+// trackOverview — GET /v1/track/overview?limit=. 标的追踪着陆页: 罗列最新 关联标的/信号/订阅推文.
+func (h *Handler) trackOverview(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	limit := 20
+	if v := c.Query("limit"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+		}
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	v, err := h.svc.TrackOverview(c.Request.Context(), userID, limit)
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+
+	assets := make([]assetCardDTO, 0, len(v.Assets))
+	for _, a := range v.Assets {
+		d := assetCardDTO{
+			Asset: toAssetDTO(&a.Asset), PriceStatus: a.PriceStatus, PriceSyncedAt: a.PriceSyncedAt,
+			LastTouched: a.LastTouched, ThesisCount: a.ThesisCount,
+			LatestClose: a.LatestClose, PctSinceDiscovery: a.PctSinceDiscovery,
+		}
+		if a.LatestDate != nil {
+			s := a.LatestDate.Format("2006-01-02")
+			d.LatestDate = &s
+		}
+		assets = append(assets, d)
+	}
+
+	signals := make([]signalCardDTO, 0, len(v.Signals))
+	for _, sc := range v.Signals {
+		refs := make([]assetRefDTO, 0, len(sc.Assets))
+		for _, r := range sc.Assets {
+			refs = append(refs, assetRefDTO{Canonical: r.Canonical, Name: r.Name, Market: r.Market, Status: r.Status})
+		}
+		signals = append(signals, signalCardDTO{
+			SignalID: sc.SignalID.String(), CapturedAt: sc.CapturedAt, Summary: sc.Summary, Assets: refs,
+		})
+	}
+
+	tweets := make([]tweetBriefDTO, 0, len(v.Tweets))
+	for _, t := range v.Tweets {
+		tweets = append(tweets, tweetBriefDTO{
+			ID: t.ID, Handle: t.Handle, Summary: t.Summary, Category: t.Category,
+			Tags: t.Tags, Relevance: t.Relevance, TweetCreatedAt: t.TweetCreatedAt,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"assets": assets, "signals": signals, "tweets": tweets})
 }
