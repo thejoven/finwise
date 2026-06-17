@@ -21,9 +21,11 @@ import (
 	"wiseflow/server/internal/httpapi"
 	"wiseflow/server/internal/infra/db"
 	iiix "wiseflow/server/internal/infra/iii"
+	marketdatax "wiseflow/server/internal/infra/marketdata"
 	mastrax "wiseflow/server/internal/infra/mastra"
 	twtapix "wiseflow/server/internal/infra/twtapi"
 	accountmod "wiseflow/server/internal/module/account"
+	assetmod "wiseflow/server/internal/module/asset"
 	attentionmod "wiseflow/server/internal/module/attention"
 	commitmentmod "wiseflow/server/internal/module/commitment"
 	companionmod "wiseflow/server/internal/module/companion"
@@ -231,6 +233,13 @@ func run() error {
 		}, logger)
 	subscriptionHandler := subscriptionmod.NewHandler(subscriptionSvc)
 
+	// asset: 标的归一 (P0) + 行情追踪 (P1). 资产/别名注册表 + signal_assets 链接 (冻结锚点);
+	// resolver: 别名缓存 → 规则 → Mastra LLM → 诚实兜底 untrackable (回填走 cmd/asset-backfill);
+	// 行情经 marketdata.Provider 抽象, P1 默认 eastmoney A股 (price poller 见下).
+	assetRepo := assetmod.NewRepository(pool)
+	assetSvc := assetmod.NewService(assetRepo, mastraClient, logger)
+	assetHandler := assetmod.NewHandler(assetSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -254,6 +263,7 @@ func run() error {
 			attentionHandler.Register(v1, internal)
 			distillationHandler.Register(v1, internal)
 			subscriptionHandler.Register(v1)
+			assetHandler.Register(v1)
 		},
 	})
 
@@ -307,6 +317,19 @@ func run() error {
 		logger.Info("subscription poller disabled",
 			zap.Bool("enabled", cfg.SubscriptionPollEnabled),
 			zap.Bool("twtapi_configured", twtClient.IsConfigured()))
+	}
+
+	// 行情同步 worker (标的追踪 P1): pending 标的从锚点回填日线、active 日更; 显式关闭则不起
+	// (REST 读已缓存行情照常). 初次批量回填可用 cmd/asset-price-sync 立即跑一遍.
+	if cfg.AssetPricePollEnabled {
+		assetPricePoller := assetmod.NewPricePoller(assetRepo, marketdatax.New(cfg.MarketDataProvider), logger)
+		workerWG.Add(1)
+		go func() {
+			defer workerWG.Done()
+			assetPricePoller.Run(workerCtx)
+		}()
+	} else {
+		logger.Info("asset price poller disabled")
 	}
 
 	// ───── HTTP serve loop ─────

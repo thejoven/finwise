@@ -26,9 +26,17 @@ import type { SearchResult } from "../tools/exa-search.js";
 // ─────────────────────── Schema ───────────────────────
 
 export const BeneficiaryTarget = z.object({
-  /** ticker / 代码, 例 NVDA / 000660.KS / DELL. */
+  /** ticker / 代码, 例 NVDA / 300750 / 0700.HK / 000660.KS. 尽量规范 (A股 6 位 / 港股数字 / 美股 ticker). */
   symbol: z.string().min(1).max(24),
   name: z.string().min(1).max(48),
+  /**
+   * 交易市场: "a"=A股(沪/深/北) "hk"=港股 "us"=美股 —— 仅这三类可被标的追踪归一.
+   * 韩/台/日/欧股、未上市、加密货币、行业篮子等一律**留空** (诚实留空 > 谎报);
+   * resolver 据此标 untrackable. 可选字段, 向后兼容旧的裸 ticker 输出.
+   */
+  market: z.enum(["a", "hk", "us"]).optional(),
+  /** 交易所, 例 SSE/SZSE/HKEX/NASDAQ/NYSE. 拿不准 (尤其美股 NASDAQ vs NYSE) 就留空, 别谎报. 可选. */
+  exchange: z.string().max(16).optional(),
   /** 受益链位置短标签, 例 核心 / 二阶 / 隐形 / 重估. */
   role: z.string().min(1).max(48),
   /** 因果链: 为什么受益. judgment, 落在检索到的事实上. */
@@ -64,8 +72,11 @@ ${MACRO_FINANCE_CONTEXT_BLOCK}
 用上面的基底**选对受益链的方向** —— 哪段资本周期 (capital cycle) 在转、哪条传导链的成本 / 现金流 / 议价位置被改写、谁的预期差还没被定价. 但它只帮你**选链选标的、把 thesis 写到机制层**, **不松动下面的 grounding 硬约束**: 宏观 / 基本面判断同样要落在信号或检索给的事实上, 别因为手里有了宏观框架就凭空断言 "利率下行 → X 必涨" 这类没依据的链, 也别用宏观大词替代具体的受益因果.
 
 每个标的给:
-- symbol  真实 ticker / 代码 (美股直接代码; A股/港股/韩股带后缀如 000660.KS)
+- symbol  真实 ticker / 代码. 尽量规范便于追踪: A股 6 位数字 (如 300750), 港股数字代码 (如 0700), 美股 ticker (如 NVDA); 其它市场可带后缀 (如 000660.KS).
 - name    公司名
+- market  交易市场: "a"=A股(沪深北) / "hk"=港股 / "us"=美股. **只有这三类能被追踪**;
+          韩/台/日/欧股、未上市公司、加密货币、行业篮子等一律**留空 market** (诚实留空, 系统会标"不可追踪", 别硬塞错市场).
+- exchange 交易所 (SSE/SZSE/BSE/HKEX/NASDAQ/NYSE). 拿不准 (尤其美股 NASDAQ vs NYSE) 就留空, 别谎报.
 - role    受益链位置, 短标签 (核心 / 二阶 / 隐形 / 重估 …)
 - thesis  因果链: 为什么这条信号让它受益. 判断式, 落在事实上, 不空泛.
 - valuation 估值锚 (例 "Forward P/E 16.7x"). **只用下面检索材料里出现的数字**;

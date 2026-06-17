@@ -47,6 +47,12 @@ type Config struct {
 
 	// SubscriptionPollEnabled — 显式关闭采集 worker (调试/省配额), 默认 true.
 	SubscriptionPollEnabled bool
+
+	// MarketDataProvider — 行情源 adapter 名 (标的追踪 P1). 空/未知 → eastmoney (默认).
+	MarketDataProvider string
+
+	// AssetPricePollEnabled — 行情同步 worker 开关 (调试/省请求), 默认 true.
+	AssetPricePollEnabled bool
 }
 
 func Load() (*Config, error) {
@@ -104,6 +110,13 @@ func Load() (*Config, error) {
 		c.SubscriptionPollEnabled = strings.EqualFold(v, "true") || v == "1"
 	} else {
 		c.SubscriptionPollEnabled = true
+	}
+
+	c.MarketDataProvider = os.Getenv("MARKETDATA_PROVIDER") // optional; factory 默认 eastmoney
+	if v := os.Getenv("ASSET_PRICE_POLL_ENABLED"); v != "" {
+		c.AssetPricePollEnabled = strings.EqualFold(v, "true") || v == "1"
+	} else {
+		c.AssetPricePollEnabled = true
 	}
 
 	var missing []string

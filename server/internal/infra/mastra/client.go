@@ -320,6 +320,37 @@ func (c *Client) ClassifyTweet(ctx context.Context, req TweetClassifyRequest) (*
 	return &resp, nil
 }
 
+// ───── ResolveSymbol (标的追踪 · 自由文本 → 规范代码归一) ─────
+
+type SymbolResolveRequest struct {
+	Reference string `json:"reference"`
+	Context   string `json:"context,omitempty"` // 信号 rationale / 原文, 帮助消歧
+}
+
+// SymbolResolveResponse 镜像 mastra symbol-resolver agent 输出.
+// Resolvable=false → 不可追踪 (加密/未上市/海外/篮子/歧义), Reason 说明原因.
+type SymbolResolveResponse struct {
+	Resolvable bool   `json:"resolvable"`
+	Market     string `json:"market,omitempty"` // a|hk|us
+	Symbol     string `json:"symbol,omitempty"`
+	Exchange   string `json:"exchange,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Type       string `json:"type,omitempty"`
+	Reason     string `json:"reason,omitempty"`
+}
+
+func (c *Client) ResolveSymbol(ctx context.Context, req SymbolResolveRequest) (*SymbolResolveResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("symbol_resolve", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp SymbolResolveResponse
+	if err := c.post(ctx, "/symbol-resolve", "symbol_resolve", req, &resp, 20*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
 func (c *Client) post(ctx context.Context, path, metricLabel string, body, out any, timeout time.Duration) error {
 	return c.postWith(ctx, c.hc, path, metricLabel, body, out, timeout)
 }

@@ -10,6 +10,7 @@
  *   - POST /diagnostician           (M11 复盘 focus)
  *   - POST /tweet-classify          (订阅模块 · 推文打标/总结)
  *   - POST /analyst-chat            (归档页 · 与否决分析师继续对话)
+ *   - POST /symbol-resolve          (标的追踪 · 自由文本 → 规范代码归一)
  *   - GET  /healthz                 (探活)
  *
  * 认证: X-Internal-Token 必须匹配 INTERNAL_TOKEN env. 与 Go server 共用.
@@ -31,6 +32,7 @@ import { runTimingCheck } from "../agents/timing.js";
 import { runCompetenceCheck } from "../agents/competence.js";
 import { runTweetClassifier } from "../agents/tweet-classifier.js";
 import { runAnalystChat, type AnalystChatInput } from "../agents/analyst-chat.js";
+import { runSymbolResolver } from "../agents/symbol-resolver.js";
 
 export interface HttpHandle {
   stop(): Promise<void>;
@@ -402,6 +404,35 @@ async function handle(
       log("warn", "analyst-chat failed", {
         analyst: input.analyst,
         asset: input.asset,
+        err: String(err),
+      });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/symbol-resolve") {
+    const input = body as { reference: string; context?: string };
+    if (!input.reference || !input.reference.trim()) {
+      writeJSON(res, 400, { error: "reference required" });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runSymbolResolver({
+        reference: input.reference,
+        context: input.context,
+      });
+      log("info", "symbol-resolve done", {
+        reference: input.reference,
+        resolvable: result.resolvable,
+        symbol: result.symbol,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "symbol-resolve failed", {
+        reference: input.reference,
         err: String(err),
       });
       writeJSON(res, 502, { error: String(err) });
