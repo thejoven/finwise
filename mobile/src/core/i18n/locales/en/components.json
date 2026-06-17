@@ -14,8 +14,9 @@
     "inbox": "Inbox",
     "distill": "Distill",
     "archive": "Archive",
-    "refreshStats": "Refresh Stats",
-    "notifications": "Notifications"
+    "stats": "Stats",
+    "notifications": "Notifications",
+    "targets": "Assets"
   },
   "colophon": {
     "navTitle": "Colophon",

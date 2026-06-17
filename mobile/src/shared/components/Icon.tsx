@@ -1,6 +1,8 @@
 import { Platform, type ColorValue, type StyleProp, type ViewStyle } from "react-native";
 import { SymbolView, type SFSymbol, type SymbolWeight } from "expo-symbols";
 import {
+  Archive,
+  ArchiveRestore,
   ArrowUp,
   ArrowUpRight,
   BookOpen,
@@ -12,6 +14,7 @@ import {
   Pencil,
   Plus,
   Search,
+  Star,
   X,
 } from "lucide-react-native";
 
@@ -54,7 +57,11 @@ export type IconName =
   | "arrowUp"
   | "arrowUpRight"
   | "book"
-  | "search";
+  | "search"
+  | "archive"
+  | "restore"
+  | "star"
+  | "starFill";
 
 /** 语义名 → SF Symbol (iOS) + lucide 组件 (兜底). SF 名见 Apple「SF Symbols」app. */
 const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
@@ -71,6 +78,11 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   // BookOpen → `book` (iOS 13+, 全版本可用). 若只跑 iOS 16+ 想要"翻开"感可换 `book.pages`.
   book: { sf: "book", lucide: BookOpen },
   search: { sf: "magnifyingglass", lucide: Search },
+  archive: { sf: "archivebox", lucide: Archive },
+  restore: { sf: "arrow.uturn.backward", lucide: ArchiveRestore },
+  // 收藏: iOS 用 SF 实心/描边两态; lucide 兜底两者都是描边 Star (Android 次要, 接受).
+  star: { sf: "star", lucide: Star },
+  starFill: { sf: "star.fill", lucide: Star },
 };
 
 /** lucide strokeWidth → SF Symbol weight. 项目描边只用 1.5 / 1.75 / 2. */

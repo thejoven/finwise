@@ -37,6 +37,7 @@ import i18n from "@/core/i18n";
 import { formatIsoDate } from "@/shared/format";
 
 import { useCommitment, usePostponeCommitment, useSignCommitment } from "@/features/commitment";
+import { CommitmentTrackHero } from "@/features/track";
 import { TypewriterText } from "@/features/refinement";
 import { useRecordOpen, type CompanionView } from "@/features/companion";
 import { ProjectBadge } from "@/features/project/ProjectBadge";
@@ -314,6 +315,9 @@ function Body({ commitment }: { commitment: ReturnType<typeof useCommitment>["da
           months: t.duration_months,
         })}
       </Mono>
+
+      {/* 标的表现 hero (P2): 锚定签字日的曲线 + 醒目累计涨跌 —— "我这笔押对没". */}
+      <CommitmentTrackHero commitmentId={commitment.id} />
 
       <DoubleRule />
 

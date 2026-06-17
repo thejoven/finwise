@@ -6,7 +6,8 @@
   },
   "dropdown": {
     "switchTo": "切到分類「{{name}}」",
-    "editCategory": "編輯分類「{{name}}」"
+    "editCategory": "編輯分類「{{name}}」",
+    "archiveCategory": "歸檔分類「{{name}}」"
   },
   "badge": {
     "filterBy": "依分類「{{name}}」篩選"
@@ -32,7 +33,22 @@
   "actions": {
     "newCategory": "新建分類",
     "create": "建立",
-    "archive": "歸檔此分類"
+    "archive": "歸檔此分類",
+    "manageArchive": "歸檔管理"
+  },
+  "toast": {
+    "stamp": "分類",
+    "restored": "已恢復「{{name}}」"
+  },
+  "archivedPage": {
+    "navTitle": "歸檔管理",
+    "title": "歸檔分類",
+    "hint": "歸檔的分類會從列表隱藏，減少干擾；歷史資料保留，作為未來的訓練資料，可隨時恢復。",
+    "empty": "暫無歸檔分類",
+    "archivedOn": "{{date}} 歸檔",
+    "restore": "恢復",
+    "restoreLabel": "恢復分類「{{name}}」",
+    "restoreConflict": "已有同名分類，請先改名後再恢復"
   },
   "defaultCategoryName": "我的關注"
 }

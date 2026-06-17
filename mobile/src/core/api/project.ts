@@ -59,3 +59,14 @@ export async function updateProject(id: string, input: UpdateProjectInput): Prom
 export async function archiveProject(id: string): Promise<void> {
   await api.delete(`v1/projects/${id}`);
 }
+
+/** 列出已归档分类 (archived_at IS NOT NULL), 最近归档的排前. 归档管理页用. */
+export async function listArchivedProjects(): Promise<ProjectView[]> {
+  const json = await api.get("v1/projects/archived").json();
+  return ProjectList.parse(json).projects;
+}
+
+/** 取消归档, 分类重回活跃列表. 同名活跃分类已存在时服务端回 409. */
+export async function restoreProject(id: string): Promise<void> {
+  await api.post(`v1/projects/${id}/restore`);
+}

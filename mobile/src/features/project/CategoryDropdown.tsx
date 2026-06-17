@@ -56,6 +56,10 @@ interface Props {
   onPick: (id: string) => void;
   onCreate: () => void;
   onEdit: (id: string) => void;
+  /** 行内快捷归档某分类 (软删除, 可在归档管理页恢复). */
+  onArchive: (id: string) => void;
+  /** 跳到归档管理页 (列出已归档分类 + 恢复). */
+  onManageArchive: () => void;
   /** 退场动画结束、Modal 真正卸载后触发 —— 调用方借此"先关下拉再开别的 Modal", 避开 iOS 同时呈现两个 Modal 的报错. */
   onClosed?: () => void;
 }
@@ -72,6 +76,8 @@ export function CategoryDropdown({
   onPick,
   onCreate,
   onEdit,
+  onArchive,
+  onManageArchive,
   onClosed,
 }: Props) {
   // 初值 false: 这些下拉/弹层恒由父级以 visible=false 创建后再 toggle, 故不从 prop 派生 ——
@@ -166,53 +172,79 @@ export function CategoryDropdown({
           {projects.map((p) => {
             const active = p.id === activeId;
             return (
-              <TapEffect
-                key={p.id}
-                onPress={() => onPick(p.id)}
-                style={styles.row}
-                accessibilityLabel={t("project.dropdown.switchTo", { name: p.name })}
-              >
-                {p.emoji ? (
-                  <Sans size={14} style={styles.rowEmoji}>
-                    {p.emoji}
-                  </Sans>
-                ) : (
-                  <View style={[styles.rowDot, p.color ? { backgroundColor: p.color } : null]} />
-                )}
-                <RNText
-                  allowFontScaling={false}
-                  numberOfLines={1}
-                  style={[styles.rowName, active && styles.rowNameActive]}
+              <View key={p.id} style={styles.row}>
+                <TapEffect
+                  onPress={() => onPick(p.id)}
+                  style={styles.rowMain}
+                  accessibilityLabel={t("project.dropdown.switchTo", { name: p.name })}
                 >
-                  {p.name}
-                </RNText>
-                {active ? (
-                  <Icon name="check" size={15} color={theme.color.ink} strokeWidth={2} />
-                ) : (
-                  <TapEffect
-                    onPress={() => onEdit(p.id)}
-                    style={styles.editBtn}
-                    accessibilityLabel={t("project.dropdown.editCategory", { name: p.name })}
+                  {p.emoji ? (
+                    <Sans size={14} style={styles.rowEmoji}>
+                      {p.emoji}
+                    </Sans>
+                  ) : (
+                    <View style={[styles.rowDot, p.color ? { backgroundColor: p.color } : null]} />
+                  )}
+                  <RNText
+                    allowFontScaling={false}
+                    numberOfLines={1}
+                    style={[styles.rowName, active && styles.rowNameActive]}
                   >
-                    <Icon name="pencil" size={13} color={theme.color.muted} strokeWidth={1.5} />
-                  </TapEffect>
-                )}
-              </TapEffect>
+                    {p.name}
+                  </RNText>
+                  {active ? (
+                    <Icon
+                      name="check"
+                      size={14}
+                      color={theme.color.ink}
+                      strokeWidth={2}
+                      style={styles.rowCheck}
+                    />
+                  ) : null}
+                </TapEffect>
+                {/* 编辑 + 归档常驻每行: active 分类也能改/归档. 归档是软删除, 归档管理页可恢复. */}
+                <TapEffect
+                  onPress={() => onEdit(p.id)}
+                  style={styles.iconBtn}
+                  accessibilityLabel={t("project.dropdown.editCategory", { name: p.name })}
+                >
+                  <Icon name="pencil" size={13} color={theme.color.muted} strokeWidth={1.5} />
+                </TapEffect>
+                <TapEffect
+                  onPress={() => onArchive(p.id)}
+                  style={styles.iconBtn}
+                  accessibilityLabel={t("project.dropdown.archiveCategory", { name: p.name })}
+                >
+                  <Icon name="archive" size={14} color={theme.color.muted} strokeWidth={1.5} />
+                </TapEffect>
+              </View>
             );
           })}
 
           <View style={styles.divider} />
 
-          <TapEffect
-            onPress={onCreate}
-            style={styles.createRow}
-            accessibilityLabel={t("project.actions.newCategory")}
-          >
-            <Icon name="plus" size={15} color={theme.color.ink2} strokeWidth={1.75} />
-            <Sans size={12} weight="500" style={styles.createLabel}>
-              {t("project.actions.newCategory")}
-            </Sans>
-          </TapEffect>
+          <View style={styles.footerRow}>
+            <TapEffect
+              onPress={onCreate}
+              style={styles.createRow}
+              accessibilityLabel={t("project.actions.newCategory")}
+            >
+              <Icon name="plus" size={15} color={theme.color.ink2} strokeWidth={1.75} />
+              <Sans size={12} weight="500" style={styles.createLabel}>
+                {t("project.actions.newCategory")}
+              </Sans>
+            </TapEffect>
+            <TapEffect
+              onPress={onManageArchive}
+              style={styles.manageRow}
+              accessibilityLabel={t("project.actions.manageArchive")}
+            >
+              <Icon name="archive" size={13} color={theme.color.muted} strokeWidth={1.5} />
+              <Sans size={12} weight="500" style={styles.manageLabel}>
+                {t("project.actions.manageArchive")}
+              </Sans>
+            </TapEffect>
+          </View>
         </ScrollView>
       </Animated.View>
     </Modal>
@@ -242,9 +274,18 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  rowMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
     paddingVertical: 10,
-    paddingHorizontal: theme.spacing.md,
+    paddingLeft: theme.spacing.md,
+    paddingRight: theme.spacing.xs,
+  },
+  rowCheck: {
+    marginLeft: 2,
   },
   rowEmoji: {
     width: 20,
@@ -267,9 +308,9 @@ const styles = StyleSheet.create({
     fontFamily: theme.fontFamily.cjkBold, // 选中项加粗, 呼应标题字重
     color: theme.color.ink,
   },
-  editBtn: {
-    width: 30,
-    height: 30,
+  iconBtn: {
+    width: 32,
+    height: 32,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -278,6 +319,11 @@ const styles = StyleSheet.create({
     backgroundColor: theme.color.ruleSoft,
     marginVertical: 4,
     marginHorizontal: theme.spacing.md,
+  },
+  footerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   createRow: {
     flexDirection: "row",
@@ -288,6 +334,17 @@ const styles = StyleSheet.create({
   },
   createLabel: {
     color: theme.color.ink2,
+    letterSpacing: 1,
+  },
+  manageRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 11,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  manageLabel: {
+    color: theme.color.muted,
     letterSpacing: 1,
   },
 });

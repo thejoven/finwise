@@ -50,19 +50,21 @@ function itemsFor(routeName: string, a: TabMenuActions, t: TFunction): ReactNode
             onPress={() => a.jumpCaizhi(1)}
           />
           <Button
-            systemImage="archivebox"
-            label={t("components.tabMenu.archive")}
+            systemImage="list.star"
+            label={t("components.tabMenu.targets")}
             onPress={() => a.jumpCaizhi(2)}
           />
+          <Button
+            systemImage="archivebox"
+            label={t("components.tabMenu.archive")}
+            onPress={() => a.jumpCaizhi(3)}
+          />
+          <Button
+            systemImage="chart.line.uptrend.xyaxis"
+            label={t("components.tabMenu.stats")}
+            onPress={() => a.jumpCaizhi(4)}
+          />
         </>
-      );
-    case "attention":
-      return (
-        <Button
-          systemImage="arrow.clockwise"
-          label={t("components.tabMenu.refreshStats")}
-          onPress={a.refreshAttention}
-        />
       );
     case "profile":
       return (

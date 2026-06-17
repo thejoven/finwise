@@ -49,7 +49,7 @@ export interface ShowToastOpts {
   durationMs?: number;
 }
 
-function showToast(opts: ShowToastOpts): void {
+export function showToast(opts: ShowToastOpts): void {
   useToastStore.getState().show(opts);
 }
 

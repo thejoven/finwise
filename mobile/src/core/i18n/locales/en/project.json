@@ -6,7 +6,8 @@
   },
   "dropdown": {
     "switchTo": "Switch to “{{name}}”",
-    "editCategory": "Edit “{{name}}”"
+    "editCategory": "Edit “{{name}}”",
+    "archiveCategory": "Archive “{{name}}”"
   },
   "badge": {
     "filterBy": "Filter by “{{name}}”"
@@ -32,7 +33,22 @@
   "actions": {
     "newCategory": "New Category",
     "create": "Create",
-    "archive": "Archive This Category"
+    "archive": "Archive This Category",
+    "manageArchive": "Archived"
+  },
+  "toast": {
+    "stamp": "Category",
+    "restored": "Restored “{{name}}”"
+  },
+  "archivedPage": {
+    "navTitle": "Archived",
+    "title": "Archived Categories",
+    "hint": "Archived categories are hidden from your list to reduce distraction. Their data is kept as future training material and can be restored anytime.",
+    "empty": "No archived categories",
+    "archivedOn": "Archived {{date}}",
+    "restore": "Restore",
+    "restoreLabel": "Restore “{{name}}”",
+    "restoreConflict": "A category with that name already exists — rename it first"
   },
   "defaultCategoryName": "My Watchlist"
 }

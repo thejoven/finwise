@@ -14,8 +14,9 @@
     "inbox": "信箱",
     "distill": "降噪",
     "archive": "归档",
-    "refreshStats": "刷新统计",
-    "notifications": "通知"
+    "stats": "统计",
+    "notifications": "通知",
+    "targets": "标的"
   },
   "colophon": {
     "navTitle": "卷首语 · COLOPHON",

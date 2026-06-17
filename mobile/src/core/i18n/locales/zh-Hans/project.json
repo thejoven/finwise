@@ -6,7 +6,8 @@
   },
   "dropdown": {
     "switchTo": "切到分类「{{name}}」",
-    "editCategory": "编辑分类「{{name}}」"
+    "editCategory": "编辑分类「{{name}}」",
+    "archiveCategory": "归档分类「{{name}}」"
   },
   "badge": {
     "filterBy": "按分类「{{name}}」筛选"
@@ -32,7 +33,22 @@
   "actions": {
     "newCategory": "新建分类",
     "create": "创建",
-    "archive": "归档此分类"
+    "archive": "归档此分类",
+    "manageArchive": "归档管理"
+  },
+  "toast": {
+    "stamp": "分类",
+    "restored": "已恢复「{{name}}」"
+  },
+  "archivedPage": {
+    "navTitle": "归档管理",
+    "title": "归档分类",
+    "hint": "归档的分类会从列表隐藏，减少干扰；历史数据保留，作为未来的训练资料，可随时恢复。",
+    "empty": "暂无归档分类",
+    "archivedOn": "{{date}} 归档",
+    "restore": "恢复",
+    "restoreLabel": "恢复分类「{{name}}」",
+    "restoreConflict": "已有同名分类，请先改名后再恢复"
   },
   "defaultCategoryName": "我的关注"
 }

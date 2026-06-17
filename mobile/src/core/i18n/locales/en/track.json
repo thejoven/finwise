@@ -1,0 +1,99 @@
+{
+  "section": {
+    "label": "Price path",
+    "meta": "TRACK",
+    "signalIntro": "Anchored to the moment you caught this."
+  },
+  "since": {
+    "discovery": "Since you saw it",
+    "sign": "Since you signed"
+  },
+  "anchor": {
+    "discovery": "Caught",
+    "sign": "Signed",
+    "both": "Caught · Signed"
+  },
+  "close": {
+    "anchor": "Caught at {{value}}",
+    "sign": "Signed at {{value}}",
+    "latest": "Latest {{value}}"
+  },
+  "state": {
+    "loading": "Loading price path…",
+    "error": "Price path is unavailable right now.",
+    "empty": "No trackable asset on this one yet.",
+    "untrackable": "Can't track this asset",
+    "untrackableHint": "Crypto, pre-IPO, overseas or basket names aren't wired to a feed yet.",
+    "noBars": "No price data yet."
+  },
+  "asOf": "As of {{date}} · {{source}}",
+  "commitment": {
+    "label": "How it's done",
+    "meta": "PERFORMANCE"
+  },
+  "market": {
+    "a": "A-shares",
+    "hk": "HK",
+    "us": "US",
+    "other": "Other"
+  },
+  "role": {
+    "primary": "Primary",
+    "beneficiary": "Beneficiary",
+    "mentioned": "Mentioned"
+  },
+  "asset": {
+    "back": "Back",
+    "headerStamp": "ASSET FILE",
+    "pricesLabel": "Price",
+    "pricesMeta": "PRICES",
+    "thesesLabel": "Every call you made on it",
+    "thesesMeta": "DOSSIER",
+    "thesesEmpty": "No call points to it yet.",
+    "delisted": "Delisted",
+    "kind": {
+      "signal": "Signal",
+      "commitment": "Commitment"
+    },
+    "commitmentStatus": {
+      "drafted": "Drafted",
+      "signed": "Signed",
+      "postponed": "Postponed",
+      "abandoned": "Abandoned"
+    },
+    "discoveredOn": "Caught {{date}}",
+    "signedOn": "Signed {{date}}",
+    "loading": "Loading asset…",
+    "error": "Couldn't load the asset."
+  },
+  "archive": {
+    "since": "Since you let go"
+  },
+  "hub": {
+    "intro": "Everything you're tracking — freshest first.",
+    "loading": "Loading your tracker…",
+    "error": "Couldn't load your tracker right now.",
+    "empty": "Nothing to track yet. Catch a signal with a named asset and it shows up here.",
+    "more": "+{{count}}",
+    "thesisCount_one": "{{count}} call",
+    "thesisCount_other": "{{count}} calls",
+    "noPrice": "No price yet",
+    "relevance": "{{pct}}% match",
+    "assets": {
+      "label": "Related assets",
+      "meta": "ASSETS",
+      "empty": "No asset in play yet."
+    },
+    "signals": {
+      "label": "Signals",
+      "meta": "SIGNALS",
+      "empty": "No signal carries a target yet.",
+      "noSummary": "Untitled signal"
+    },
+    "tweets": {
+      "label": "Your feed",
+      "meta": "FEED",
+      "empty": "No subscription posts yet."
+    }
+  }
+}

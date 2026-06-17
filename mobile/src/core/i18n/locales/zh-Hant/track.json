@@ -1,0 +1,98 @@
+{
+  "section": {
+    "label": "標的走勢",
+    "meta": "TRACK",
+    "signalIntro": "以你發現這條的那一刻為錨點。"
+  },
+  "since": {
+    "discovery": "發現至今",
+    "sign": "簽字至今"
+  },
+  "anchor": {
+    "discovery": "發現",
+    "sign": "簽字",
+    "both": "發現 · 簽字"
+  },
+  "close": {
+    "anchor": "發現時 {{value}}",
+    "sign": "簽字時 {{value}}",
+    "latest": "最新 {{value}}"
+  },
+  "state": {
+    "loading": "讀取走勢…",
+    "error": "走勢暫時讀不到。",
+    "empty": "這條還沒指向可追蹤的標的。",
+    "untrackable": "無法追蹤此標的",
+    "untrackableHint": "加密、未上市、海外或籃子標的，暫未接入行情。",
+    "noBars": "暫無行情數據。"
+  },
+  "asOf": "數據截至 {{date}} · {{source}}",
+  "commitment": {
+    "label": "標的表現",
+    "meta": "PERFORMANCE"
+  },
+  "market": {
+    "a": "A股",
+    "hk": "港股",
+    "us": "美股",
+    "other": "其他"
+  },
+  "role": {
+    "primary": "主標的",
+    "beneficiary": "受益",
+    "mentioned": "提及"
+  },
+  "asset": {
+    "back": "返回",
+    "headerStamp": "標的檔案",
+    "pricesLabel": "價格走勢",
+    "pricesMeta": "PRICES",
+    "thesesLabel": "你碰過它的命題",
+    "thesesMeta": "DOSSIER",
+    "thesesEmpty": "還沒有命題指向它。",
+    "delisted": "已退市",
+    "kind": {
+      "signal": "信號",
+      "commitment": "承諾"
+    },
+    "commitmentStatus": {
+      "drafted": "草擬",
+      "signed": "已簽字",
+      "postponed": "已擱置",
+      "abandoned": "已放棄"
+    },
+    "discoveredOn": "發現於 {{date}}",
+    "signedOn": "簽字於 {{date}}",
+    "loading": "讀取標的…",
+    "error": "標的讀取失敗。"
+  },
+  "archive": {
+    "since": "放下至今"
+  },
+  "hub": {
+    "intro": "你在追蹤的一切，最新在前。",
+    "loading": "讀取追蹤…",
+    "error": "追蹤暫時讀不到。",
+    "empty": "還沒有可追蹤的內容。當某條信號帶上具體標的，就會出現在這裡。",
+    "more": "+{{count}}",
+    "thesisCount_other": "{{count}} 個命題",
+    "noPrice": "暫無價",
+    "relevance": "相關 {{pct}}%",
+    "assets": {
+      "label": "關聯標的",
+      "meta": "ASSETS",
+      "empty": "還沒有在場的標的。"
+    },
+    "signals": {
+      "label": "信號",
+      "meta": "SIGNALS",
+      "empty": "還沒有帶標的的信號。",
+      "noSummary": "未命名信號"
+    },
+    "tweets": {
+      "label": "訂閱資訊",
+      "meta": "FEED",
+      "empty": "還沒有訂閱推文。"
+    }
+  }
+}

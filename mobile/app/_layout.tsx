@@ -14,6 +14,7 @@ import { SplashCover } from "@/features/splash";
 import { useAuth } from "@/core/auth/store";
 import { useNotifications } from "@/features/notifications";
 import { useActiveProject } from "@/features/project/store";
+import { useFavoriteAssets } from "@/features/track";
 import { useAppearance } from "@/core/theme/store";
 import { useLanguage } from "@/core/i18n";
 import { resolveColors } from "@/core/theme";
@@ -78,6 +79,7 @@ export default function RootLayout() {
   const hydrateAuth = useAuth((s) => s.hydrate);
   const hydrateNotifications = useNotifications((s) => s.hydrate);
   const hydrateActiveProject = useActiveProject((s) => s.hydrate);
+  const hydrateFavorites = useFavoriteAssets((s) => s.hydrate);
   const hydrateAppearance = useAppearance((s) => s.hydrate);
   const hydrateLanguage = useLanguage((s) => s.hydrate);
   const [storageReady, setStorageReady] = useState(false);
@@ -100,6 +102,9 @@ export default function RootLayout() {
       hydrateActiveProject().catch((err) => {
         console.warn("[activeProject] hydrate failed:", err);
       }),
+      hydrateFavorites().catch((err) => {
+        console.warn("[favoriteAssets] hydrate failed:", err);
+      }),
       hydrateAppearance().catch((err) => {
         console.warn("[appearance] hydrate failed:", err);
       }),
@@ -117,6 +122,7 @@ export default function RootLayout() {
     hydrateAuth,
     hydrateNotifications,
     hydrateActiveProject,
+    hydrateFavorites,
     hydrateAppearance,
     hydrateLanguage,
   ]);
@@ -158,11 +164,13 @@ export default function RootLayout() {
             <Stack.Screen name="profile/preferences" options={pushDetailScreen} />
             <Stack.Screen name="search" options={bottomModalScreen} />
             <Stack.Screen name="subscriptions/manage" options={bottomModalScreen} />
+            <Stack.Screen name="projects/archived" options={pushDetailScreen} />
             <Stack.Screen name="signal/[id]" options={pushDetailScreen} />
             <Stack.Screen name="tweet/[id]" options={pushDetailScreen} />
             <Stack.Screen name="refinement/[sessionId]" options={pushDetailScreen} />
             <Stack.Screen name="archive/chat/[id]" options={pushDetailScreen} />
             <Stack.Screen name="commitment/[id]" options={pushDetailScreen} />
+            <Stack.Screen name="asset/[id]" options={pushDetailScreen} />
             <Stack.Screen name="retrospect/[id]" options={pushDetailScreen} />
             <Stack.Screen name="colophon" options={pushDetailScreen} />
             <Stack.Screen name="notifications" options={pushDetailScreen} />
