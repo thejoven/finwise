@@ -379,6 +379,7 @@ type signalCardDTO struct {
 type tweetBriefDTO struct {
 	ID             string    `json:"id"`
 	Handle         string    `json:"handle"`
+	Text           string    `json:"text,omitempty"`
 	Summary        string    `json:"summary,omitempty"`
 	Category       string    `json:"category,omitempty"`
 	Tags           []string  `json:"tags,omitempty"`
@@ -438,7 +439,7 @@ func (h *Handler) trackOverview(c *gin.Context) {
 	tweets := make([]tweetBriefDTO, 0, len(v.Tweets))
 	for _, t := range v.Tweets {
 		tweets = append(tweets, tweetBriefDTO{
-			ID: t.ID, Handle: t.Handle, Summary: t.Summary, Category: t.Category,
+			ID: t.ID, Handle: t.Handle, Text: t.Text, Summary: t.Summary, Category: t.Category,
 			Tags: t.Tags, Relevance: t.Relevance, TweetCreatedAt: t.TweetCreatedAt,
 		})
 	}

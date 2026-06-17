@@ -165,6 +165,7 @@ func (s *Service) AssetTheses(ctx context.Context, userID, assetID uuid.UUID) (*
 type TweetBrief struct {
 	ID             string
 	Handle         string
+	Text           string // 原文; summary 未生成(未分类)时 UI 兜底显示, 卡片不空
 	Summary        string
 	Category       string
 	Tags           []string

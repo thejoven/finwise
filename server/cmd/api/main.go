@@ -287,7 +287,7 @@ func run() error {
 		out := make([]assetmod.TweetBrief, 0, len(items))
 		for _, t := range items {
 			b := assetmod.TweetBrief{
-				ID: t.ID, Handle: t.Handle, Tags: t.Tags,
+				ID: t.ID, Handle: t.Handle, Text: t.Text, Tags: t.Tags,
 				Relevance: t.Relevance, TweetCreatedAt: t.TweetCreatedAt,
 			}
 			if t.Summary != nil {
