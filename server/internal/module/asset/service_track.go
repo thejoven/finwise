@@ -139,3 +139,22 @@ func dayBefore(barDate, anchor time.Time) bool {
 	anchorDay := time.Date(a.Year(), a.Month(), a.Day(), 0, 0, 0, 0, time.UTC)
 	return barDate.UTC().Before(anchorDay)
 }
+
+// AssetThesesView — GET /v1/assets/:id/theses (标的专页: 标的 meta + 我碰过它的全部命题).
+type AssetThesesView struct {
+	Asset  Asset
+	Theses []Thesis
+}
+
+// AssetTheses — 标的不存在 → ErrNotFound; 存在但该 user 没碰过 → Theses 空 (标的全局).
+func (s *Service) AssetTheses(ctx context.Context, userID, assetID uuid.UUID) (*AssetThesesView, error) {
+	a, err := s.repo.GetAsset(ctx, assetID)
+	if err != nil {
+		return nil, err
+	}
+	theses, err := s.repo.AssetTheses(ctx, userID, assetID)
+	if err != nil {
+		return nil, err
+	}
+	return &AssetThesesView{Asset: *a, Theses: theses}, nil
+}

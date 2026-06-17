@@ -25,6 +25,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) Register(publicV1 *gin.RouterGroup) {
 	publicV1.POST("/assets/resolve", h.resolve)
 	publicV1.GET("/assets/:id/prices", h.prices)
+	publicV1.GET("/assets/:id/theses", h.assetTheses)
 	publicV1.GET("/commitments/:id/track", h.commitmentTrack)
 	publicV1.GET("/signals/:id/track", h.signalTrack)
 }
@@ -289,4 +290,59 @@ func (h *Handler) signalTrack(c *gin.Context) {
 		"signal_id": v.SignalID.String(),
 		"tracks":    toTrackDTOs(v.Tracks),
 	})
+}
+
+// ───────────────────────── 标的专页反查 (P4) ─────────────────────────
+
+type thesisDTO struct {
+	Kind             string     `json:"kind"` // "signal" | "commitment"
+	SignalID         string     `json:"signal_id"`
+	CapturedAt       time.Time  `json:"captured_at"`
+	AnchorAt         time.Time  `json:"anchor_at"`
+	Role             string     `json:"role"`
+	Rationale        *string    `json:"rationale,omitempty"`
+	Summary          *string    `json:"summary,omitempty"`
+	CommitmentID     *string    `json:"commitment_id,omitempty"`
+	CommitmentStatus *string    `json:"commitment_status,omitempty"`
+	SignedAt         *time.Time `json:"signed_at,omitempty"`
+	Action           *string    `json:"action,omitempty"`
+}
+
+// assetTheses — GET /v1/assets/:id/theses. 标的专页: 我碰过这只标的的全部命题 (信号 + 派生承诺).
+func (h *Handler) assetTheses(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	v, err := h.svc.AssetTheses(c.Request.Context(), userID, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "asset not found"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	out := make([]thesisDTO, 0, len(v.Theses))
+	for _, t := range v.Theses {
+		d := thesisDTO{
+			Kind: "signal", SignalID: t.SignalID.String(), CapturedAt: t.CapturedAt,
+			AnchorAt: t.AnchorAt, Role: t.Role, Rationale: t.Rationale, Summary: t.Summary,
+			CommitmentStatus: t.CommitmentStatus, SignedAt: t.SignedAt, Action: t.Action,
+		}
+		if t.CommitmentID != nil {
+			s := t.CommitmentID.String()
+			d.CommitmentID = &s
+			d.Kind = "commitment"
+		}
+		out = append(out, d)
+	}
+	c.JSON(http.StatusOK, gin.H{"asset": toAssetDTO(&v.Asset), "theses": out})
 }

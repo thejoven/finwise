@@ -116,3 +116,52 @@ func (r *Repository) BarsForAssets(ctx context.Context, assetIDs []uuid.UUID) (m
 	}
 	return out, rows.Err()
 }
+
+// ───────────────────────── 标的专页反查 (P4) ─────────────────────────
+
+// Thesis — "我碰过这只标的的一条命题": 一条引用了该标的的信号 + (若有) 它派生的承诺.
+type Thesis struct {
+	SignalID   uuid.UUID
+	CapturedAt time.Time
+	AnchorAt   time.Time // 冻结锚点 (= captured_at, 见 signal_assets)
+	Role       string
+	Rationale  *string
+	Summary    *string // signal.inference_summary
+	// 该信号经 refinement→evaluation 派生的承诺 (1:1:1; 无则全 nil).
+	CommitmentID     *uuid.UUID
+	CommitmentStatus *string
+	SignedAt         *time.Time
+	Action           *string // commitment.thesis->>'action'
+}
+
+// AssetTheses — 反查某 user 碰过该标的的全部命题 (signals + 派生 commitments), 最新在前.
+// 标的全局, 命题 user-scoped (JOIN signals.user_id). 用 idx_signal_assets_asset 反查.
+func (r *Repository) AssetTheses(ctx context.Context, userID, assetID uuid.UUID) ([]Thesis, error) {
+	const q = `
+		SELECT s.id, s.captured_at, sa.anchor_at, sa.role, sa.rationale, s.inference_summary,
+		       c.id, c.status, c.signed_at, c.thesis->>'action'
+		FROM signal_assets sa
+		JOIN signals s             ON s.id = sa.signal_id AND s.user_id = $2
+		LEFT JOIN refinement_sessions rs ON rs.primary_signal_id = s.id
+		LEFT JOIN gate_evaluations ge    ON ge.refinement_id = rs.id
+		LEFT JOIN commitments c          ON c.evaluation_id = ge.id
+		WHERE sa.asset_id = $1
+		ORDER BY s.captured_at DESC`
+	rows, err := r.pool.Query(ctx, q, assetID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("asset theses: %w", err)
+	}
+	defer rows.Close()
+	var out []Thesis
+	for rows.Next() {
+		var t Thesis
+		if err := rows.Scan(
+			&t.SignalID, &t.CapturedAt, &t.AnchorAt, &t.Role, &t.Rationale, &t.Summary,
+			&t.CommitmentID, &t.CommitmentStatus, &t.SignedAt, &t.Action,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
