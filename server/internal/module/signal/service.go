@@ -29,12 +29,18 @@ type ProjectOwnerCheck func(ctx context.Context, userID, projectID uuid.UUID) er
 // 无分类返回 nil). RecordInference 在"信号未分类且 AI 弃权"时用它兜底, 保证信号有归属可见.
 type FirstActiveProjectFn func(ctx context.Context, userID uuid.UUID) (*uuid.UUID, error)
 
+// AfterInferenceFn — 推演落库后的回调 (main.go 装配, 标的追踪用它把新信号的 related_assets
+// 实时归一成 signal_assets). best-effort: 闭包自行异步 + 吞错, 不影响推演回写. 闭包形式避免
+// signal 反向 import asset 模块.
+type AfterInferenceFn func(ctx context.Context, userID, signalID uuid.UUID)
+
 // Service holds the business rules around signal capture / inference.
 // Kept thin: repository is the work-horse.
 type Service struct {
-	repo         *Repository
-	projectCheck ProjectOwnerCheck
-	firstActive  FirstActiveProjectFn
+	repo           *Repository
+	projectCheck   ProjectOwnerCheck
+	firstActive    FirstActiveProjectFn
+	afterInference AfterInferenceFn
 }
 
 // NewService — projectCheck / firstActive 可以传 nil (测试场景方便): projectCheck nil 时
@@ -42,6 +48,10 @@ type Service struct {
 func NewService(repo *Repository, projectCheck ProjectOwnerCheck, firstActive FirstActiveProjectFn) *Service {
 	return &Service{repo: repo, projectCheck: projectCheck, firstActive: firstActive}
 }
+
+// SetAfterInference 装配推演落库后回调 (标的实时归一). 用 setter 而非 NewService 参数, 避免
+// 改动既有调用方 (含测试) 签名; 与 asset 模块的构建先后无关 (asset 在 main.go 里后建).
+func (s *Service) SetAfterInference(fn AfterInferenceFn) { s.afterInference = fn }
 
 // CaptureCommand is the API-facing input to capture a signal.
 type CaptureCommand struct {
@@ -236,7 +246,15 @@ func (s *Service) RecordInference(ctx context.Context, cmd InferenceCommand) err
 		Consensus:     cmd.Consensus,
 		ProjectID:     resolved,
 	}
-	return s.repo.RecordInference(ctx, payload, sig.SourceEventID)
+	if err := s.repo.RecordInference(ctx, payload, sig.SourceEventID); err != nil {
+		return err
+	}
+	// 推演落库后实时归一标的 (标的追踪). best-effort —— 闭包自行异步 + 吞错,
+	// 归一失败不影响推演结果 (兜底有 cmd/asset-backfill + POST /v1/assets/resolve).
+	if s.afterInference != nil {
+		s.afterInference(ctx, cmd.UserID, cmd.SignalID)
+	}
+	return nil
 }
 
 // resolveInferenceProject 决定推演回写后信号的最终分类. 纯函数, 无 DB 依赖, 便于 table-test.

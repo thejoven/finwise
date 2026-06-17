@@ -262,6 +262,19 @@ func run() error {
 	assetSvc := assetmod.NewService(assetRepo, mastraClient, logger)
 	assetHandler := assetmod.NewHandler(assetSvc)
 
+	// 新信号推演落库后, 实时把其 related_assets 归一成 signal_assets (异步 best-effort, 不阻塞推演回写).
+	// 闭包接进 signal 模块, 不让 signal 反向 import asset. 归一失败有 cmd/asset-backfill + 人工端点兜底.
+	signalSvc.SetAfterInference(func(_ context.Context, _, signalID uuid.UUID) {
+		go func() {
+			bg, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+			defer cancel()
+			if err := assetSvc.ResolveSignal(bg, signalID); err != nil {
+				logger.Warn("realtime resolve signal failed",
+					zap.String("signal", signalID.String()), zap.Error(err))
+			}
+		}()
+	})
+
 	// recommend: 主动信号推荐. P0「画像底座」派生 user_alpha_profile; P1「持仓相关情报」(W2)
 	// 加策展漏斗 (Curator: 对活跃命题召相关推文 → 粗排吃画像 → 硬配额 → 写 recommendations)
 	// + 承诺相关情报读/反馈端点. 策展 cron 化留后续 (当前经内部 /recommend/build 手动触发).

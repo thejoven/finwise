@@ -313,3 +313,30 @@ func (s *Service) Backfill(ctx context.Context) (*BackfillStats, error) {
 	}
 	return st, nil
 }
+
+// ResolveSignal 实时归一单条信号的 related_assets → signal_assets (推演完成后 best-effort 触发).
+// 同 backfill 单条版: 锚点冻结 = signal.captured_at; 失败逐条记日志不中断 (派生数据, 兜底有
+// backfill + 人工端点). 幂等 (alias 缓存 + ON CONFLICT DO NOTHING).
+func (s *Service) ResolveSignal(ctx context.Context, signalID uuid.UUID) error {
+	capturedAt, assets, err := s.repo.SignalForResolve(ctx, signalID)
+	if err != nil {
+		return err
+	}
+	for _, ra := range assets {
+		ref := strings.TrimSpace(ra.Ticker)
+		if ref == "" {
+			continue
+		}
+		id, _, err := s.resolveReference(ctx, ref, ra.Rationale)
+		if err != nil {
+			s.logger.Warn("resolve signal ref failed",
+				zap.String("signal", signalID.String()), zap.String("ref", ref), zap.Error(err))
+			continue
+		}
+		if err := s.repo.LinkSignalAsset(ctx, signalID, id, ra.Rationale, capturedAt); err != nil {
+			s.logger.Warn("resolve signal link failed",
+				zap.String("signal", signalID.String()), zap.String("ref", ref), zap.Error(err))
+		}
+	}
+	return nil
+}

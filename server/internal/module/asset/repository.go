@@ -166,3 +166,23 @@ func (r *Repository) SignalCapturedAt(ctx context.Context, signalID uuid.UUID) (
 	}
 	return t, nil
 }
+
+// SignalForResolve 取单条信号的 captured_at + 自由文本标的 (实时归一用; 同 backfill 单条版).
+func (r *Repository) SignalForResolve(ctx context.Context, signalID uuid.UUID) (time.Time, []domain.RelatedAsset, error) {
+	const q = `SELECT captured_at, inference_related_assets FROM signals WHERE id = $1`
+	var capturedAt time.Time
+	var raw []byte
+	if err := r.pool.QueryRow(ctx, q, signalID).Scan(&capturedAt, &raw); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return time.Time{}, nil, ErrNotFound
+		}
+		return time.Time{}, nil, fmt.Errorf("signal for resolve: %w", err)
+	}
+	var assets []domain.RelatedAsset
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &assets); err != nil {
+			return time.Time{}, nil, fmt.Errorf("unmarshal related_assets %s: %w", signalID, err)
+		}
+	}
+	return capturedAt, assets, nil
+}
