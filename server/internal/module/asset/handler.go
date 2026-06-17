@@ -20,9 +20,13 @@ func NewHandler(svc *Service) *Handler {
 }
 
 // Register — 资产端点挂 publicV1 (Bearer). 资产全局, 任一登录用户可读价格 / 纠正一个归一.
+// track 端点跨表只读 (承诺/信号 → signal_assets → asset_prices), 用既有 :id 参数名, 不与
+// commitment/signal 模块的 /:id 路由冲突.
 func (h *Handler) Register(publicV1 *gin.RouterGroup) {
 	publicV1.POST("/assets/resolve", h.resolve)
 	publicV1.GET("/assets/:id/prices", h.prices)
+	publicV1.GET("/commitments/:id/track", h.commitmentTrack)
+	publicV1.GET("/signals/:id/track", h.signalTrack)
 }
 
 type assetDTO struct {
@@ -182,5 +186,107 @@ func (h *Handler) prices(c *gin.Context) {
 		PriceSyncedAt: view.PriceSyncedAt,
 		Source:        source,
 		Bars:          bars,
+	})
+}
+
+// ───────────────────────── track (发现后走势) ─────────────────────────
+
+type trackBarDTO struct {
+	Date  string  `json:"date"` // YYYY-MM-DD
+	Close float64 `json:"close"`
+}
+
+type trackDTO struct {
+	Asset             assetDTO      `json:"asset"`
+	Role              string        `json:"role"`
+	AnchorAt          time.Time     `json:"anchor_at"` // 发现时刻 (冻结)
+	AnchorClose       *float64      `json:"anchor_close,omitempty"`
+	SignedAt          *time.Time    `json:"signed_at,omitempty"` // 承诺签字日 (信号 track 无)
+	SignClose         *float64      `json:"sign_close,omitempty"`
+	LatestClose       *float64      `json:"latest_close,omitempty"`
+	LatestDate        *string       `json:"latest_date,omitempty"`
+	PctSinceDiscovery *float64      `json:"pct_since_discovery,omitempty"`
+	PctSinceSign      *float64      `json:"pct_since_sign,omitempty"`
+	Source            string        `json:"source,omitempty"`
+	Bars              []trackBarDTO `json:"bars"`
+}
+
+func toTrackDTO(t Track) trackDTO {
+	bars := make([]trackBarDTO, 0, len(t.Bars))
+	for _, b := range t.Bars {
+		bars = append(bars, trackBarDTO{Date: b.Date.Format("2006-01-02"), Close: b.Close})
+	}
+	dto := trackDTO{
+		Asset: toAssetDTO(&t.Asset), Role: t.Role, AnchorAt: t.AnchorAt,
+		AnchorClose: t.AnchorClose, SignedAt: t.SignedAt, SignClose: t.SignClose,
+		LatestClose: t.LatestClose, PctSinceDiscovery: t.PctSinceDiscovery,
+		PctSinceSign: t.PctSinceSign, Source: t.Source, Bars: bars,
+	}
+	if t.LatestDate != nil {
+		s := t.LatestDate.Format("2006-01-02")
+		dto.LatestDate = &s
+	}
+	return dto
+}
+
+func toTrackDTOs(tracks []Track) []trackDTO {
+	out := make([]trackDTO, 0, len(tracks))
+	for _, t := range tracks {
+		out = append(out, toTrackDTO(t))
+	}
+	return out
+}
+
+// commitmentTrack — GET /v1/commitments/:id/track. 承诺标的发现后走势 + 签字日锚点 ("我押对没").
+func (h *Handler) commitmentTrack(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	v, err := h.svc.CommitmentTrack(c.Request.Context(), userID, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "commitment not found"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"commitment_id": v.CommitmentID.String(),
+		"signed_at":     v.SignedAt,
+		"thesis_asset":  v.ThesisAsset,
+		"tracks":        toTrackDTOs(v.Tracks),
+	})
+}
+
+// signalTrack — GET /v1/signals/:id/track. 信号标的发现后走势 (无签字日). 无相关标的 → tracks: [].
+func (h *Handler) signalTrack(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	v, err := h.svc.SignalTrack(c.Request.Context(), userID, id)
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"signal_id": v.SignalID.String(),
+		"tracks":    toTrackDTOs(v.Tracks),
 	})
 }
