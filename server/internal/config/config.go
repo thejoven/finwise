@@ -67,6 +67,11 @@ type Config struct {
 	RecoveryCooldown      time.Duration // RECOVERY_COOLDOWN_MS, default 300000 (5min)
 	RecoveryMaxRevivals   int           // RECOVERY_MAX_REVIVALS, default 5
 	RecoveryBatchSize     int           // RECOVERY_BATCH, default 50
+
+	// Recommend (主动信号推荐 P1 策展漏斗) tuning. 仅 recommend.Curator 消费.
+	RecRelevanceMin        float64 // REC_RELEVANCE_MIN, 候选 relevance 阈值, default 0.5
+	RecPerCommitmentQuota  int     // REC_PER_COMMITMENT_QUOTA, 每命题活跃推荐硬上限, default 2
+	RecCandidateWindowDays int     // REC_CANDIDATE_WINDOW_DAYS, 候选推文时间窗(天), default 14
 }
 
 func Load() (*Config, error) {
@@ -164,6 +169,24 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("RECOVERY_BATCH must be int in [1, 1000]: %v", err)
 	}
 	c.RecoveryBatchSize = recBatch
+
+	relMin, err := strconv.ParseFloat(getDefault("REC_RELEVANCE_MIN", "0.5"), 64)
+	if err != nil || relMin < 0 || relMin > 1 {
+		return nil, fmt.Errorf("REC_RELEVANCE_MIN must be float in [0,1]: %v", err)
+	}
+	c.RecRelevanceMin = relMin
+
+	recQuota, err := strconv.Atoi(getDefault("REC_PER_COMMITMENT_QUOTA", "2"))
+	if err != nil || recQuota < 1 || recQuota > 50 {
+		return nil, fmt.Errorf("REC_PER_COMMITMENT_QUOTA must be int in [1,50]: %v", err)
+	}
+	c.RecPerCommitmentQuota = recQuota
+
+	recWindow, err := strconv.Atoi(getDefault("REC_CANDIDATE_WINDOW_DAYS", "14"))
+	if err != nil || recWindow < 1 || recWindow > 365 {
+		return nil, fmt.Errorf("REC_CANDIDATE_WINDOW_DAYS must be int in [1,365]: %v", err)
+	}
+	c.RecCandidateWindowDays = recWindow
 
 	var missing []string
 	if c.DatabaseURL == "" {

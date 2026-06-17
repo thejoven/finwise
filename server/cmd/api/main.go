@@ -262,11 +262,15 @@ func run() error {
 	assetSvc := assetmod.NewService(assetRepo, mastraClient, logger)
 	assetHandler := assetmod.NewHandler(assetSvc)
 
-	// recommend: 主动信号推荐. P0「画像底座」—— builder 从既有行为轨迹 (signals/gate/
-	// commitments/holdings/retrospects/转信号 tweets) 派生每用户 alpha 画像, 落 user_alpha_profile.
-	// 本期只有一个内部端点 (手动触发重算, 供验证); 策展漏斗 + cron 留待 P1.
+	// recommend: 主动信号推荐. P0「画像底座」派生 user_alpha_profile; P1「持仓相关情报」(W2)
+	// 加策展漏斗 (Curator: 对活跃命题召相关推文 → 粗排吃画像 → 硬配额 → 写 recommendations)
+	// + 承诺相关情报读/反馈端点. 策展 cron 化留后续 (当前经内部 /recommend/build 手动触发).
 	recommendRepo := recommendmod.NewRepository(pool)
-	recommendSvc := recommendmod.NewService(recommendRepo, logger)
+	recommendSvc := recommendmod.NewService(recommendRepo, recommendmod.CuratorConfig{
+		RelevanceMin:        cfg.RecRelevanceMin,
+		PerCommitmentQuota:  cfg.RecPerCommitmentQuota,
+		CandidateWindowDays: cfg.RecCandidateWindowDays,
+	}, logger)
 	recommendHandler := recommendmod.NewHandler(recommendSvc)
 
 	// admin: 运营后台跨表聚合 (系统总览 KPI + 研判漏斗 + AI 推断健康). 只读, 仅依赖 pool.
@@ -299,7 +303,7 @@ func run() error {
 			attentionHandler.Register(v1, internal)
 			distillationHandler.Register(v1, internal, admin)
 			subscriptionHandler.Register(v1, admin)
-			recommendHandler.Register(internal)
+			recommendHandler.Register(v1, internal)
 			assetHandler.Register(v1)
 		},
 	})

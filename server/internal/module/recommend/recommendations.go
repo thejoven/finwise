@@ -157,3 +157,60 @@ func (r *Repository) MarkRecommendationStatus(ctx context.Context, userID, id uu
 	}
 	return nil
 }
+
+// CountActiveCommitmentRecs 数某命题当前活跃 (pending/surfaced) 的推荐数 — 配额硬上限的计数器.
+func (r *Repository) CountActiveCommitmentRecs(ctx context.Context, userID, commitmentID uuid.UUID) (int, error) {
+	var n int
+	err := r.pool.QueryRow(ctx, `
+		SELECT count(*) FROM recommendations
+		WHERE user_id = $1 AND context_type = 'commitment' AND target_ref = $2
+		  AND status IN ('pending', 'surfaced')`, userID, commitmentID).Scan(&n)
+	if err != nil {
+		return 0, fmt.Errorf("count active commitment recs: %w", err)
+	}
+	return n, nil
+}
+
+// RelatedItem — GET /commitments/:id/related 的行 (推荐 + 其推文摘要).
+type RelatedItem struct {
+	RecID          uuid.UUID
+	TweetID        string
+	Score          float32
+	Rationale      string
+	Status         string
+	Handle         string
+	TweetText      string
+	TweetSummary   string
+	TweetCreatedAt *time.Time
+	CreatedAt      time.Time
+}
+
+// ListCommitmentRelated 取某命题的相关情报 (rec 关联 tweet/账号), score 降序.
+// 空 = 不渲染 (规格 §8 沉默不变量, 由前端落实). LEFT JOIN: 推文万一被删也不丢这条 rec.
+func (r *Repository) ListCommitmentRelated(ctx context.Context, userID, commitmentID uuid.UUID) ([]RelatedItem, error) {
+	const q = `
+		SELECT rec.id, rec.source_id, rec.score, rec.rationale, rec.status, rec.created_at,
+		       COALESCE(a.handle, ''), COALESCE(t.text, ''), COALESCE(t.summary, ''), t.tweet_created_at
+		FROM recommendations rec
+		LEFT JOIN tweets t ON t.id = rec.source_id
+		LEFT JOIN twitter_accounts a ON a.id = t.twitter_account_id
+		WHERE rec.user_id = $1 AND rec.context_type = 'commitment' AND rec.target_ref = $2
+		  AND rec.status IN ('pending', 'surfaced')
+		ORDER BY rec.score DESC, rec.created_at DESC
+	`
+	rows, err := r.pool.Query(ctx, q, userID, commitmentID)
+	if err != nil {
+		return nil, fmt.Errorf("list commitment related: %w", err)
+	}
+	defer rows.Close()
+	var out []RelatedItem
+	for rows.Next() {
+		var it RelatedItem
+		if err := rows.Scan(&it.RecID, &it.TweetID, &it.Score, &it.Rationale, &it.Status,
+			&it.CreatedAt, &it.Handle, &it.TweetText, &it.TweetSummary, &it.TweetCreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, it)
+	}
+	return out, rows.Err()
+}
