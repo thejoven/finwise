@@ -23,8 +23,11 @@ import (
 	iiix "wiseflow/server/internal/infra/iii"
 	marketdatax "wiseflow/server/internal/infra/marketdata"
 	mastrax "wiseflow/server/internal/infra/mastra"
+	twitterdatax "wiseflow/server/internal/infra/twitterdata"
 	twtapix "wiseflow/server/internal/infra/twtapi"
+	xsource "wiseflow/server/internal/infra/xsource"
 	accountmod "wiseflow/server/internal/module/account"
+	adminmod "wiseflow/server/internal/module/admin"
 	assetmod "wiseflow/server/internal/module/asset"
 	attentionmod "wiseflow/server/internal/module/attention"
 	commitmentmod "wiseflow/server/internal/module/commitment"
@@ -34,6 +37,8 @@ import (
 	gatemod "wiseflow/server/internal/module/gate"
 	invitemod "wiseflow/server/internal/module/invite"
 	projectmod "wiseflow/server/internal/module/project"
+	recommendmod "wiseflow/server/internal/module/recommend"
+	recoverymod "wiseflow/server/internal/module/recovery"
 	refinementmod "wiseflow/server/internal/module/refinement"
 	researchmod "wiseflow/server/internal/module/research"
 	retrospectmod "wiseflow/server/internal/module/retrospect"
@@ -45,6 +50,23 @@ func main() {
 	if err := run(); err != nil {
 		fmt.Fprintln(os.Stderr, "fatal:", err)
 		os.Exit(1)
+	}
+}
+
+// newXProvider 按 cfg.XProvider 选 X 数据源实现 (xsource.Provider). 这是供应商抽象的唯一
+// 装配点 —— 加新供应商: 这里加一个 case + 各自的 env 凭证, 订阅模块 (service/poller) 零改动.
+func newXProvider(cfg *config.Config, logger *zap.Logger) xsource.Provider {
+	switch cfg.XProvider {
+	case "twtapi", "":
+		return twtapix.New(cfg.TwtAPIKey)
+	case "twitterdata":
+		// 骨架: HTTP/鉴权层已通, 解析待样本 (twitterdata/parse.go 的 errParseTODO).
+		// 切到本 provider 前须先填 parse + 抓样本, 否则采集每轮报错 (不崩, 但采不到).
+		return twitterdatax.New(cfg.TwitterDataToken)
+	default:
+		logger.Warn("unknown X_PROVIDER, falling back to twtapi",
+			zap.String("provider", cfg.XProvider))
+		return twtapix.New(cfg.TwtAPIKey)
 	}
 }
 
@@ -208,9 +230,9 @@ func run() error {
 
 	// subscription: 推文订阅 (采集 poller + 分类派发 + REST). 转信号经闭包走
 	// signal.Capture — 与 exit→retrospect 同样的 main.go 装配模式, 不反向 import.
-	twtClient := twtapix.New(cfg.TwtAPIKey)
+	xProvider := newXProvider(cfg, logger)
 	subscriptionRepo := subscriptionmod.NewRepository(pool)
-	subscriptionSvc := subscriptionmod.NewService(subscriptionRepo, twtClient, mastraClient,
+	subscriptionSvc := subscriptionmod.NewService(subscriptionRepo, xProvider, mastraClient,
 		func(ctx context.Context, userID, clientEventID uuid.UUID, rawText string) (uuid.UUID, bool, error) {
 			// promote 兜底归类: 落到用户第一个活跃分类 (provisional, auto_assigned), 信号立即可见;
 			// 之后 mastra analyst 判好会覆盖到更合适的分类. AI 故障也不丢信号 (产品无未分类视图).
@@ -235,10 +257,23 @@ func run() error {
 
 	// asset: 标的归一 (P0) + 行情追踪 (P1). 资产/别名注册表 + signal_assets 链接 (冻结锚点);
 	// resolver: 别名缓存 → 规则 → Mastra LLM → 诚实兜底 untrackable (回填走 cmd/asset-backfill);
-	// 行情经 marketdata.Provider 抽象, P1 默认 eastmoney A股 (price poller 见下).
+	// 行情经 marketdata.Provider 抽象, P1 默认 tencent A股 (price poller 见下).
 	assetRepo := assetmod.NewRepository(pool)
 	assetSvc := assetmod.NewService(assetRepo, mastraClient, logger)
 	assetHandler := assetmod.NewHandler(assetSvc)
+
+	// recommend: 主动信号推荐. P0「画像底座」—— builder 从既有行为轨迹 (signals/gate/
+	// commitments/holdings/retrospects/转信号 tweets) 派生每用户 alpha 画像, 落 user_alpha_profile.
+	// 本期只有一个内部端点 (手动触发重算, 供验证); 策展漏斗 + cron 留待 P1.
+	recommendRepo := recommendmod.NewRepository(pool)
+	recommendSvc := recommendmod.NewService(recommendRepo, logger)
+	recommendHandler := recommendmod.NewHandler(recommendSvc)
+
+	// admin: 运营后台跨表聚合 (系统总览 KPI + 研判漏斗 + AI 推断健康). 只读, 仅依赖 pool.
+	// 挂 adminV1 (/v1/admin, RequireAdmin), 与 account/invite 的 admin 路由并列.
+	adminRepo := adminmod.NewRepository(pool)
+	adminSvc := adminmod.NewService(adminRepo)
+	adminHandler := adminmod.NewHandler(adminSvc)
 
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
@@ -252,17 +287,19 @@ func run() error {
 		RegisterModules: func(anon, v1, internal, admin *gin.RouterGroup) {
 			accountHandler.Register(anon, v1, internal, admin)
 			inviteHandler.Register(admin)
-			projectHandler.Register(v1, internal)
-			signalHandler.Register(v1, internal)
-			refinementHandler.Register(v1, internal)
-			gateHandler.Register(v1, internal)
-			commitmentHandler.Register(v1, internal)
+			adminHandler.Register(admin)
+			projectHandler.Register(v1, internal, admin)
+			signalHandler.Register(v1, internal, admin)
+			refinementHandler.Register(v1, internal, admin)
+			gateHandler.Register(v1, internal, admin)
+			commitmentHandler.Register(v1, internal, admin)
 			companionHandler.Register(v1, internal)
-			retrospectHandler.Register(v1, internal)
+			retrospectHandler.Register(v1, internal, admin)
 			researchHandler.Register(v1, internal)
 			attentionHandler.Register(v1, internal)
-			distillationHandler.Register(v1, internal)
-			subscriptionHandler.Register(v1)
+			distillationHandler.Register(v1, internal, admin)
+			subscriptionHandler.Register(v1, admin)
+			recommendHandler.Register(internal)
 			assetHandler.Register(v1)
 		},
 	})
@@ -305,8 +342,28 @@ func run() error {
 		exitChecker.Run(workerCtx)
 	}()
 
+	// recovery sweeper — 自动复活被 LLM 偶发抽风搁浅的 signal/tweet (inference 卡
+	// 'pending' / classify 卡 'failed'). 重置 outbox 行 / 重新 pending 来重新驱动,
+	// 带复活次数上限 + 冷却, 幂等不产生重复信号. 默认开; RECOVERY_ENABLED=false
+	// 可关 (关掉后永久搁浅仍只能人工恢复).
+	if cfg.RecoveryEnabled {
+		sweeper := recoverymod.New(pool, logger, recoverymod.Config{
+			SweepInterval: cfg.RecoverySweepInterval,
+			Cooldown:      cfg.RecoveryCooldown,
+			MaxRevivals:   cfg.RecoveryMaxRevivals,
+			BatchSize:     cfg.RecoveryBatchSize,
+		})
+		workerWG.Add(1)
+		go func() {
+			defer workerWG.Done()
+			sweeper.Run(workerCtx)
+		}()
+	} else {
+		logger.Info("recovery sweeper disabled (RECOVERY_ENABLED=false)")
+	}
+
 	// 订阅采集 + 分类派发 worker. key 缺失 / 显式关闭 → 不起 (REST 读历史照常).
-	if cfg.SubscriptionPollEnabled && twtClient.IsConfigured() {
+	if cfg.SubscriptionPollEnabled && xProvider.IsConfigured() {
 		subscriptionPoller := subscriptionmod.NewPoller(subscriptionSvc, logger)
 		workerWG.Add(1)
 		go func() {
@@ -316,7 +373,8 @@ func run() error {
 	} else {
 		logger.Info("subscription poller disabled",
 			zap.Bool("enabled", cfg.SubscriptionPollEnabled),
-			zap.Bool("twtapi_configured", twtClient.IsConfigured()))
+			zap.String("x_provider", cfg.XProvider),
+			zap.Bool("provider_configured", xProvider.IsConfigured()))
 	}
 
 	// 行情同步 worker (标的追踪 P1): pending 标的从锚点回填日线、active 日更; 显式关闭则不起

@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/twtapi"
+	"wiseflow/server/internal/infra/xsource"
 )
 
 const (
@@ -62,9 +62,9 @@ func (p *Poller) pollOnce(ctx context.Context) {
 		return
 	}
 	if err := p.svc.PollDue(ctx, pollBatch); err != nil {
-		if errors.Is(err, twtapi.ErrQuotaExceeded) {
+		if errors.Is(err, xsource.ErrQuotaExceeded) {
 			p.pausedUntil = time.Now().Add(quotaPause)
-			p.logger.Error("twtapi quota exceeded — pausing all polling",
+			p.logger.Error("x source quota exceeded — pausing all polling",
 				zap.Time("until", p.pausedUntil))
 			return
 		}

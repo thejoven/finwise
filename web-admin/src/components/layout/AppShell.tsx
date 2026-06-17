@@ -1,6 +1,7 @@
 import { Outlet } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
+import { FocusBanner } from "@/components/FocusBanner";
 
 interface Props {
   onSignOut: () => void;
@@ -12,6 +13,7 @@ export function AppShell({ onSignOut }: Props) {
       <Sidebar />
       <div className="flex min-h-screen flex-1 flex-col">
         <Topbar onSignOut={onSignOut} />
+        <FocusBanner />
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="container max-w-screen-2xl px-6 py-6">
             <Outlet />

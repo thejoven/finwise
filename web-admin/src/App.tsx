@@ -18,6 +18,11 @@ import { MetricsPage } from "@/pages/Metrics";
 import { SettingsPage } from "@/pages/Settings";
 import { UsersPage } from "@/pages/Users";
 import { InvitesPage } from "@/pages/Invites";
+import { AiPipelinePage } from "@/pages/AiPipeline";
+import { SubscriptionsPage } from "@/pages/Subscriptions";
+import { PositionsPage } from "@/pages/Positions";
+import { DistillationPage } from "@/pages/Distillation";
+import { ProjectsPage } from "@/pages/Projects";
 
 function FullScreen({ children }: { children: React.ReactNode }) {
   return (
@@ -117,6 +122,14 @@ export default function App() {
         <Route path="/invites" element={<InvitesPage />} />
         <Route path="/metrics" element={<MetricsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
+
+        {/* 重构期占位 — 后续前端切片替换为真实页面 */}
+        <Route path="/subscriptions" element={<SubscriptionsPage />} />
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/distillation" element={<DistillationPage />} />
+        <Route path="/positions" element={<PositionsPage />} />
+        <Route path="/inference" element={<AiPipelinePage />} />
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

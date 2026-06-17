@@ -21,7 +21,7 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	pub := publicV1.Group("/commitments")
 	pub.GET("", h.list)
 	pub.GET("/active", h.active)
@@ -36,6 +36,9 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 	holdings.GET("/:id", h.getHolding)
 
 	internalV1.POST("/commitments/draft", h.internalDraft)
+
+	// 运营后台跨用户持仓列表 (RequireAdmin).
+	adminV1.GET("/holdings", h.adminListHoldings)
 }
 
 // ───── DTOs ─────

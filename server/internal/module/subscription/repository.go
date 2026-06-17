@@ -21,7 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/twtapi"
+	"wiseflow/server/internal/infra/xsource"
 )
 
 var ErrNotFound = errors.New("subscription: not found")
@@ -80,7 +80,7 @@ type TweetView struct {
 // ───────────────────────── 账号 / 订阅 ─────────────────────────
 
 // UpsertAccount — 按 rest_id 幂等; 资料字段每次刷新 (改名/换头像跟上).
-func (r *Repository) UpsertAccount(ctx context.Context, a twtapi.Account) (uuid.UUID, error) {
+func (r *Repository) UpsertAccount(ctx context.Context, a xsource.Account) (uuid.UUID, error) {
 	const q = `
 		INSERT INTO twitter_accounts (rest_id, handle, display_name, avatar_url, bio)
 		VALUES ($1, $2, $3, $4, $5)
@@ -238,7 +238,7 @@ func (r *Repository) ClaimDueAccounts(ctx context.Context, limit int) ([]DueAcco
 }
 
 // InsertTweets — 按 id 幂等批量入库 (置顶/RT 乱序靠 ON CONFLICT 兜底). 返回新增数.
-func (r *Repository) InsertTweets(ctx context.Context, accountID uuid.UUID, tweets []twtapi.ParsedTweet) (int, error) {
+func (r *Repository) InsertTweets(ctx context.Context, accountID uuid.UUID, tweets []xsource.Tweet) (int, error) {
 	if len(tweets) == 0 {
 		return 0, nil
 	}

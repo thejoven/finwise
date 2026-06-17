@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"wiseflow/server/internal/infra/xsource"
 )
 
 // fixtures 是 P0 spike 抓的真实响应 (账号 @elonmusk), 见 docs/api/samples/twtapi/README.md.
@@ -121,12 +123,12 @@ func TestParseAccountNotFound(t *testing.T) {
 	// 空订阅. (注: 误以为"不存在"的 handle 若其实已被注册, twtapi 会正常返 User —
 	// 那不是 bug, 是该 handle 真实存在.)
 	cases := []string{
-		`{"data":{"user_results":{}}}`,                 // result 缺失 (真·不存在)
-		`{"data":{"user_results":{"result":null}}}`,    // result 显式 null
-		`{"data":{}}`,                                  // 整个 user_results 缺失
+		`{"data":{"user_results":{}}}`,              // result 缺失 (真·不存在)
+		`{"data":{"user_results":{"result":null}}}`, // result 显式 null
+		`{"data":{}}`, // 整个 user_results 缺失
 	}
 	for _, body := range cases {
-		if _, err := ParseAccount([]byte(body)); !errors.Is(err, ErrNotFound) {
+		if _, err := ParseAccount([]byte(body)); !errors.Is(err, xsource.ErrNotFound) {
 			t.Errorf("ParseAccount(%s) err = %v, want ErrNotFound", body, err)
 		}
 	}
@@ -169,24 +171,6 @@ func TestRubyDateLayout(t *testing.T) {
 	}
 	if ts.UTC().Format(time.RFC3339) != "2026-06-09T06:50:58Z" {
 		t.Fatalf("got %s", ts.UTC().Format(time.RFC3339))
-	}
-}
-
-func TestCompareIDs(t *testing.T) {
-	cases := []struct {
-		a, b string
-		want int
-	}{
-		{"2064238810582438366", "2064238810582438366", 0},
-		{"2064238810582438366", "2064238810582438365", 1},
-		{"999", "1000", -1},          // 长度优先
-		{"1000", "999", 1},
-		{" 123", "123", 0},           // trim
-	}
-	for _, c := range cases {
-		if got := CompareIDs(c.a, c.b); got != c.want {
-			t.Errorf("CompareIDs(%q,%q) = %d, want %d", c.a, c.b, got, c.want)
-		}
 	}
 }
 

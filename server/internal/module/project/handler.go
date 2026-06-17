@@ -19,10 +19,13 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(publicV1, _ *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, _, adminV1 *gin.RouterGroup) {
+	adminV1.GET("/projects", h.adminList)
 	g := publicV1.Group("/projects")
 	g.GET("", h.list)
+	g.GET("/archived", h.listArchived)
 	g.POST("", h.create)
+	g.POST("/:id/restore", h.restore)
 	g.PATCH("/:id", h.update)
 	g.DELETE("/:id", h.archive)
 }
@@ -69,6 +72,24 @@ func (h *Handler) list(c *gin.Context) {
 		return
 	}
 	rows, err := h.svc.ListActive(c.Request.Context(), userID)
+	if err != nil {
+		writeErr(c, err)
+		return
+	}
+	views := make([]projectView, len(rows))
+	for i, p := range rows {
+		views[i] = toView(p)
+	}
+	c.JSON(http.StatusOK, listResponse{Projects: views})
+}
+
+func (h *Handler) listArchived(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	rows, err := h.svc.ListArchived(c.Request.Context(), userID)
 	if err != nil {
 		writeErr(c, err)
 		return
@@ -174,6 +195,32 @@ func (h *Handler) archive(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "archived"})
+}
+
+func (h *Handler) restore(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "id not a uuid"})
+		return
+	}
+	if err := h.svc.Restore(c.Request.Context(), userID, id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		if errors.Is(err, ErrDuplicateName) {
+			c.JSON(http.StatusConflict, gin.H{"error": "name already used"})
+			return
+		}
+		writeErr(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "restored"})
 }
 
 // ───── helpers ─────

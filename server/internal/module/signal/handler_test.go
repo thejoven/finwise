@@ -89,8 +89,8 @@ func newTestEnv(t *testing.T) *testEnv {
 		DevUserID:        devUserID,
 		InternalToken:    testInternalToken,
 		InternalLoopback: false, // httptest uses loopback anyway; disable to avoid flakes
-		RegisterModules: func(_, v1, internalV1, _ *gin.RouterGroup) {
-			handler.Register(v1, internalV1)
+		RegisterModules: func(_, v1, internalV1, adminV1 *gin.RouterGroup) {
+			handler.Register(v1, internalV1, adminV1)
 		},
 	})
 

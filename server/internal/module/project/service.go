@@ -94,6 +94,10 @@ func (s *Service) ListActive(ctx context.Context, userID uuid.UUID) ([]Project, 
 	return s.repo.ListActive(ctx, userID)
 }
 
+func (s *Service) ListArchived(ctx context.Context, userID uuid.UUID) ([]Project, error) {
+	return s.repo.ListArchived(ctx, userID)
+}
+
 func (s *Service) Get(ctx context.Context, userID, id uuid.UUID) (*Project, error) {
 	return s.repo.Get(ctx, userID, id)
 }
@@ -168,6 +172,10 @@ func (s *Service) Update(ctx context.Context, cmd UpdateCommand) (*Project, erro
 
 func (s *Service) Archive(ctx context.Context, userID, id uuid.UUID) error {
 	return s.repo.Archive(ctx, userID, id)
+}
+
+func (s *Service) Restore(ctx context.Context, userID, id uuid.UUID) error {
+	return s.repo.Restore(ctx, userID, id)
 }
 
 // ValidateOwnership 给 signal capture 用: 确认 project_id 属于 user 且未归档.

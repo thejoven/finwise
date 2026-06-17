@@ -23,7 +23,7 @@ func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
 }
 
-func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	pub := publicV1.Group("/gate")
 	pub.GET("/evaluations", h.listAll)
 	pub.GET("/evaluations/:id", h.get)
@@ -37,6 +37,9 @@ func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
 
 	// 这个 endpoint 给运维 / 调试用 — 直接触发 Evaluate (不校验 ownership), 不走业务流.
 	internalV1.POST("/gate/evaluate", h.evaluate)
+
+	// 运营后台跨用户评估列表 (RequireAdmin).
+	adminV1.GET("/gate/evaluations", h.adminList)
 }
 
 type evaluationResponse struct {

@@ -23,7 +23,8 @@ func NewHandler(svc *Service) *Handler {
 
 // Register 把路由挂到 v1 / internal 两个 group.
 // Public 路由都在 /v1/refinement/sessions/* 下, internal 在 /v1/internal/refinement/*.
-func (h *Handler) Register(publicV1, internalV1 *gin.RouterGroup) {
+func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
+	adminV1.GET("/refinement/sessions", h.adminList)
 	pub := publicV1.Group("/refinement/sessions")
 	pub.POST("", h.start)
 	pub.GET("", h.list)

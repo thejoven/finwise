@@ -311,6 +311,169 @@ export interface AuthResponse {
   session: { token: string; expires_at: string };
 }
 
+// ───────── 运营后台 admin 聚合 / 跨用户视图 (后端切片 1-2) ─────────
+
+export interface AdminOverview {
+  users: { total: number; active_7d: number; admins: number };
+  signals: { today: number; total: number; pending: number; failed: number };
+  tweets: { today: number; total: number; classify_pending: number; classify_failed: number };
+  subscriptions: { accounts: number; active_subs: number; poller_last_at: string | null };
+  pipeline: {
+    signals_30d: number;
+    refine_done: number;
+    distilled: number;
+    gate_total: number;
+    gate_passed: number;
+    signed: number;
+    holdings_active: number;
+  };
+  gate_pass_rate_30d: number;
+}
+
+export interface InferenceFailure {
+  signal_id: string;
+  user_id: string;
+  email: string;
+  text_preview: string;
+  captured_at: string;
+}
+
+export interface InferenceHealth {
+  pending: number;
+  failed: number;
+  done: number;
+  avg_latency_seconds: number;
+  recent_failures: InferenceFailure[];
+}
+
+// AdminSignalRow — 跨用户信号行 (带归属 user + 分类名).
+export interface AdminSignalRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  project_id?: string;
+  project_name?: string;
+  raw_text: string;
+  captured_at: string;
+  inference_status: "pending" | "done" | "failed";
+  inference_summary?: string;
+  inference_tags?: string[];
+}
+
+export interface AdminSignalListResponse {
+  signals: AdminSignalRow[];
+  has_more: boolean;
+}
+
+// AdminAccountRow — 订阅源按账号聚合 (运营/轮询视图).
+export interface AdminAccountRow {
+  id: string;
+  handle: string;
+  display_name?: string;
+  status: string;
+  last_polled_at?: string;
+  poll_interval_sec: number;
+  subscriber_count: number;
+  tweet_count: number;
+}
+
+export interface AdminHoldingRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  status: string;
+  ticker?: string;
+  action?: string;
+  signed_at: string;
+  expires_at: string;
+  triggered_at?: string;
+  closed_at?: string;
+  archived_at?: string;
+}
+
+export interface AdminEvalRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  refinement_id: string;
+  passed: boolean;
+  failed_gate?: number;
+  archived_pool?: string;
+  evaluated_at: string;
+}
+
+// AdminUserOverview — 单用户跨域旅程快照 (驱动「聚焦到用户」).
+export interface AdminUserOverview {
+  id: string;
+  email: string;
+  display_name?: string;
+  is_admin: boolean;
+  created_at: string;
+  signals_total: number;
+  signals_pending: number;
+  signals_failed: number;
+  refine_completed: number;
+  gate_total: number;
+  gate_passed: number;
+  commitments_signed: number;
+  holdings_active: number;
+  subscriptions_active: number;
+  last_signal_at?: string;
+}
+
+// AdminSessionRow — 跨用户追问会话.
+export interface AdminSessionRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  status: string;
+  rounds_done: number;
+  decision?: string;
+  primary_asset?: string;
+  signal_summary?: string;
+  started_at: string;
+  completed_at?: string;
+}
+
+export interface AdminDistillationRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  refinement_id: string;
+  model: string;
+  has_beneficiary: boolean;
+  content_preview?: string;
+  created_at: string;
+}
+
+export interface AdminProjectRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  name: string;
+  emoji?: string;
+  archived: boolean;
+  signal_count: number;
+  created_at: string;
+}
+
+export interface AdminRetrospectRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  user_display_name?: string;
+  state: string;
+  focus_dim?: string;
+  started_at: string;
+  finalized_at?: string;
+}
+
 export const wiseflow = {
   health: () => api<{ status: string; db?: string }>("/healthz", { noAuth: true }),
   metrics: () =>
@@ -337,9 +500,120 @@ export const wiseflow = {
 
   // 管理员专用 (服务端 /v1/admin/* 走 RequireAdmin). 非 admin 调用返回 403.
   admin: {
+    stats: {
+      overview: () => api<AdminOverview>("/v1/admin/stats/overview"),
+    },
+    inference: {
+      health: () => api<InferenceHealth>("/v1/admin/inference/health"),
+    },
+    signals: {
+      // 跨用户信号. 过滤: user_id / status / project_id / q / before 游标; 返回 has_more.
+      list: (params?: {
+        user_id?: string;
+        status?: "pending" | "done" | "failed";
+        project_id?: string;
+        q?: string;
+        limit?: number;
+        before?: string;
+      }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.status) sp.set("status", params.status);
+        if (params?.project_id) sp.set("project_id", params.project_id);
+        if (params?.q) sp.set("q", params.q);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        if (params?.before) sp.set("before", params.before);
+        const qs = sp.toString();
+        return api<AdminSignalListResponse>(`/v1/admin/signals${qs ? `?${qs}` : ""}`);
+      },
+      // 运营按需重推单条 (跨用户, 不校验 ownership). 202 + {signal_id, inference_status};
+      // 已 done → 409; 不存在 → 404. 给"按需 / recovery_exhausted 兜底".
+      reinfer: (id: string) =>
+        api<{ signal_id: string; inference_status: string }>(
+          `/v1/admin/signals/${id}/reinfer`,
+          { method: "POST" },
+        ),
+      // 批量重推全部 failed (可选 user_id 收窄到聚焦用户). 返回 {reinfered: N}.
+      reinferFailed: (params?: { user_id?: string }) =>
+        api<{ reinfered: number }>("/v1/admin/signals/reinfer", {
+          method: "POST",
+          body: params?.user_id ? { user_id: params.user_id } : {},
+        }),
+    },
+    subscriptions: {
+      // 按账号 (订阅数/推文数/轮询). user_id 过滤 = 该用户订阅的账号 (聚焦用户).
+      list: (params?: { user_id?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ accounts: AdminAccountRow[] }>(`/v1/admin/subscriptions${qs ? `?${qs}` : ""}`);
+      },
+    },
+    holdings: {
+      list: (params?: { user_id?: string; status?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.status) sp.set("status", params.status);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ holdings: AdminHoldingRow[] }>(`/v1/admin/holdings${qs ? `?${qs}` : ""}`);
+      },
+    },
+    gate: {
+      list: (params?: { user_id?: string; passed?: boolean; pool?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.passed !== undefined) sp.set("passed", String(params.passed));
+        if (params?.pool) sp.set("pool", params.pool);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ evaluations: AdminEvalRow[] }>(`/v1/admin/gate/evaluations${qs ? `?${qs}` : ""}`);
+      },
+    },
+    refinement: {
+      list: (params?: { user_id?: string; status?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.status) sp.set("status", params.status);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ sessions: AdminSessionRow[] }>(`/v1/admin/refinement/sessions${qs ? `?${qs}` : ""}`);
+      },
+    },
+    distillations: {
+      list: (params?: { user_id?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ distillations: AdminDistillationRow[] }>(`/v1/admin/distillations${qs ? `?${qs}` : ""}`);
+      },
+    },
+    projects: {
+      list: (params?: { user_id?: string; include_archived?: boolean; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.include_archived) sp.set("include_archived", "true");
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ projects: AdminProjectRow[] }>(`/v1/admin/projects${qs ? `?${qs}` : ""}`);
+      },
+    },
+    retrospects: {
+      list: (params?: { user_id?: string; state?: string; limit?: number }) => {
+        const sp = new URLSearchParams();
+        if (params?.user_id) sp.set("user_id", params.user_id);
+        if (params?.state) sp.set("state", params.state);
+        if (params?.limit) sp.set("limit", String(params.limit));
+        const qs = sp.toString();
+        return api<{ retrospects: AdminRetrospectRow[] }>(`/v1/admin/retrospects${qs ? `?${qs}` : ""}`);
+      },
+    },
     users: {
       list: () => api<{ users: AdminUserRow[]; total: number }>("/v1/admin/users"),
       get: (id: string) => api<User>(`/v1/admin/users/${id}`),
+      overview: (id: string) => api<AdminUserOverview>(`/v1/admin/users/${id}/overview`),
       setAdmin: (id: string, is_admin: boolean) =>
         api<User>(`/v1/admin/users/${id}/admin`, {
           method: "POST",

@@ -1,6 +1,8 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, ShieldCheck, ShieldOff } from "lucide-react";
+import { RefreshCw, ShieldCheck, ShieldOff, UserCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useFocusedUser } from "@/lib/focusedUser";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,9 +29,20 @@ import { wiseflow, type AdminUserRow, type User } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 
+function MiniStat({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-medium tabular-nums">{value}</p>
+    </div>
+  );
+}
+
 export function UsersPage() {
   const qc = useQueryClient();
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const { focus } = useFocusedUser();
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<AdminUserRow | null>(null);
 
@@ -37,6 +50,12 @@ export function UsersPage() {
   const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "users"],
     queryFn: wiseflow.admin.users.list,
+  });
+  // 选中某用户时拉其跨域旅程快照 (信号/追问/过会/持仓/订阅).
+  const overview = useQuery({
+    queryKey: ["admin", "user-overview", selected?.id],
+    queryFn: () => wiseflow.admin.users.overview(selected!.id),
+    enabled: !!selected,
   });
 
   const setAdmin = useMutation({
@@ -193,6 +212,52 @@ export function UsersPage() {
                   </div>
                 )}
               </dl>
+
+              <div className="rounded-md border bg-muted/30 p-3">
+                <p className="mb-2.5 text-xs font-medium text-muted-foreground">
+                  跨域旅程
+                </p>
+                {overview.isLoading && (
+                  <p className="text-xs text-muted-foreground">加载中…</p>
+                )}
+                {overview.data && (
+                  <div className="grid grid-cols-3 gap-x-3 gap-y-2.5">
+                    <MiniStat label="信号" value={overview.data.signals_total} />
+                    <MiniStat label="待推断" value={overview.data.signals_pending} />
+                    <MiniStat label="失败" value={overview.data.signals_failed} />
+                    <MiniStat label="追问完成" value={overview.data.refine_completed} />
+                    <MiniStat
+                      label="过会"
+                      value={`${overview.data.gate_passed}/${overview.data.gate_total}`}
+                    />
+                    <MiniStat label="签字" value={overview.data.commitments_signed} />
+                    <MiniStat label="活跃持仓" value={overview.data.holdings_active} />
+                    <MiniStat label="活跃订阅" value={overview.data.subscriptions_active} />
+                    <MiniStat
+                      label="最近信号"
+                      value={
+                        <span className="text-xs font-normal">
+                          {overview.data.last_signal_at
+                            ? formatDate(overview.data.last_signal_at)
+                            : "—"}
+                        </span>
+                      }
+                    />
+                  </div>
+                )}
+              </div>
+
+              <Button
+                className="w-full"
+                onClick={() => {
+                  focus({ id: selected.id, email: selected.email });
+                  setSelected(null);
+                  navigate("/signals");
+                }}
+              >
+                <UserCheck className="mr-1.5 h-4 w-4" />
+                进入该用户视角
+              </Button>
 
               <DialogFooter className="sm:justify-between">
                 {me?.id === selected.id ? (
