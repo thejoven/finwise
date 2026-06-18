@@ -275,32 +275,6 @@ func run() error {
 		}()
 	})
 
-	// 标的追踪 Hub (GET /v1/track/overview「订阅信息」段): 注入"取最新订阅推文"闭包,
-	// 复用订阅模块的 Feed —— asset 不反向 import subscription, 只收一份映射好的 TweetBrief.
-	assetSvc.SetLatestTweets(func(ctx context.Context, userID uuid.UUID, limit int) ([]assetmod.TweetBrief, error) {
-		items, _, _, err := subscriptionSvc.Feed(ctx, subscriptionmod.FeedInput{
-			UserID: userID, IncludeRead: true, Limit: limit,
-		})
-		if err != nil {
-			return nil, err
-		}
-		out := make([]assetmod.TweetBrief, 0, len(items))
-		for _, t := range items {
-			b := assetmod.TweetBrief{
-				ID: t.ID, Handle: t.Handle, Text: t.Text, Tags: t.Tags,
-				Relevance: t.Relevance, TweetCreatedAt: t.TweetCreatedAt,
-			}
-			if t.Summary != nil {
-				b.Summary = *t.Summary
-			}
-			if t.Category != nil {
-				b.Category = *t.Category
-			}
-			out = append(out, b)
-		}
-		return out, nil
-	})
-
 	// recommend: 主动信号推荐. P0「画像底座」派生 user_alpha_profile; P1「持仓相关情报」(W2)
 	// 加策展漏斗 (Curator: 对活跃命题召相关推文 → 粗排吃画像 → 硬配额 → 写 recommendations)
 	// + 承诺相关情报读/反馈端点. 策展 cron 化留后续 (当前经内部 /recommend/build 手动触发).
