@@ -14,7 +14,7 @@ import { SplashCover } from "@/features/splash";
 import { useAuth } from "@/core/auth/store";
 import { useNotifications } from "@/features/notifications";
 import { useActiveProject } from "@/features/project/store";
-import { useFavoriteAssets } from "@/features/track";
+import { useFavoriteAssets, useHiddenAssets } from "@/features/track";
 import { useAppearance } from "@/core/theme/store";
 import { useLanguage } from "@/core/i18n";
 import { resolveColors } from "@/core/theme";
@@ -80,6 +80,7 @@ export default function RootLayout() {
   const hydrateNotifications = useNotifications((s) => s.hydrate);
   const hydrateActiveProject = useActiveProject((s) => s.hydrate);
   const hydrateFavorites = useFavoriteAssets((s) => s.hydrate);
+  const hydrateHidden = useHiddenAssets((s) => s.hydrate);
   const hydrateAppearance = useAppearance((s) => s.hydrate);
   const hydrateLanguage = useLanguage((s) => s.hydrate);
   const [storageReady, setStorageReady] = useState(false);
@@ -105,6 +106,9 @@ export default function RootLayout() {
       hydrateFavorites().catch((err) => {
         console.warn("[favoriteAssets] hydrate failed:", err);
       }),
+      hydrateHidden().catch((err) => {
+        console.warn("[hiddenAssets] hydrate failed:", err);
+      }),
       hydrateAppearance().catch((err) => {
         console.warn("[appearance] hydrate failed:", err);
       }),
@@ -123,6 +127,7 @@ export default function RootLayout() {
     hydrateNotifications,
     hydrateActiveProject,
     hydrateFavorites,
+    hydrateHidden,
     hydrateAppearance,
     hydrateLanguage,
   ]);

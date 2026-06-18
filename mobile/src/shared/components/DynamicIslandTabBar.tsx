@@ -43,7 +43,7 @@ import { TabContextMenu, type TabMenuActions } from "./TabContextMenu";
  *
  * 形态: 一行里并排两颗悬浮玻璃药丸, 中间留缝、互不相连:
  *   · 左「分类格」(BottomCategoryCell): 当前分类 + ▴, 点击向上弹分类下拉框.
- *   · 右「tab 岛」: 三个 tab (订阅 · 财知 · 我) —— **上图标下文字**, 标签常驻可见.
+ *   · 右「tab 岛」: 四个 tab (订阅 · 财知 · 标的 · 我) —— **上图标下文字**, 标签常驻可见.
  *   整行水平居中悬浮, 脱离屏幕边缘.
  *
  * 分类格只在「财知」tab 显示 (见 GOAL 本轮调整): 分类筛选只作用于财知内的信箱/降噪/归档/统计
@@ -138,6 +138,9 @@ type TabMeta = { icon: SFSymbol; iconSelected: SFSymbol };
 const TAB_META: Record<string, TabMeta> = {
   subscriptions: { icon: "newspaper", iconSelected: "newspaper.fill" },
   caizhi: { icon: "books.vertical", iconSelected: "books.vertical.fill" },
+  // 标的: 价格走势曲线 —— 此页内核就是"发现后股价怎么走". 该 symbol 无 .fill 变体, 选中靠 ink
+  //   tint + 玻璃透镜滑入, 故 icon/iconSelected 同名 (避免猜 .fill 渲染成空).
+  track: { icon: "chart.line.uptrend.xyaxis", iconSelected: "chart.line.uptrend.xyaxis" },
   profile: { icon: "person", iconSelected: "person.fill" },
 };
 

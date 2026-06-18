@@ -8,8 +8,7 @@
     "inbox": "信箱",
     "distill": "降噪",
     "archive": "归档",
-    "stats": "统计",
-    "targets": "标的"
+    "stats": "统计"
   },
   "inbox": {
     "thisWeek": "本周记录",

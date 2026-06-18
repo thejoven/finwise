@@ -15,8 +15,7 @@
     "distill": "Distill",
     "archive": "Archive",
     "stats": "Stats",
-    "notifications": "Notifications",
-    "targets": "Assets"
+    "notifications": "Notifications"
   },
   "colophon": {
     "navTitle": "Colophon",

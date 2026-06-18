@@ -11,16 +11,15 @@ export { CompactTrackStrip } from "./CompactTrackStrip";
 export { SignalTrackSection } from "./SignalTrackSection";
 export { CommitmentTrackHero } from "./CommitmentTrackHero";
 
-export { TrackHubView } from "./TrackHubView";
-
 export {
   useSignalTrack,
   useCommitmentTrack,
   useAssetPrices,
   useAssetTheses,
-  useTrackOverview,
+  useTrackedAssets,
 } from "./hooks";
 
 export { useFavoriteAssets, useIsFavorite } from "./favorites";
+export { useHiddenAssets, useIsHidden } from "./hidden";
 
 export { changeColor, formatPct, formatClose, rangePct } from "./format";

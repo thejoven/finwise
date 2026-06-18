@@ -13,7 +13,7 @@ import {
   getAssetTheses,
   getCommitmentTrack,
   getSignalTrack,
-  getTrackOverview,
+  getTrackedAssets,
 } from "@/core/api/track";
 
 const PRICE_STALE = 5 * 60_000;
@@ -55,16 +55,16 @@ export function useAssetTheses(assetId: string | undefined) {
   });
 }
 
-// ───────────────────────── Hub 着陆页: 三段聚合 ─────────────────────────
+// ───────────────────────── 标的追踪页: 关联标的 ─────────────────────────
 
 /**
- * useTrackOverview — 标的追踪 Hub 数据源. 一次 GET /v1/track/overview 取齐
- * 关联标的 / 信号 / 订阅推文三段 (各按"最新"倒序). 后端已聚合, 客户端不再翻页扫信号.
+ * useTrackedAssets — 标的追踪页数据源. GET /v1/track/assets 取用户碰过的全部标的
+ * (按 last_touched 倒序). 信号/订阅各有专门端点, 不在此.
  */
-export function useTrackOverview(limit = 20) {
+export function useTrackedAssets() {
   return useQuery({
-    queryKey: ["track", "overview", limit],
-    queryFn: () => getTrackOverview(limit),
+    queryKey: ["track", "assets"],
+    queryFn: () => getTrackedAssets(),
     staleTime: PRICE_STALE,
   });
 }

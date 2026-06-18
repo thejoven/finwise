@@ -7,7 +7,7 @@ import { type SFSymbol } from "expo-symbols";
  *   摆进原生菜单项. 这样 @expo/ui (仅 iOS) 全部收在 .ios 文件里, 共享层不碰它.
  */
 export interface TabMenuActions {
-  /** 跳到「财知」某子页 (0 信箱 / 1 降噪 / 2 标的 / 3 归档 / 4 统计). */
+  /** 跳到「财知」某子页 (0 信箱 / 1 降噪 / 2 归档 / 3 统计). */
   jumpCaizhi: (page: number) => void;
   /** 「我」→ 编辑资料. */
   editProfile: () => void;

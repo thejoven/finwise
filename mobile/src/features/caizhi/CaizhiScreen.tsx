@@ -11,12 +11,11 @@ import { InboxView } from "@/features/inbox";
 import { DenoiseView } from "@/features/capture";
 import { ArchiveView } from "@/features/archive";
 import { AttentionView } from "@/features/attention";
-import { TrackHubView } from "@/features/track";
+import { SegmentedTabs } from "@/shared/components";
 import { haptic } from "@/core/haptics";
 import { theme } from "@/core/theme";
 
 import { CaizhiHeader } from "./CaizhiHeader";
-import { SegmentedTabs } from "./SegmentedTabs";
 import { useCaizhiNav } from "./store";
 
 /**
@@ -42,7 +41,6 @@ export default function CaizhiScreen() {
     () => [
       t("caizhi.tabs.inbox"),
       t("caizhi.tabs.distill"),
-      t("caizhi.tabs.targets"),
       t("caizhi.tabs.archive"),
       t("caizhi.tabs.stats"),
     ],
@@ -96,9 +94,6 @@ export default function CaizhiScreen() {
         </View>
         <View key="signals" style={styles.page} collapsable={false}>
           <DenoiseView />
-        </View>
-        <View key="targets" style={styles.page} collapsable={false}>
-          <TrackHubView />
         </View>
         <View key="archive" style={styles.page} collapsable={false}>
           <ArchiveView />

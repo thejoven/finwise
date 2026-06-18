@@ -1,4 +1,19 @@
 {
+  "nameplate": "標的追蹤",
+  "tabs": {
+    "all": "所有標的",
+    "favorites": "收藏標的",
+    "hidden": "已隱藏"
+  },
+  "favorite": "收藏",
+  "unfavorite": "取消收藏",
+  "hide": "隱藏",
+  "unhide": "取消隱藏",
+  "empty": {
+    "all": "還沒有標的。當某條信號帶上具體標的，就會出現在這裡。",
+    "favorites": "還沒有收藏的標的。點行尾的星標即可收藏。",
+    "hidden": "沒有隱藏的標的。"
+  },
   "section": {
     "label": "標的走勢",
     "meta": "TRACK",
@@ -69,30 +84,8 @@
   "archive": {
     "since": "放下至今"
   },
-  "hub": {
-    "intro": "你在追蹤的一切，最新在前。",
-    "loading": "讀取追蹤…",
-    "error": "追蹤暫時讀不到。",
-    "empty": "還沒有可追蹤的內容。當某條信號帶上具體標的，就會出現在這裡。",
-    "more": "+{{count}}",
-    "thesisCount_other": "{{count}} 個命題",
-    "noPrice": "暫無價",
-    "relevance": "相關 {{pct}}%",
-    "assets": {
-      "label": "關聯標的",
-      "meta": "ASSETS",
-      "empty": "還沒有在場的標的。"
-    },
-    "signals": {
-      "label": "信號",
-      "meta": "SIGNALS",
-      "empty": "還沒有帶標的的信號。",
-      "noSummary": "未命名信號"
-    },
-    "tweets": {
-      "label": "訂閱資訊",
-      "meta": "FEED",
-      "empty": "還沒有訂閱推文。"
-    }
-  }
+  "loading": "讀取追蹤…",
+  "error": "追蹤暫時讀不到。",
+  "thesisCount_other": "{{count}} 個命題",
+  "noPrice": "暫無價"
 }

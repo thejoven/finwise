@@ -11,6 +11,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  Eye,
+  EyeOff,
   Pencil,
   Plus,
   Search,
@@ -61,7 +63,9 @@ export type IconName =
   | "archive"
   | "restore"
   | "star"
-  | "starFill";
+  | "starFill"
+  | "eye"
+  | "eyeOff";
 
 /** 语义名 → SF Symbol (iOS) + lucide 组件 (兜底). SF 名见 Apple「SF Symbols」app. */
 const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
@@ -83,6 +87,9 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   // 收藏: iOS 用 SF 实心/描边两态; lucide 兜底两者都是描边 Star (Android 次要, 接受).
   star: { sf: "star", lucide: Star },
   starFill: { sf: "star.fill", lucide: Star },
+  // 隐藏 / 取消隐藏 (标的追踪页). eye.slash = 藏起来, eye = 重新显示.
+  eyeOff: { sf: "eye.slash", lucide: EyeOff },
+  eye: { sf: "eye", lucide: Eye },
 };
 
 /** lucide strokeWidth → SF Symbol weight. 项目描边只用 1.5 / 1.75 / 2. */

@@ -8,8 +8,7 @@
     "inbox": "Inbox",
     "distill": "Distill",
     "archive": "Archive",
-    "stats": "Stats",
-    "targets": "Assets"
+    "stats": "Stats"
   },
   "inbox": {
     "thisWeek": "This Week",

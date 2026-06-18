@@ -1,4 +1,19 @@
 {
+  "nameplate": "标的追踪",
+  "tabs": {
+    "all": "所有标的",
+    "favorites": "收藏标的",
+    "hidden": "已隐藏"
+  },
+  "favorite": "收藏",
+  "unfavorite": "取消收藏",
+  "hide": "隐藏",
+  "unhide": "取消隐藏",
+  "empty": {
+    "all": "还没有标的。当某条信号带上具体标的，就会出现在这里。",
+    "favorites": "还没有收藏的标的。点行尾的星标即可收藏。",
+    "hidden": "没有隐藏的标的。"
+  },
   "section": {
     "label": "标的走势",
     "meta": "TRACK",
@@ -69,30 +84,8 @@
   "archive": {
     "since": "放下至今"
   },
-  "hub": {
-    "intro": "你在追踪的一切，最新在前。",
-    "loading": "读取追踪…",
-    "error": "追踪暂时读不到。",
-    "empty": "还没有可追踪的内容。当某条信号带上具体标的，就会出现在这里。",
-    "more": "+{{count}}",
-    "thesisCount_other": "{{count}} 个命题",
-    "noPrice": "暂无价",
-    "relevance": "相关 {{pct}}%",
-    "assets": {
-      "label": "关联标的",
-      "meta": "ASSETS",
-      "empty": "还没有在场的标的。"
-    },
-    "signals": {
-      "label": "信号",
-      "meta": "SIGNALS",
-      "empty": "还没有带标的的信号。",
-      "noSummary": "未命名信号"
-    },
-    "tweets": {
-      "label": "订阅信息",
-      "meta": "FEED",
-      "empty": "还没有订阅推文。"
-    }
-  }
+  "loading": "读取追踪…",
+  "error": "追踪暂时读不到。",
+  "thesisCount_other": "{{count}} 个命题",
+  "noPrice": "暂无价"
 }

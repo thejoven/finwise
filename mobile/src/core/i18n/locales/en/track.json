@@ -1,4 +1,19 @@
 {
+  "nameplate": "Tracker",
+  "tabs": {
+    "all": "All",
+    "favorites": "Favorites",
+    "hidden": "Hidden"
+  },
+  "favorite": "Favorite",
+  "unfavorite": "Unfavorite",
+  "hide": "Hide",
+  "unhide": "Unhide",
+  "empty": {
+    "all": "No assets yet. Catch a signal with a named asset and it shows up here.",
+    "favorites": "No favorites yet. Tap the star on a row to add one.",
+    "hidden": "Nothing hidden."
+  },
   "section": {
     "label": "Price path",
     "meta": "TRACK",
@@ -69,31 +84,9 @@
   "archive": {
     "since": "Since you let go"
   },
-  "hub": {
-    "intro": "Everything you're tracking — freshest first.",
-    "loading": "Loading your tracker…",
-    "error": "Couldn't load your tracker right now.",
-    "empty": "Nothing to track yet. Catch a signal with a named asset and it shows up here.",
-    "more": "+{{count}}",
-    "thesisCount_one": "{{count}} call",
-    "thesisCount_other": "{{count}} calls",
-    "noPrice": "No price yet",
-    "relevance": "{{pct}}% match",
-    "assets": {
-      "label": "Related assets",
-      "meta": "ASSETS",
-      "empty": "No asset in play yet."
-    },
-    "signals": {
-      "label": "Signals",
-      "meta": "SIGNALS",
-      "empty": "No signal carries a target yet.",
-      "noSummary": "Untitled signal"
-    },
-    "tweets": {
-      "label": "Your feed",
-      "meta": "FEED",
-      "empty": "No subscription posts yet."
-    }
-  }
+  "loading": "Loading your tracker…",
+  "error": "Couldn't load your tracker right now.",
+  "thesisCount_one": "{{count}} call",
+  "thesisCount_other": "{{count}} calls",
+  "noPrice": "No price yet"
 }

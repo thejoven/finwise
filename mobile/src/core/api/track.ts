@@ -150,14 +150,14 @@ export function isTrackable(track: Pick<Track, "asset" | "bars">): boolean {
   return track.asset.status !== "untrackable" && track.bars.length > 0;
 }
 
-// ───── Hub 聚合 (标的追踪着陆页) ─────
+// ───── 标的追踪页: 关联标的 ─────
 
 /**
- * Hub「关联标的」一项: 标的 meta + 行情状态 + 最新价 + 发现至今涨跌 + 命题数.
+ * 「关联标的」一项: 标的 meta + 行情状态 + 最新价 + 发现至今涨跌 + 命题数.
  * 不带日线 (digest, 不画 sparkline; 完整曲线在 /asset/[id] 专页).
  * untrackable 或未定价时 latest_close/latest_date/pct_since_discovery 缺省 (omitempty).
  */
-export const TrackOverviewAsset = z.object({
+export const TrackedAsset = z.object({
   asset: TrackAsset,
   price_status: z.string().optional().default(""),
   price_synced_at: z.string().nullable().optional(),
@@ -168,52 +168,14 @@ export const TrackOverviewAsset = z.object({
   // 小数. 0.15 = +15%. 见 features/track/format.formatPct.
   pct_since_discovery: z.number().nullable().optional(),
 });
-export type TrackOverviewAsset = z.infer<typeof TrackOverviewAsset>;
+export type TrackedAsset = z.infer<typeof TrackedAsset>;
 
-/** Hub「信号」行内轻量标的标签 (无 id, 仅展示; 整行下钻到 /signal/[id]). */
-export const TrackOverviewSignalAsset = z.object({
-  canonical: z.string(),
-  name: z.string(),
-  market: z.string(),
-  status: z.string(),
+const TrackedAssetsResponse = z.object({
+  assets: z.array(TrackedAsset).default([]),
 });
-export type TrackOverviewSignalAsset = z.infer<typeof TrackOverviewSignalAsset>;
 
-/** Hub「信号」一项: 最近带标的的信号 + 其归一后的标的. */
-export const TrackOverviewSignal = z.object({
-  signal_id: z.string().uuid(),
-  captured_at: z.string(),
-  summary: z.string().optional().default(""),
-  assets: z.array(TrackOverviewSignalAsset).default([]),
-});
-export type TrackOverviewSignal = z.infer<typeof TrackOverviewSignal>;
-
-/** Hub「订阅信息」一项: 最新订阅推文. summary 空时 UI 用 text 兜底; relevance 可做角标. */
-export const TrackOverviewTweet = z.object({
-  id: z.string(),
-  handle: z.string(),
-  text: z.string().optional().default(""),
-  summary: z.string().nullable().optional(),
-  category: z.string().nullable().optional(),
-  tags: z.array(z.string()).nullable().optional(),
-  // 相关度 (小数 0..1); 缺省 = 未分类推文.
-  relevance: z.number().nullable().optional(),
-  tweet_created_at: z.string(),
-});
-export type TrackOverviewTweet = z.infer<typeof TrackOverviewTweet>;
-
-/** 标的追踪 Hub 着陆页: 一次取齐三段 (各按"最新"倒序). */
-export const TrackOverview = z.object({
-  assets: z.array(TrackOverviewAsset).default([]),
-  signals: z.array(TrackOverviewSignal).default([]),
-  tweets: z.array(TrackOverviewTweet).default([]),
-});
-export type TrackOverview = z.infer<typeof TrackOverview>;
-
-/** GET /v1/track/overview —— Hub 三段聚合 (user-scoped, Bearer). */
-export async function getTrackOverview(limit = 20): Promise<TrackOverview> {
-  const json = await api
-    .get("v1/track/overview", { searchParams: { limit: String(limit) } })
-    .json();
-  return TrackOverview.parse(json);
+/** GET /v1/track/assets —— 标的追踪页「关联标的」: 用户碰过的全部标的 (user-scoped, Bearer). */
+export async function getTrackedAssets(): Promise<TrackedAsset[]> {
+  const json = await api.get("v1/track/assets").json();
+  return TrackedAssetsResponse.parse(json).assets;
 }

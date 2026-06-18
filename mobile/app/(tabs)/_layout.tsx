@@ -3,15 +3,19 @@ import { Tabs } from "expo-router";
 import { DynamicIslandTabBar } from "@/shared/components";
 
 /**
- * 底部 Tab: 订阅 · 财知 · 我.
+ * 底部 Tab: 订阅 · 财知 · 标的 · 我.
  *
  * 「订阅」(subscriptions) 在财知左侧 — 顶替当年「报纸」占位的位置 (报纸当年就是
  *   "财知左侧的新栏目"), 现在是真功能: 订阅 X 账号 → AI 标签/总结 → 阅读/已读 → 转信号.
  *   启动仍落财知 (initialRouteName 不变).
  *
+ * 「标的」(track) 在财知右侧 — 标的追踪 Hub 由原财知子页提升为独立全屏 tab (见 TrackScreen):
+ *   内部「标的 / 信号 / 订阅」三段改 PagerView 左右滑动. 提升出来后内层横滑不再与外层冲突
+ *   (底部 tab 切换走点按/横扫岛体, 非内容区横滑).
+ *
  * 此前整合 (见 GOAL): 旧「收件箱/降噪/档案」三个 tab 合并进「财知」(caizhi) 一个 tab,
- *   变成财知页内左右滑动的子页 (信箱/降噪/归档); 本轮「统计」也从底部 tab 并入财知, 成为
- *   第四张子页 (见 CaizhiScreen) —— 故底部不再有独立的「统计」tab.
+ *   变成财知页内左右滑动的子页 (信箱/降噪/归档); 「统计」也从底部 tab 并入财知, 成为
+ *   财知的子页 (见 CaizhiScreen) —— 故底部不再有独立的「统计」tab.
  *
  * 视觉走"灵动岛"风格 —— 一颗悬浮的墨色胶囊, 选中项展开露出标签, 切换时灵巧伸缩.
  *   整套图标 / 标签 / 配色 / 动画都在 `DynamicIslandTabBar` 里定义, 本文件只声明
@@ -41,6 +45,7 @@ export default function TabLayout() {
     >
       <Tabs.Screen name="subscriptions" />
       <Tabs.Screen name="caizhi" />
+      <Tabs.Screen name="track" />
       <Tabs.Screen name="profile" />
     </Tabs>
   );

@@ -12,7 +12,7 @@ import { create } from "zustand";
  * @see DynamicIslandTabBar — 生产端 (长按「财知」菜单 → requestPage)
  */
 interface CaizhiNavState {
-  /** 待跳转的子页 index (0 信箱 / 1 降噪 / 2 标的 / 3 归档 / 4 统计); null = 无 pending. */
+  /** 待跳转的子页 index (0 信箱 / 1 降噪 / 2 归档 / 3 统计); null = 无 pending. */
   pendingPage: number | null;
   /** 底栏请求跳到某子页. */
   requestPage: (index: number) => void;

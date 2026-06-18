@@ -50,19 +50,14 @@ function itemsFor(routeName: string, a: TabMenuActions, t: TFunction): ReactNode
             onPress={() => a.jumpCaizhi(1)}
           />
           <Button
-            systemImage="list.star"
-            label={t("components.tabMenu.targets")}
-            onPress={() => a.jumpCaizhi(2)}
-          />
-          <Button
             systemImage="archivebox"
             label={t("components.tabMenu.archive")}
-            onPress={() => a.jumpCaizhi(3)}
+            onPress={() => a.jumpCaizhi(2)}
           />
           <Button
             systemImage="chart.line.uptrend.xyaxis"
             label={t("components.tabMenu.stats")}
-            onPress={() => a.jumpCaizhi(4)}
+            onPress={() => a.jumpCaizhi(3)}
           />
         </>
       );

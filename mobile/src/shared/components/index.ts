@@ -21,6 +21,8 @@ export type { DoubleRuleProps } from "./DoubleRule";
 export { SectionHeader } from "./SectionHeader";
 export type { SectionHeaderProps } from "./SectionHeader";
 
+export { SegmentedTabs } from "./SegmentedTabs";
+
 export { RomanList } from "./RomanList";
 export type { RomanListProps, RomanListItem } from "./RomanList";
 
