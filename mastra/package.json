@@ -1,8 +1,8 @@
 {
-  "name": "wiseflow-mastra",
+  "name": "alphax-mastra",
   "version": "0.1.0",
   "private": true,
-  "description": "LLM orchestration for WiseFlow Engine — Analyst Agent + iii SDK worker.",
+  "description": "LLM orchestration for AlphaX Engine — Analyst Agent + iii SDK worker.",
   "type": "module",
   "engines": {
     "node": ">=20"

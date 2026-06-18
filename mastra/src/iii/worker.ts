@@ -4,8 +4,8 @@
  *   • 5 个 HTTP shim — Go outbox POST 进来, shim 内部 enqueue 到对应队列.
  *
  * 函数命名:
- *   - 处理器: wiseflow::<name>             — queue trigger
- *   - HTTP 入口: wiseflow::http::<event>    — http trigger, 立即 enqueue 后返 202
+ *   - 处理器: alphax::<name>             — queue trigger
+ *   - HTTP 入口: alphax::http::<event>    — http trigger, 立即 enqueue 后返 202
  *
  * 队列与原 NATS subject 的映射:
  *   signal.captured       → q:signal-inference   → runSignalInference
@@ -64,7 +64,7 @@ export interface WorkerHandle {
 
 export async function startIiiWorker(): Promise<WorkerHandle> {
   const iii: ISdk = registerWorker(config.iiiUrl, {
-    workerName: "wiseflow-mastra",
+    workerName: "alphax-mastra",
   });
   log("info", "iii worker connecting", { url: config.iiiUrl });
 
@@ -88,7 +88,7 @@ export async function startIiiWorker(): Promise<WorkerHandle> {
 function registerProcessors(iii: ISdk): void {
   // signal.captured → signal-inference
   iii.registerFunction(
-    "wiseflow::signal-inference",
+    "alphax::signal-inference",
     async (payload: unknown) => {
       const parsed = SignalCapturedPayload.safeParse(payload);
       if (!parsed.success) {
@@ -117,12 +117,12 @@ function registerProcessors(iii: ISdk): void {
   );
   iii.registerTrigger({
     type: "durable:subscriber",
-    function_id: "wiseflow::signal-inference",
+    function_id: "alphax::signal-inference",
     config: { queue: QUEUES.signalInference },
   });
 
   // refinement.{started,answered} → refinement-step
-  iii.registerFunction("wiseflow::refinement-step", async (payload: unknown) => {
+  iii.registerFunction("alphax::refinement-step", async (payload: unknown) => {
     // 同时接受 started + answered, 用 union 校验.
     const parsed = RefinementStartedPayload.safeParse(payload).success
       ? RefinementStartedPayload.safeParse(payload)
@@ -164,13 +164,13 @@ function registerProcessors(iii: ISdk): void {
   });
   iii.registerTrigger({
     type: "durable:subscriber",
-    function_id: "wiseflow::refinement-step",
+    function_id: "alphax::refinement-step",
     config: { queue: QUEUES.refinementStep },
   });
 
   // refinement.completed → attention-analyze
   iii.registerFunction(
-    "wiseflow::attention-analyze",
+    "alphax::attention-analyze",
     async (payload: unknown) => {
       const parsed = RefinementCompletedPayload.safeParse(payload);
       if (!parsed.success) {
@@ -203,13 +203,13 @@ function registerProcessors(iii: ISdk): void {
   );
   iii.registerTrigger({
     type: "durable:subscriber",
-    function_id: "wiseflow::attention-analyze",
+    function_id: "alphax::attention-analyze",
     config: { queue: QUEUES.attentionAnalyze },
   });
 
   // refinement.completed → post-refinement (降噪页: distiller + beneficiary).
   // 与 attention-analyze 并行消费同一事件 (见 HTTP_PATHS 扇出).
-  iii.registerFunction("wiseflow::post-refinement", async (payload: unknown) => {
+  iii.registerFunction("alphax::post-refinement", async (payload: unknown) => {
     const parsed = RefinementCompletedPayload.safeParse(payload);
     if (!parsed.success) {
       log("error", "post-refinement: bad payload", {
@@ -245,13 +245,13 @@ function registerProcessors(iii: ISdk): void {
   });
   iii.registerTrigger({
     type: "durable:subscriber",
-    function_id: "wiseflow::post-refinement",
+    function_id: "alphax::post-refinement",
     config: { queue: QUEUES.postRefinement },
   });
 
   // gate.passed → commitment-draft
   iii.registerFunction(
-    "wiseflow::commitment-draft",
+    "alphax::commitment-draft",
     async (payload: unknown) => {
       const parsed = GatePassedPayload.safeParse(payload);
       if (!parsed.success) {
@@ -286,7 +286,7 @@ function registerProcessors(iii: ISdk): void {
   );
   iii.registerTrigger({
     type: "durable:subscriber",
-    function_id: "wiseflow::commitment-draft",
+    function_id: "alphax::commitment-draft",
     config: { queue: QUEUES.commitmentDraft },
   });
 }
@@ -309,7 +309,7 @@ const HTTP_PATHS: HttpShim[] = [
     targets: [
       {
         queue: QUEUES.signalInference,
-        processorFnId: "wiseflow::signal-inference",
+        processorFnId: "alphax::signal-inference",
       },
     ],
   },
@@ -318,7 +318,7 @@ const HTTP_PATHS: HttpShim[] = [
     targets: [
       {
         queue: QUEUES.refinementStep,
-        processorFnId: "wiseflow::refinement-step",
+        processorFnId: "alphax::refinement-step",
       },
     ],
   },
@@ -327,7 +327,7 @@ const HTTP_PATHS: HttpShim[] = [
     targets: [
       {
         queue: QUEUES.refinementStep,
-        processorFnId: "wiseflow::refinement-step",
+        processorFnId: "alphax::refinement-step",
       },
     ],
   },
@@ -336,11 +336,11 @@ const HTTP_PATHS: HttpShim[] = [
     targets: [
       {
         queue: QUEUES.attentionAnalyze,
-        processorFnId: "wiseflow::attention-analyze",
+        processorFnId: "alphax::attention-analyze",
       },
       {
         queue: QUEUES.postRefinement,
-        processorFnId: "wiseflow::post-refinement",
+        processorFnId: "alphax::post-refinement",
       },
     ],
   },
@@ -349,7 +349,7 @@ const HTTP_PATHS: HttpShim[] = [
     targets: [
       {
         queue: QUEUES.commitmentDraft,
-        processorFnId: "wiseflow::commitment-draft",
+        processorFnId: "alphax::commitment-draft",
       },
     ],
   },
@@ -357,7 +357,7 @@ const HTTP_PATHS: HttpShim[] = [
 
 function registerHttpShims(iii: ISdk): void {
   for (const shim of HTTP_PATHS) {
-    const fnId = `wiseflow::http::${slug(shim.path)}`;
+    const fnId = `alphax::http::${slug(shim.path)}`;
     iii.registerFunction(fnId, async (req: { body: unknown }) => {
       try {
         // 扇出: 同一事件依次 enqueue 到该 path 的每个目标队列.

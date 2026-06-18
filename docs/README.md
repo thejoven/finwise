@@ -9,10 +9,10 @@
 ## 目录结构
 
 ```
-wiseflow-bundle/
+alphax-bundle/
 ├── 产品简介.md                            ← 5 分钟产品简介(从这里开始)
 ├── 产品文档/                              ← 产品哲学与五层架构(7 份)
-│   ├── 00_总览_WiseFlow_Engine.md
+│   ├── 00_总览_AlphaX_Engine.md
 │   ├── 01_第一层_信号捕捉.md
 │   ├── 02_第二层_模式识别与推演训练.md
 │   ├── 03_第三层_确定性评估.md
@@ -34,7 +34,7 @@ wiseflow-bundle/
 │   └── (phase-1/2/3 建造任务单 M1-M11 已建完, 归档至 归档/GOAL/)
 │
 ├── 原型/
-│   └── wiseflow-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
+│   └── alphax-prototype-v4.html          # 3 屏可交互原型(浏览器打开)
 │
 └── 归档/                                   ← 跟不上更新速度的历史文档(见其 README)
     ├── PROGRESS.md / *.html                # 冻结于 5/25-5/26 的进度面板与分析
@@ -48,9 +48,9 @@ wiseflow-bundle/
 
 ### 如果你是产品方 / 投资方
 1. `产品简介.md` — 5 分钟读完: 产品是什么、长什么样、凭什么
-2. `产品文档/00_总览_WiseFlow_Engine.md` — 五层架构总览
+2. `产品文档/00_总览_AlphaX_Engine.md` — 五层架构总览
 3. `产品文档/06_产品哲学.md` — 反直觉设计原则
-4. 用浏览器打开 `原型/wiseflow-prototype-v4.html` — 3 屏交互原型
+4. 用浏览器打开 `原型/alphax-prototype-v4.html` — 3 屏交互原型
 
 ### 如果你是技术合作者
 1. 先读产品文档六份 — 理解世界观

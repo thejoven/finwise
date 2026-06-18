@@ -25,8 +25,8 @@ import (
 	"os"
 	"time"
 
-	"wiseflow/server/internal/infra/db"
-	accountmod "wiseflow/server/internal/module/account"
+	"alphax/server/internal/infra/db"
+	accountmod "alphax/server/internal/module/account"
 )
 
 func main() {

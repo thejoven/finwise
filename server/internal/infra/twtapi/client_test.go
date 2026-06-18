@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 func TestClientStatusMapping(t *testing.T) {

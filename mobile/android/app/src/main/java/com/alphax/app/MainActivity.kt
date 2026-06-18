@@ -1,4 +1,4 @@
-package com.wiseflow.app
+package com.alphax.app
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

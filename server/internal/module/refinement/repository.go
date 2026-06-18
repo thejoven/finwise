@@ -21,8 +21,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/infra/db"
 )
 
 var (

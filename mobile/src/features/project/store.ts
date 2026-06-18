@@ -18,7 +18,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-const STORAGE_KEY = "wiseflow.activeProject.v1";
+const STORAGE_KEY = "alphax.activeProject.v1";
 
 interface ActiveProjectState {
   hydrated: boolean;

@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"wiseflow/server/internal/infra/metrics"
+	"alphax/server/internal/infra/metrics"
 )
 
 var ErrNotConfigured = errors.New("mastra http url not set")

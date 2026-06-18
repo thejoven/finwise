@@ -11,7 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -19,7 +19,7 @@ export function SubscriptionsPage() {
   const { focused } = useFocusedUser();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "subscriptions", focused?.id ?? "all"],
-    queryFn: () => wiseflow.admin.subscriptions.list({ user_id: focused?.id }),
+    queryFn: () => alphax.admin.subscriptions.list({ user_id: focused?.id }),
   });
   const accounts = data?.accounts ?? [];
 

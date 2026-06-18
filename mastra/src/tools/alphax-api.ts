@@ -1,5 +1,5 @@
 /**
- * wiseflow-api — HTTP client for the Go server's /v1/internal/* surface.
+ * alphax-api — HTTP client for the Go server's /v1/internal/* surface.
  * Used by the workflow to write inferences back.
  *
  * 重试策略 (M2 critical fix):
@@ -15,14 +15,14 @@ import type { Question, PriorRound } from "../agents/socratic.js";
 import type { Thesis } from "../agents/narrator.js";
 import type { SearchResult } from "./exa-search.js";
 
-export class WiseFlowApiError extends Error {
+export class AlphaXApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
     public readonly body: string,
   ) {
     super(message);
-    this.name = "WiseFlowApiError";
+    this.name = "AlphaXApiError";
   }
 }
 
@@ -37,7 +37,7 @@ const MAX_HTTP_ATTEMPTS = 3;
 const HTTP_TIMEOUT_MS = 10_000;
 
 export async function postInference(args: PostInferenceArgs): Promise<void> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/inferences`;
+  const url = `${config.alphaxApiUrl}/v1/internal/inferences`;
   const body = JSON.stringify({
     signal_id: args.signal_id,
     user_id: args.user_id,
@@ -80,7 +80,7 @@ async function postOnce(url: string, body: string): Promise<void> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new WiseFlowApiError(
+      throw new AlphaXApiError(
         `POST /v1/internal/inferences failed: ${res.status}`,
         res.status,
         text,
@@ -92,7 +92,7 @@ async function postOnce(url: string, body: string): Promise<void> {
 }
 
 function shouldRetry(err: unknown): boolean {
-  if (err instanceof WiseFlowApiError) return err.status >= 500;
+  if (err instanceof AlphaXApiError) return err.status >= 500;
   // AbortError / network error / DNS / connection refused → retry.
   return true;
 }
@@ -120,7 +120,7 @@ export interface PostRefinementQuestionArgs {
 export async function postRefinementQuestion(
   args: PostRefinementQuestionArgs,
 ): Promise<void> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/refinement/sessions/${args.session_id}/question`;
+  const url = `${config.alphaxApiUrl}/v1/internal/refinement/sessions/${args.session_id}/question`;
   const body = JSON.stringify({
     user_id: args.user_id,
     round: args.round,
@@ -171,7 +171,7 @@ export async function getRefinementSession(args: {
   session_id: string;
   user_id: string;
 }): Promise<SessionView> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/refinement/sessions/${args.session_id}?user_id=${encodeURIComponent(args.user_id)}`;
+  const url = `${config.alphaxApiUrl}/v1/internal/refinement/sessions/${args.session_id}?user_id=${encodeURIComponent(args.user_id)}`;
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), HTTP_TIMEOUT_MS);
   try {
@@ -181,7 +181,7 @@ export async function getRefinementSession(args: {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new WiseFlowApiError(
+      throw new AlphaXApiError(
         `GET refinement session failed: ${res.status}`,
         res.status,
         text,
@@ -209,7 +209,7 @@ export interface PostCommitmentDraftResult {
 export async function postCommitmentDraft(
   args: PostCommitmentDraftArgs,
 ): Promise<PostCommitmentDraftResult> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/commitments/draft`;
+  const url = `${config.alphaxApiUrl}/v1/internal/commitments/draft`;
   const body = JSON.stringify({
     user_id: args.user_id,
     evaluation_id: args.evaluation_id,
@@ -248,7 +248,7 @@ async function postOnceReturning<T>(url: string, body: string): Promise<T> {
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");
-      throw new WiseFlowApiError(
+      throw new AlphaXApiError(
         `POST ${url} failed: ${res.status}`,
         res.status,
         text,
@@ -301,7 +301,7 @@ export interface PostResearchArgs {
 }
 
 export async function postResearch(args: PostResearchArgs): Promise<void> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/research`;
+  const url = `${config.alphaxApiUrl}/v1/internal/research`;
   const body = JSON.stringify({
     user_id: args.user_id,
     scope: args.scope,
@@ -330,7 +330,7 @@ export interface PostAttentionArgs {
 }
 
 export async function postAttention(args: PostAttentionArgs): Promise<void> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/attention`;
+  const url = `${config.alphaxApiUrl}/v1/internal/attention`;
   await retryingPost(url, JSON.stringify(args));
 }
 
@@ -358,7 +358,7 @@ export interface PostDistillationArgs {
 export async function postDistillation(
   args: PostDistillationArgs,
 ): Promise<void> {
-  const url = `${config.wiseflowApiUrl}/v1/internal/distillation`;
+  const url = `${config.alphaxApiUrl}/v1/internal/distillation`;
   const body = JSON.stringify({
     refinement_id: args.refinement_id,
     user_id: args.user_id,

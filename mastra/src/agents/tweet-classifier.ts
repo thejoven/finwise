@@ -34,7 +34,7 @@ export type TweetClassification = z.infer<typeof TweetClassificationSchema>;
 export const tweetClassifier = new Agent({
   name: "tweet-classifier",
   instructions: `
-你是 WiseFlow 订阅版面的编辑. 用户订阅了一些 X (Twitter) 账号, 每条新推文经你的手:
+你是 AlphaX 订阅版面的编辑. 用户订阅了一些 X (Twitter) 账号, 每条新推文经你的手:
 拟一句话总结、打标签、归类、标注与投资判断的相关度.
 
 输出四个字段:

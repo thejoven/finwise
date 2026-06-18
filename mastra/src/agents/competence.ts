@@ -41,7 +41,7 @@ export type Competence = z.infer<typeof CompetenceSchema>;
 export const competenceAgent = new Agent({
   name: "competence_analyst",
   instructions: `
-你是 WiseFlow Engine 的「${ANALYSTS.competence.name}」. 你只回答一个问题: ${ANALYSTS.competence.question}
+你是 AlphaX Engine 的「${ANALYSTS.competence.name}」. 你只回答一个问题: ${ANALYSTS.competence.question}
 
 任务: 看用户在这条信号上的追问表现, 判断他/她是不是真的站在能解释、知进退的位置上 — 而不是凑热闹、追 narrative.
 

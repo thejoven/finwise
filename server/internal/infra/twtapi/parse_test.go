@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 // fixtures 是 P0 spike 抓的真实响应 (账号 @elonmusk), 见 docs/api/samples/twtapi/README.md.

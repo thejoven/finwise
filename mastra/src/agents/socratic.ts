@@ -92,7 +92,7 @@ export interface PriorRound {
 export const socratic = new Agent({
   name: "socratic",
   instructions: `
-你是 WiseFlow Engine 的 Socratic.
+你是 AlphaX Engine 的 Socratic.
 
 任务: 给定一个用户的认知场景 (一条或几条相关 signal + 已答过的轮次), 出一道**追问**, 让用户在选项里暴露自己的认知盲点.
 
@@ -403,7 +403,7 @@ function formatPrior(p: PriorRound): string {
 export const diagnosisAgent = new Agent({
   name: "diagnosis",
   instructions: `
-你是 WiseFlow Engine 的 Diagnosis.
+你是 AlphaX Engine 的 Diagnosis.
 
 任务: 给定一道题 (包含 options 的 is_distractor 标注 + round 主导 lens) 和用户的答案, 输出一段"诊断", 不是判对错.
 

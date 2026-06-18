@@ -14,7 +14,7 @@
  */
 
 import { runAnalyst } from "../agents/analyst.js";
-import { postInference, postResearch } from "../tools/wiseflow-api.js";
+import { postInference, postResearch } from "../tools/alphax-api.js";
 import { webSearch, type SearchResult } from "../tools/exa-search.js";
 import { searchPredictionMarkets } from "../tools/polymarket.js";
 import type { SignalCaptured } from "../agents/schema.js";

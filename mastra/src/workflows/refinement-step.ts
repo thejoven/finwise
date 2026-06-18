@@ -23,7 +23,7 @@ import {
   postRefinementQuestion,
   postResearch,
   type SessionView,
-} from "../tools/wiseflow-api.js";
+} from "../tools/alphax-api.js";
 import { webSearch, type SearchResult } from "../tools/exa-search.js";
 import { searchPredictionMarkets } from "../tools/polymarket.js";
 import { config } from "../config/env.js";

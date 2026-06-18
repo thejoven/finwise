@@ -72,6 +72,10 @@ type Config struct {
 	RecRelevanceMin        float64 // REC_RELEVANCE_MIN, 候选 relevance 阈值, default 0.5
 	RecPerCommitmentQuota  int     // REC_PER_COMMITMENT_QUOTA, 每命题活跃推荐硬上限, default 2
 	RecCandidateWindowDays int     // REC_CANDIDATE_WINDOW_DAYS, 候选推文时间窗(天), default 14
+
+	// RevenueCatWebhookAuth — RevenueCat webhook 配的 Authorization 头明文 (共享密钥).
+	// 空 → billing webhook 拒收所有请求 (fail closed); 设了才接收续订/退款/过期事件.
+	RevenueCatWebhookAuth string
 }
 
 func Load() (*Config, error) {
@@ -134,6 +138,8 @@ func Load() (*Config, error) {
 	}
 
 	c.MarketDataProvider = os.Getenv("MARKETDATA_PROVIDER") // optional; factory 默认 tencent
+
+	c.RevenueCatWebhookAuth = os.Getenv("REVENUECAT_WEBHOOK_AUTH") // optional; 空 → billing webhook fail closed
 	if v := os.Getenv("ASSET_PRICE_POLL_ENABLED"); v != "" {
 		c.AssetPricePollEnabled = strings.EqualFold(v, "true") || v == "1"
 	} else {

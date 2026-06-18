@@ -45,7 +45,7 @@ export const config = {
 
   iiiUrl: optional("III_URL", "ws://localhost:49134")!,
 
-  wiseflowApiUrl: optional("WISEFLOW_API_URL", "http://localhost:8080")!,
+  alphaxApiUrl: optional("ALPHAX_API_URL", "http://localhost:8080")!,
   internalToken: required("INTERNAL_TOKEN"),
 
   // 默认 deepseek-chat (公开模型). 用户想用 v4-pro 或其他, 改 ANALYST_MODEL env.
@@ -91,7 +91,7 @@ export const config = {
 
   // pgvector store (复用 .205 已有 postgres, 走 mastra schema 隔离).
   vectorStore: {
-    connectionString: optional("MASTRA_PG_URL") ?? optional("DATABASE_URL", "postgres://wiseflow:wiseflow@localhost:5432/wiseflow")!,
+    connectionString: optional("MASTRA_PG_URL") ?? optional("DATABASE_URL", "postgres://alphax:alphax@localhost:5432/alphax")!,
     schemaName: optional("MASTRA_PG_SCHEMA", "mastra")!,
     signalIndex: optional("MASTRA_SIGNAL_INDEX", "signal_summaries")!,
   },

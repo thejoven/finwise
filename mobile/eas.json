@@ -33,16 +33,16 @@
         "autoIncrement": true
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.wiseflow.example.com"
+        "EXPO_PUBLIC_API_URL": "https://api.alphax.example.com"
       }
     }
   },
   "submit": {
     "production": {
       "ios": {
-        "appleId": "WISEFLOW_APPLE_ID",
-        "ascAppId": "WISEFLOW_ASC_APP_ID",
-        "appleTeamId": "WISEFLOW_APPLE_TEAM_ID"
+        "appleId": "ALPHAX_APPLE_ID",
+        "ascAppId": "ALPHAX_ASC_APP_ID",
+        "appleTeamId": "ALPHAX_APPLE_TEAM_ID"
       }
     }
   }

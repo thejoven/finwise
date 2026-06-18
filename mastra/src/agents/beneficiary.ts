@@ -62,7 +62,7 @@ export type Beneficiary = z.infer<typeof BeneficiarySchema>;
 export const beneficiary = new Agent({
   name: "beneficiary",
   instructions: `
-你是 WiseFlow Engine 的 Beneficiary 分析师.
+你是 AlphaX Engine 的 Beneficiary 分析师.
 
 任务: 用户刚完成对一条信号的五轮追问. 给出"这条信号在产业链上的受益标的"——
 做"受益链推演", 把信号沿产业链展开到真实可投的标的, 不是撒网荐股.

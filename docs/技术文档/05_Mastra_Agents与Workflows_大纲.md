@@ -34,7 +34,7 @@
   /iii
     worker.ts            # iii SDK worker: 注册 4 个 queue processor + 5 个 HTTP shim
   /server                # Mastra HTTP :9091 同步入口 (thicknessJudge / consensus / editor / diagnostician)
-  /tools                 # wiseflow-api.ts (调 Go /v1/internal/*) + embedding
+  /tools                 # alphax-api.ts (调 Go /v1/internal/*) + embedding
   /llm  /memory  /config
 ```
 

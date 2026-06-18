@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
-import { wiseflow, type CommitmentRow } from "@/lib/api";
+import { alphax, type CommitmentRow } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 import { uuidv4 } from "@/lib/uuid";
@@ -48,7 +48,7 @@ export function CommitmentsPage() {
 
   const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["commitments", "list"],
-    queryFn: wiseflow.commitments.list,
+    queryFn: alphax.commitments.list,
   });
 
   const rows = data?.commitments ?? [];
@@ -161,7 +161,7 @@ function CommitmentDetail({
   const [reason, setReason] = React.useState("");
 
   const sign = useMutation({
-    mutationFn: () => wiseflow.commitments.sign(c.id, uuidv4()),
+    mutationFn: () => alphax.commitments.sign(c.id, uuidv4()),
     onSuccess: () => {
       toast({ title: "已签字", description: "已翻面为持仓.", variant: "success" });
       qc.invalidateQueries({ queryKey: ["commitments"] });
@@ -171,7 +171,7 @@ function CommitmentDetail({
       toast({ title: "签字失败", description: String(err), variant: "destructive" }),
   });
   const postpone = useMutation({
-    mutationFn: () => wiseflow.commitments.postpone(c.id, uuidv4(), reason || undefined),
+    mutationFn: () => alphax.commitments.postpone(c.id, uuidv4(), reason || undefined),
     onSuccess: () => {
       toast({ title: "已推迟", variant: "success" });
       qc.invalidateQueries({ queryKey: ["commitments"] });

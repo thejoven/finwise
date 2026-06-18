@@ -165,8 +165,8 @@ else
   else
     fail "inference 在 ${INFERENCE_TIMEOUT}s 内没变 done"
     info "可能原因: Mastra 没在跑 / NATS 链路断 / Anthropic API key 错"
-    info "诊断: ssh root@192.168.1.205 'tail -50 /var/log/wiseflow-api.log'"
-    info "诊断: ssh root@192.168.1.205 'docker compose -f /opt/wiseflow/docker-compose.yml logs --tail 50 nats'"
+    info "诊断: ssh root@192.168.1.205 'tail -50 /var/log/alphax-api.log'"
+    info "诊断: ssh root@192.168.1.205 'docker compose -f /opt/alphax/docker-compose.yml logs --tail 50 nats'"
   fi
 fi
 

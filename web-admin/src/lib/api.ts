@@ -1,10 +1,10 @@
-// Thin fetch wrapper around the wiseflow Go API.
+// Thin fetch wrapper around the alphax Go API.
 // All v1 calls send "Authorization: Bearer <token>".
 // Token is held in localStorage and read fresh on every call so a token
 // rotation in Settings takes effect immediately.
 
-const TOKEN_KEY = "wiseflow.admin.token";
-const BASE_KEY = "wiseflow.admin.base";
+const TOKEN_KEY = "alphax.admin.token";
+const BASE_KEY = "alphax.admin.base";
 
 export function getApiBase(): string {
   const stored = localStorage.getItem(BASE_KEY);
@@ -32,7 +32,7 @@ export function clearToken() {
 
 // AUTH_EXPIRED_EVENT 在任意已认证请求收到 401 时派发, App 监听后弹回登录页.
 // 用全局事件而非直接耦合 React, 让 api 层不依赖组件树.
-export const AUTH_EXPIRED_EVENT = "wiseflow:auth-expired";
+export const AUTH_EXPIRED_EVENT = "alphax:auth-expired";
 
 export class ApiError extends Error {
   status: number;
@@ -474,7 +474,7 @@ export interface AdminRetrospectRow {
   finalized_at?: string;
 }
 
-export const wiseflow = {
+export const alphax = {
   health: () => api<{ status: string; db?: string }>("/healthz", { noAuth: true }),
   metrics: () =>
     api<string>("/metrics", { noAuth: true, asText: true }),

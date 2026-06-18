@@ -18,7 +18,7 @@
 import { create } from "zustand";
 import * as SecureStore from "expo-secure-store";
 
-const STORAGE_KEY = "wiseflow.auth.v1";
+const STORAGE_KEY = "alphax.auth.v1";
 
 export interface AuthUser {
   id: string;

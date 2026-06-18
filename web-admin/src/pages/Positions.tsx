@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -30,7 +30,7 @@ export function PositionsPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "holdings", focused?.id ?? "all", status],
     queryFn: () =>
-      wiseflow.admin.holdings.list({ user_id: focused?.id, status: status || undefined }),
+      alphax.admin.holdings.list({ user_id: focused?.id, status: status || undefined }),
   });
   const holdings = data?.holdings ?? [];
 

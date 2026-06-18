@@ -2,7 +2,7 @@
  * ThicknessJudge Agent · G1 信号厚度的 LLM 判定.
  *
  * 替换原 Go 侧的 "近 14 天 ≥3 个独立 tag-cluster" 启发式. 用 RAG 召回当前用户
- * 历史信号 + WiseFlow Pro Lens 框架综合判定:
+ * 历史信号 + AlphaX Pro Lens 框架综合判定:
  *
  *   - single_signal_richness: 当前这条信号本身够不够厚 (跨多少 lens / 有具体 actor / 含数字与链条)
  *   - cross_signal_breadth:   召回的历史信号是否构成"主题地图" (跨主题 / 不同 enabling chain)
@@ -43,7 +43,7 @@ export const thicknessAgent = new Agent({
   name: "thickness_judge",
   memory: getMemory(),
   instructions: `
-你是 WiseFlow Engine 的 ThicknessJudge.
+你是 AlphaX Engine 的 ThicknessJudge.
 
 任务: 判定一条信号 (+ 该用户近期相关信号召回) 是否"够厚"到值得进入承诺流程.
 给两个维度评分, 综合给一个 0-100 score, score>=60 算 pass.

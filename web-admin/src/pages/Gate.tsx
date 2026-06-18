@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -31,7 +31,7 @@ export function GatePage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "gate", focused?.id ?? "all", passed],
     queryFn: () =>
-      wiseflow.admin.gate.list({
+      alphax.admin.gate.list({
         user_id: focused?.id,
         passed: passed === "" ? undefined : passed === "true",
       }),

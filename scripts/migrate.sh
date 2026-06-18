@@ -13,14 +13,14 @@
 #
 # Env:
 #   POSTGRES_SERVICE  docker compose service name (default: postgres)
-#   POSTGRES_USER     (default: wiseflow)
-#   POSTGRES_DB       (default: wiseflow)
+#   POSTGRES_USER     (default: alphax)
+#   POSTGRES_DB       (default: alphax)
 
 set -euo pipefail
 
 SERVICE="${POSTGRES_SERVICE:-postgres}"
-PGUSER="${POSTGRES_USER:-wiseflow}"
-PGDB="${POSTGRES_DB:-wiseflow}"
+PGUSER="${POSTGRES_USER:-alphax}"
+PGDB="${POSTGRES_DB:-alphax}"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
 mig_dir="$repo_root/server/migrations"

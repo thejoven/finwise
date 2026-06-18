@@ -52,7 +52,7 @@ export default function ColophonScreen() {
             财知
           </RNText>
           <Display size={18} italic style={styles.nameplateEN}>
-            WiseFlow
+            AlphaX
           </Display>
         </View>
 

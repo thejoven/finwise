@@ -55,7 +55,7 @@
   - `references/02-ios-checklist.md` — iOS 详细 30 项清单 🟢
   - `references/03-android-checklist.md` — Android 大纲(Phase 2)
   - `references/04-cross-platform-design.md` — 跨平台报刊感设计
-  - `references/05-wiseflow-restraint.md` — 财富密码 专属克制 🟢
+  - `references/05-alphax-restraint.md` — 财富密码 专属克制 🟢
   - `references/06-haptic-grammar.md` — 触感反馈语法
   - `references/07-typography.md` — 字体加载与中文混排
   - `references/08-anti-patterns.md` — 反模式禁止清单 🟢

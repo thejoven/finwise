@@ -19,7 +19,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/infra/db"
 )
 
 type Repository struct {

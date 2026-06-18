@@ -1,7 +1,7 @@
 /**
  * Motion tokens — 全 App 统一的"丝滑"手感参数, 一处调、处处变.
  *
- * 设计原则 (见 docs/技术文档/native_feel_skill/references/05-wiseflow-restraint.md § 3):
+ * 设计原则 (见 docs/技术文档/native_feel_skill/references/05-alphax-restraint.md § 3):
  *   克制的是装饰与庆祝, 不是运动本身。运动要丝滑、跟手、几乎不回弹
  *   —— 产品要"有重量", 不要弹跳感。
  *

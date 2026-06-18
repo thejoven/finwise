@@ -12,9 +12,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/httpapi/auth"
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/metrics"
+	"alphax/server/internal/httpapi/auth"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/metrics"
 )
 
 type Deps struct {

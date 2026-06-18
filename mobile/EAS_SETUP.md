@@ -14,7 +14,7 @@ eas login            # 用你的 Expo 账号登录 (没有就 eas register)
 
 # 2) 关联本项目
 cd /Users/clh-openclaw/Project/0002-wiseflow/mobile
-eas init             # 让 EAS 在 expo.dev 创建一个 project, slug 写 wiseflow
+eas init             # 让 EAS 在 expo.dev 创建一个 project, slug 写 alphax
                      # 它会修改 app.json 加 extra.eas.projectId, 提交进 git
 
 # 3) 检查 eas.json 没问题
@@ -25,13 +25,13 @@ eas build:configure  # 检查 app.json 兼容
 
 ## § 2 · 填 Apple 真实值
 
-打开 `mobile/eas.json`. 三个 `WISEFLOW_*` 占位符要填:
+打开 `mobile/eas.json`. 三个 `ALPHAX_*` 占位符要填:
 
 | 占位符                   | 哪里拿                                                                  |
 | ------------------------ | ----------------------------------------------------------------------- |
-| `WISEFLOW_APPLE_ID`      | 你的 Apple ID 邮箱 (开发者账号那个)                                     |
-| `WISEFLOW_ASC_APP_ID`    | App Store Connect → My Apps → WiseFlow → App Info → Apple ID (一串数字) |
-| `WISEFLOW_APPLE_TEAM_ID` | <https://developer.apple.com/account> → Membership → Team ID (10 字符)  |
+| `ALPHAX_APPLE_ID`      | 你的 Apple ID 邮箱 (开发者账号那个)                                     |
+| `ALPHAX_ASC_APP_ID`    | App Store Connect → My Apps → AlphaX → App Info → Apple ID (一串数字) |
+| `ALPHAX_APPLE_TEAM_ID` | <https://developer.apple.com/account> → Membership → Team ID (10 字符)  |
 
 **填的时机**: 在 [docs/TESTFLIGHT_PLAN.md § 1.1](../docs/TESTFLIGHT_PLAN.md) 注册 Apple Developer
 
@@ -77,9 +77,9 @@ eas submit --profile production --platform ios --latest
 | ----------- | ---------------------------------- | -------------------------------------------- |
 | development | `http://192.168.1.205:8080`        | 本地真机/模拟器在你家 WiFi 用内网 dev server |
 | preview     | `http://192.168.1.205:8080`        | 内测者在你家 WiFi (内测窗口 1)               |
-| production  | `https://api.wiseflow.example.com` | 已搬公网 VPS (见 TESTFLIGHT_PLAN § 5)        |
+| production  | `https://api.alphax.example.com` | 已搬公网 VPS (见 TESTFLIGHT_PLAN § 5)        |
 
-**production 跑前必须**: 把 `api.wiseflow.example.com` 改成你的真实域名 +
+**production 跑前必须**: 把 `api.alphax.example.com` 改成你的真实域名 +
 后端真的部署到公网.
 
 ---

@@ -43,7 +43,7 @@ export type SymbolResolution = z.infer<typeof SymbolResolutionSchema>;
 export const symbolResolver = new Agent({
   name: "symbol-resolver",
   instructions: `
-你是 WiseFlow 的标的归一器 (symbol resolver). 给你一段对某投资标的的自由文本指称
+你是 AlphaX 的标的归一器 (symbol resolver). 给你一段对某投资标的的自由文本指称
 (可能是公司名、股票代码、混写、或一个模糊的板块/篮子), 判断它**能否**归一到
 A股 / 港股 / 美股 三大市场之一的**单一、当前在市**的上市标的, 并给出规范代码.
 

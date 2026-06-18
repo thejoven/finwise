@@ -16,8 +16,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/testutil"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/metrics"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/metrics"
 )
 
 func TestNewDefaults(t *testing.T) {

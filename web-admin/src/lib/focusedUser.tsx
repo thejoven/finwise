@@ -15,7 +15,7 @@ interface Ctx {
 }
 
 const FocusedUserContext = React.createContext<Ctx | null>(null);
-const KEY = "wiseflow.admin.focusedUser";
+const KEY = "alphax.admin.focusedUser";
 
 export function FocusedUserProvider({ children }: { children: React.ReactNode }) {
   const [focused, setFocused] = React.useState<FocusedUser | null>(() => {

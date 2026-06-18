@@ -16,11 +16,11 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/httpapi"
-	"wiseflow/server/internal/infra/db"
-	mastrax "wiseflow/server/internal/infra/mastra"
-	refinementmod "wiseflow/server/internal/module/refinement"
-	signalmod "wiseflow/server/internal/module/signal"
+	"alphax/server/internal/httpapi"
+	"alphax/server/internal/infra/db"
+	mastrax "alphax/server/internal/infra/mastra"
+	refinementmod "alphax/server/internal/module/refinement"
+	signalmod "alphax/server/internal/module/signal"
 )
 
 const (

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
 import {
-  wiseflow,
+  alphax,
   type CreateInviteInput,
   type InviteCodeRow,
   type InviteStatus,
@@ -92,7 +92,7 @@ export function InvitesPage() {
 
   const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "invites"],
-    queryFn: wiseflow.admin.invites.list,
+    queryFn: alphax.admin.invites.list,
   });
 
   function resetForm() {
@@ -100,7 +100,7 @@ export function InvitesPage() {
   }
 
   const createMut = useMutation({
-    mutationFn: (input: CreateInviteInput) => wiseflow.admin.invites.create(input),
+    mutationFn: (input: CreateInviteInput) => alphax.admin.invites.create(input),
     onSuccess: (row: InviteCodeRow) => {
       setForm({ created: row });
       qc.invalidateQueries({ queryKey: ["admin", "invites"] });
@@ -115,7 +115,7 @@ export function InvitesPage() {
   });
 
   const revokeMut = useMutation({
-    mutationFn: (id: string) => wiseflow.admin.invites.revoke(id),
+    mutationFn: (id: string) => alphax.admin.invites.revoke(id),
     onSuccess: (row: InviteCodeRow) => {
       toast({ title: "已吊销邀请码", description: row.code, variant: "success" });
       qc.invalidateQueries({ queryKey: ["admin", "invites"] });

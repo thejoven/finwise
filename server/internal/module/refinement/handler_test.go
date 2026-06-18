@@ -20,9 +20,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/httpapi"
-	"wiseflow/server/internal/infra/db"
-	signalmod "wiseflow/server/internal/module/signal"
+	"alphax/server/internal/httpapi"
+	"alphax/server/internal/infra/db"
+	signalmod "alphax/server/internal/module/signal"
 )
 
 const (

@@ -38,7 +38,7 @@ export type Thesis = z.infer<typeof ThesisSchema>;
 export const narrator = new Agent({
   name: "narrator",
   instructions: `
-你是 WiseFlow Engine 的 Narrator.
+你是 AlphaX Engine 的 Narrator.
 
 任务: 给一份给"6 个月后的自己"看的私人契约. 不是分析师报告, 不是投资建议, 是用户自己的判断的归档.
 

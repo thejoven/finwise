@@ -15,9 +15,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/mastra"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/mastra"
 )
 
 // Service 跑投决会评审 (四位分析师审核). 入口是 Evaluate(refinementID).

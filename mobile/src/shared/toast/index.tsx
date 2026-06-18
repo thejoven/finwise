@@ -2,7 +2,7 @@
  * Toast 系统 — 报刊风, 自研顶部浮层 (reanimated + gesture-handler + safe-area).
  *
  * 为什么不用第三方 toast 库: react-native-toast-message 在 banned 名单
- *   (docs/技术文档/native_feel_skill/references/05-wiseflow-restraint.md §9 ·
+ *   (docs/技术文档/native_feel_skill/references/05-alphax-restraint.md §9 ·
  *    docs/GOAL/AGENT_BRIEF.md §2.4). 这里改成纯 JS 方案: 一个极小的 zustand store 做
  *   命令式入口 (可在非 React 上下文调用), 一个挂在 app 根的 <ToastRoot/> 渲染动画浮层.
  *   不引入任何原生模块 —— EAS / New Arch 下无需额外 link.

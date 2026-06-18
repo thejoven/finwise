@@ -64,7 +64,7 @@ Alert.alert('确认', '放弃这张草稿?', [...]);
 // ✓ 不显示, 或打字机效果
 ```
 
-见 `05-wiseflow-restraint.md` § 1.3。
+见 `05-alphax-restraint.md` § 1.3。
 
 ### A.5 ❌ 不用 Switch 默认样式
 
@@ -418,7 +418,7 @@ useEffect(() => {
 
 ### D.4 ❌ 不用 swipe-to-delete
 
-见 `05-wiseflow-restraint.md` § 5.2。
+见 `05-alphax-restraint.md` § 5.2。
 
 ### D.5 ❌ 不让用户摇晃手机触发动作
 
@@ -503,7 +503,7 @@ useQuery({
 
 ### F.1 ❌ 不说 "Loading..."
 
-见 `05-wiseflow-restraint.md` § 4.4。
+见 `05-alphax-restraint.md` § 4.4。
 
 ### F.2 ❌ 不在错误信息加 emoji
 

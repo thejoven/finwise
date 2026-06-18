@@ -5,7 +5,7 @@ import { Loader2 } from "lucide-react";
 import { AuthGate } from "@/components/AuthGate";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
-import { AUTH_EXPIRED_EVENT, clearToken, wiseflow, getToken } from "@/lib/api";
+import { AUTH_EXPIRED_EVENT, clearToken, alphax, getToken } from "@/lib/api";
 import { DashboardPage } from "@/pages/Dashboard";
 import { SignalsPage } from "@/pages/Signals";
 import { SignalDetailPage } from "@/pages/SignalDetail";
@@ -66,7 +66,7 @@ export default function App() {
   // 引导查询: 有 token 才查当前用户身份 (含 is_admin).
   const { data: me, isLoading, isError } = useQuery({
     queryKey: ["me"],
-    queryFn: wiseflow.me,
+    queryFn: alphax.me,
     enabled: hasToken,
     retry: false,
     staleTime: 60_000,
@@ -78,7 +78,7 @@ export default function App() {
   };
 
   const handleSignOut = () => {
-    void wiseflow.auth.logout().catch(() => {}); // 尽力吊销 server session, 失败忽略
+    void alphax.auth.logout().catch(() => {}); // 尽力吊销 server session, 失败忽略
     clearToken();
     qc.clear();
     setHasToken(false);

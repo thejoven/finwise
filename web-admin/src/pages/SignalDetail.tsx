@@ -8,14 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ErrorBox, Loading } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 export function SignalDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["signal", id],
-    queryFn: () => wiseflow.signals.get(id!),
+    queryFn: () => alphax.signals.get(id!),
     enabled: !!id,
   });
 
@@ -112,14 +112,14 @@ export function SignalDetailPage() {
 function SignalChain({ signalId }: { signalId: string }) {
   const { data: refine, isLoading: refineLoading } = useQuery({
     queryKey: ["chain", "refine", signalId],
-    queryFn: () => wiseflow.refinement.bySignal(signalId),
+    queryFn: () => alphax.refinement.bySignal(signalId),
     retry: 0,
   });
   const refId = refine?.id;
 
   const { data: evalData, isLoading: evalLoading } = useQuery({
     queryKey: ["chain", "eval", refId],
-    queryFn: () => wiseflow.gate.byRefinement(refId!),
+    queryFn: () => alphax.gate.byRefinement(refId!),
     enabled: !!refId,
     retry: 0,
   });
@@ -127,7 +127,7 @@ function SignalChain({ signalId }: { signalId: string }) {
 
   const { data: commit, isLoading: commitLoading } = useQuery({
     queryKey: ["chain", "commit", evalId],
-    queryFn: () => wiseflow.commitments.byEvaluation(evalId!),
+    queryFn: () => alphax.commitments.byEvaluation(evalId!),
     enabled: !!evalId,
     retry: 0,
   });
@@ -135,14 +135,14 @@ function SignalChain({ signalId }: { signalId: string }) {
 
   const { data: holding, isLoading: holdingLoading } = useQuery({
     queryKey: ["chain", "holding", commitId],
-    queryFn: () => wiseflow.holdings.get(commitId!),
+    queryFn: () => alphax.holdings.get(commitId!),
     enabled: !!commitId,
     retry: 0,
   });
 
   const { data: retroData, isLoading: retroLoading } = useQuery({
     queryKey: ["retrospects"],
-    queryFn: wiseflow.retrospects.list,
+    queryFn: alphax.retrospects.list,
     enabled: !!commitId,
   });
   const retro = commitId

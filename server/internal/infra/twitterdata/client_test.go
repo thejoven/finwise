@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 // HTTP/鉴权/错误层是骨架里唯一可验证的部分 (解析待样本). 这些测试锁住它.

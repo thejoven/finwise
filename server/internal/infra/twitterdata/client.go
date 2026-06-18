@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 const defaultBaseURL = "https://pro.twitterdata.com"

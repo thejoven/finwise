@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { ApiError, clearToken, wiseflow, getApiBase, setApiBase, setToken } from "@/lib/api";
+import { ApiError, clearToken, alphax, getApiBase, setApiBase, setToken } from "@/lib/api";
 
 interface Props {
   onSignedIn: () => void;
@@ -57,7 +57,7 @@ export function AuthGate({ onSignedIn }: Props) {
     set({ error: null });
     setApiBase(base.trim());
     try {
-      const resp = await wiseflow.auth.login(email.trim(), password);
+      const resp = await alphax.auth.login(email.trim(), password);
       setToken(resp.session.token);
       if (!resp.user.is_admin) {
         // 非管理员: 立即清 token, 不放进后台.
@@ -84,7 +84,7 @@ export function AuthGate({ onSignedIn }: Props) {
     setApiBase(base.trim());
     setToken(devToken.trim());
     try {
-      const me = await wiseflow.me(); // dev 占位行 is_admin=true
+      const me = await alphax.me(); // dev 占位行 is_admin=true
       if (!me.is_admin) {
         clearToken();
         set({ error: "该 token 对应的账号不是管理员." });
@@ -106,7 +106,7 @@ export function AuthGate({ onSignedIn }: Props) {
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>WiseFlow Admin</CardTitle>
+          <CardTitle>AlphaX Admin</CardTitle>
           <CardDescription>
             管理员登录. 仅 <code>is_admin</code> 账号可进入后台.
           </CardDescription>

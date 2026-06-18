@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
-import { wiseflow, type AdminUserRow, type User } from "@/lib/api";
+import { alphax, type AdminUserRow, type User } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 
@@ -46,21 +46,21 @@ export function UsersPage() {
   const [filter, setFilter] = React.useState("");
   const [selected, setSelected] = React.useState<AdminUserRow | null>(null);
 
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: alphax.me });
   const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "users"],
-    queryFn: wiseflow.admin.users.list,
+    queryFn: alphax.admin.users.list,
   });
   // 选中某用户时拉其跨域旅程快照 (信号/追问/过会/持仓/订阅).
   const overview = useQuery({
     queryKey: ["admin", "user-overview", selected?.id],
-    queryFn: () => wiseflow.admin.users.overview(selected!.id),
+    queryFn: () => alphax.admin.users.overview(selected!.id),
     enabled: !!selected,
   });
 
   const setAdmin = useMutation({
     mutationFn: ({ id, is_admin }: { id: string; is_admin: boolean }) =>
-      wiseflow.admin.users.setAdmin(id, is_admin),
+      alphax.admin.users.setAdmin(id, is_admin),
     onSuccess: (u: User) => {
       toast({
         title: u.is_admin ? "已设为管理员" : "已取消管理员",

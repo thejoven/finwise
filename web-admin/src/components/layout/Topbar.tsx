@@ -2,13 +2,13 @@ import * as React from "react";
 import { LogOut, Server, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { wiseflow, getApiBase } from "@/lib/api";
+import { alphax, getApiBase } from "@/lib/api";
 
 interface Props {
   onSignOut: () => void;
 }
 
-const THEME_KEY = "wiseflow.admin.theme";
+const THEME_KEY = "alphax.admin.theme";
 
 export function Topbar({ onSignOut }: Props) {
   const [dark, setDark] = React.useState(() =>
@@ -17,12 +17,12 @@ export function Topbar({ onSignOut }: Props) {
 
   const { data: health, isError: healthError } = useQuery({
     queryKey: ["healthz"],
-    queryFn: wiseflow.health,
+    queryFn: alphax.health,
     refetchInterval: 15_000,
     retry: 0,
   });
 
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: alphax.me, staleTime: 60_000 });
 
   const toggleTheme = () => {
     const next = !dark;

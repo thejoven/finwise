@@ -23,7 +23,7 @@ import {
   getRefinementSession,
   postAttention,
   type SessionView,
-} from "../tools/wiseflow-api.js";
+} from "../tools/alphax-api.js";
 import { config } from "../config/env.js";
 
 export interface AttentionWorkflowInput {

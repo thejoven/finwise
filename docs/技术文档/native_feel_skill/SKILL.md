@@ -1,5 +1,5 @@
 ---
-name: wiseflow-rn-native-feel
+name: alphax-rn-native-feel
 description: Make React Native apps for 财富密码 feel indistinguishable from a native iOS/Android app, while honoring the project's restraint philosophy. Use this skill when building or reviewing any RN UI in the 财富密码 project — capture screens, inbox, commitment cards, anxiety companion, timeline replay. Triggers on requests like "build a screen for X", "make this feel more native", "implement the signing page", "review my component", or any work touching Pressable, Haptics, modal presentation, platform differences, font loading. Also activates when editing files under src/features/ or app/ and when the conversation mentions iOS native-feel, Expo, SafeAreaView, scroll bounce, sheet modals, or platform adaptation.
 ---
 
@@ -92,7 +92,7 @@ RN 给的 `<Button>`、`<TouchableOpacity>`、`<Alert>` 都是**最低公约数*
 | 长按操作菜单 | 慎用, 首选明确按钮 |
 | 滑动删除 | 不用 |
 
-这些规则的依据全部在 `06_产品哲学.md` 里。详见 `references/05-wiseflow-restraint.md`。
+这些规则的依据全部在 `06_产品哲学.md` 里。详见 `references/05-alphax-restraint.md`。
 
 ---
 
@@ -106,7 +106,7 @@ native_feel_skill/
 │   ├── 02-ios-checklist.md                 # iOS 详细 30 项清单 🟢
 │   ├── 03-android-checklist.md             # Android 大纲 (Phase 2)
 │   ├── 04-cross-platform-design.md         # 强统一视觉的实现
-│   ├── 05-wiseflow-restraint.md          # 财富密码 专属克制 🟢
+│   ├── 05-alphax-restraint.md          # 财富密码 专属克制 🟢
 │   ├── 06-haptic-grammar.md                # 触感反馈的语法
 │   ├── 07-typography.md                    # 字体加载与中文混排
 │   └── 08-anti-patterns.md                 # 必须禁止的反模式 🟢
@@ -135,7 +135,7 @@ native_feel_skill/
 
 最不能将就的页面。必读:
 
-1. `references/05-wiseflow-restraint.md`
+1. `references/05-alphax-restraint.md`
 2. `references/06-haptic-grammar.md` — 签字时该用什么触感
 3. `references/07-typography.md` — 大字号的报刊感
 

@@ -12,8 +12,8 @@
 set -euo pipefail
 
 dir="$(cd "$(dirname "$0")/.." && pwd)"
-log_file="${MASTRA_LOG:-/tmp/wiseflow-mastra.log}"
-pid_file="${MASTRA_PID:-/tmp/wiseflow-mastra.pid}"
+log_file="${MASTRA_LOG:-/tmp/alphax-mastra.log}"
+pid_file="${MASTRA_PID:-/tmp/alphax-mastra.pid}"
 
 is_running() {
   if [ -f "$pid_file" ]; then

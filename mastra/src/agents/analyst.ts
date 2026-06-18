@@ -1,5 +1,5 @@
 /**
- * Analyst Agent · WiseFlow Engine 的"推演员".
+ * Analyst Agent · AlphaX Engine 的"推演员".
  *
  * **prompt 已搬到 skills/analyst/** — 本文件保留为薄 facade, 仅 re-export.
  * 这样 import 路径 `agents/analyst.js` 的现有调用方 (workflow / manual-eval)

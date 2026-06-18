@@ -12,7 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/infra/db"
 )
 
 func testPool(t *testing.T) *db.Pool {

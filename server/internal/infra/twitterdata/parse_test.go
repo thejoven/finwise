@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 // fixtures 是真实响应 (账号 @elonmusk, 2026-06-16), 见 docs/api/samples/twitterdata/README.md.

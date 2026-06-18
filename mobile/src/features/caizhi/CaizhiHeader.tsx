@@ -13,7 +13,7 @@ import { monthDayLabel, weekdayLabel } from "@/shared/format";
  *
  * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 放大镜 → 搜索, 中日期,
  * 右 ＋ → 记录) + 常驻刊名「财知」. 区别: 这里**始终固定**, 不随滚动折叠 (滚动折叠交给各子页
- * 自己的列表, host 的报头/分段栏常驻). 装饰性副线 (WiseFlow / slogan) 略去, 给三页腾出高度.
+ * 自己的列表, host 的报头/分段栏常驻). 装饰性副线 (AlphaX / slogan) 略去, 给三页腾出高度.
  *
  * 作为 PagerView 的兄弟节点常驻在顶部, 故无需 absolute 浮层 + paddingTop 让位 —— 直接
  * 占流式高度, 下方紧接吸顶分段栏 (SegmentedTabs).

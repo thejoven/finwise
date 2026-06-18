@@ -8,7 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"wiseflow/server/internal/domain"
+	"alphax/server/internal/domain"
 )
 
 // ErrDuplicateClientEvent indicates the (user_id, client_event_id) pair already exists.

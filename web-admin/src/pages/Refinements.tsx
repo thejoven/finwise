@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -36,7 +36,7 @@ export function RefinementsPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "refinement", focused?.id ?? "all", status],
     queryFn: () =>
-      wiseflow.admin.refinement.list({ user_id: focused?.id, status: status || undefined, limit: 100 }),
+      alphax.admin.refinement.list({ user_id: focused?.id, status: status || undefined, limit: 100 }),
   });
   const rows = data?.sessions ?? [];
 

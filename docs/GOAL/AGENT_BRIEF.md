@@ -25,7 +25,7 @@
 每次开始任务前, 至少把 1-3 项读进上下文。第 4-5 项按模块需要。
 
 1. **`产品文档/06_产品哲学.md`** — 12 条反直觉设计原则。**这是项目的宪法**。
-2. **`产品文档/00_总览_WiseFlow_Engine.md`** — 知道整体架构和动机
+2. **`产品文档/00_总览_AlphaX_Engine.md`** — 知道整体架构和动机
 3. **`GOAL/GOAL.md`** — 知道当前在哪个 Phase, 整体进度
 4. **(已建完 · 归档) 各 Phase 的 `00-overview.md` / `Mn-xxx.md`** — 三个 Phase 的建造任务单已完成并归档至 [`归档/GOAL/`](../归档/GOAL/);回溯当初的建造意图与验收标准时再查,日常开发不必读。
 
@@ -94,7 +94,7 @@ react-native-timeline-flatlist
 expo-notifications        ← 永远不装这个
 ```
 
-完整列表见 `technology文档/native_feel_skill/references/05-wiseflow-restraint.md` § 9。
+完整列表见 `technology文档/native_feel_skill/references/05-alphax-restraint.md` § 9。
 
 ### 2.5 视觉一致性
 
@@ -220,7 +220,7 @@ RN 教程默认 Material。本项目报刊感, 用 `<Display>` + 直角按钮 + 
 ### 错误 6 · 写"使用统计"页
 "今日推演 3 次"、"本周训练 5 次"。**全部移除**。能力地图用"二阶推演:持续漏"这种判断式描述。
 
-### 错误 7 · 把 conviction 改成 wiseflow
+### 错误 7 · 把 conviction 改成 alphax
 有几处"conviction"作为**产品类别概念词**(不是品牌名)出现, 保留小写不改:
 - "这是 conviction engine, 不是 trading platform"
 - "Conviction 的本质是减少决策"

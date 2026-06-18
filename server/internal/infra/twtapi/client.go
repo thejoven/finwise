@@ -22,7 +22,7 @@ import (
 	"strings"
 	"time"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 const defaultBaseURL = "https://api.twtapi.com/api/v1/twitter"

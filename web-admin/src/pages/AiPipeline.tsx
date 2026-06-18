@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 import { useToast } from "@/components/ui/toaster";
@@ -50,7 +50,7 @@ export function AiPipelinePage() {
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin", "inference-health"],
-    queryFn: wiseflow.admin.inference.health,
+    queryFn: alphax.admin.inference.health,
     refetchInterval: 20_000,
   });
 
@@ -59,7 +59,7 @@ export function AiPipelinePage() {
 
   // 单条按需重推 (失败行内). 重推不立即改 status — 经 outbox 重发, mastra 重跑后才回写 done.
   const reinferOne = useMutation({
-    mutationFn: (id: string) => wiseflow.admin.signals.reinfer(id),
+    mutationFn: (id: string) => alphax.admin.signals.reinfer(id),
     onSuccess: (r) => {
       toast({
         title: "已入队重推",
@@ -79,7 +79,7 @@ export function AiPipelinePage() {
   // 批量重推全部 failed; 有聚焦用户时只重推该用户的 (尊重"聚焦").
   const reinferAll = useMutation({
     mutationFn: () =>
-      wiseflow.admin.signals.reinferFailed({ user_id: focused?.id }),
+      alphax.admin.signals.reinferFailed({ user_id: focused?.id }),
     onSuccess: (r) => {
       toast({
         title:

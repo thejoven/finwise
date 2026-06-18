@@ -7,7 +7,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 const (

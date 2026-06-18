@@ -18,7 +18,7 @@ RUN go mod download
 
 # 拷源码 + 构建.
 COPY . .
-RUN go build -trimpath -ldflags="-s -w" -o /out/wiseflow-api ./cmd/api
+RUN go build -trimpath -ldflags="-s -w" -o /out/alphax-api ./cmd/api
 
 # ---
 
@@ -28,7 +28,7 @@ RUN apk add --no-cache ca-certificates tzdata wget && \
     addgroup -S app && adduser -S -G app app
 
 WORKDIR /app
-COPY --from=builder /out/wiseflow-api /app/wiseflow-api
+COPY --from=builder /out/alphax-api /app/alphax-api
 
 USER app
 EXPOSE 8080
@@ -36,4 +36,4 @@ EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=5 \
   CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
 
-ENTRYPOINT ["/app/wiseflow-api"]
+ENTRYPOINT ["/app/alphax-api"]

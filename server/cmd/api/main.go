@@ -16,34 +16,35 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"wiseflow/server/internal/config"
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/httpapi"
-	"wiseflow/server/internal/infra/db"
-	iiix "wiseflow/server/internal/infra/iii"
-	marketdatax "wiseflow/server/internal/infra/marketdata"
-	mastrax "wiseflow/server/internal/infra/mastra"
-	twitterdatax "wiseflow/server/internal/infra/twitterdata"
-	twtapix "wiseflow/server/internal/infra/twtapi"
-	xsource "wiseflow/server/internal/infra/xsource"
-	accountmod "wiseflow/server/internal/module/account"
-	adminmod "wiseflow/server/internal/module/admin"
-	assetmod "wiseflow/server/internal/module/asset"
-	attentionmod "wiseflow/server/internal/module/attention"
-	commitmentmod "wiseflow/server/internal/module/commitment"
-	companionmod "wiseflow/server/internal/module/companion"
-	distillationmod "wiseflow/server/internal/module/distillation"
-	exitmod "wiseflow/server/internal/module/exit"
-	gatemod "wiseflow/server/internal/module/gate"
-	invitemod "wiseflow/server/internal/module/invite"
-	projectmod "wiseflow/server/internal/module/project"
-	recommendmod "wiseflow/server/internal/module/recommend"
-	recoverymod "wiseflow/server/internal/module/recovery"
-	refinementmod "wiseflow/server/internal/module/refinement"
-	researchmod "wiseflow/server/internal/module/research"
-	retrospectmod "wiseflow/server/internal/module/retrospect"
-	signalmod "wiseflow/server/internal/module/signal"
-	subscriptionmod "wiseflow/server/internal/module/subscription"
+	"alphax/server/internal/config"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/httpapi"
+	"alphax/server/internal/infra/db"
+	iiix "alphax/server/internal/infra/iii"
+	marketdatax "alphax/server/internal/infra/marketdata"
+	mastrax "alphax/server/internal/infra/mastra"
+	twitterdatax "alphax/server/internal/infra/twitterdata"
+	twtapix "alphax/server/internal/infra/twtapi"
+	xsource "alphax/server/internal/infra/xsource"
+	accountmod "alphax/server/internal/module/account"
+	adminmod "alphax/server/internal/module/admin"
+	assetmod "alphax/server/internal/module/asset"
+	attentionmod "alphax/server/internal/module/attention"
+	billingmod "alphax/server/internal/module/billing"
+	commitmentmod "alphax/server/internal/module/commitment"
+	companionmod "alphax/server/internal/module/companion"
+	distillationmod "alphax/server/internal/module/distillation"
+	exitmod "alphax/server/internal/module/exit"
+	gatemod "alphax/server/internal/module/gate"
+	invitemod "alphax/server/internal/module/invite"
+	projectmod "alphax/server/internal/module/project"
+	recommendmod "alphax/server/internal/module/recommend"
+	recoverymod "alphax/server/internal/module/recovery"
+	refinementmod "alphax/server/internal/module/refinement"
+	researchmod "alphax/server/internal/module/research"
+	retrospectmod "alphax/server/internal/module/retrospect"
+	signalmod "alphax/server/internal/module/signal"
+	subscriptionmod "alphax/server/internal/module/subscription"
 )
 
 func main() {
@@ -292,6 +293,12 @@ func run() error {
 	adminSvc := adminmod.NewService(adminRepo)
 	adminHandler := adminmod.NewHandler(adminSvc)
 
+	// billing: App Store 订阅 (经 RevenueCat) 的服务端真相 + webhook 接收.
+	// 与 module/subscription (X 推文订阅) 无关 —— 那是采集数据源, 这是付费订阅.
+	billingRepo := billingmod.NewRepository(pool)
+	billingSvc := billingmod.NewService(billingRepo, cfg.RevenueCatWebhookAuth, logger)
+	billingHandler := billingmod.NewHandler(billingSvc)
+
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
 		DB:               pool,
@@ -317,6 +324,7 @@ func run() error {
 			distillationHandler.Register(v1, internal, admin)
 			subscriptionHandler.Register(v1, admin)
 			recommendHandler.Register(v1, internal)
+			billingHandler.Register(anon, v1)
 			assetHandler.Register(v1)
 		},
 	})

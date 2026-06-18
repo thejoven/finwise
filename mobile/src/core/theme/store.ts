@@ -24,7 +24,7 @@ import { create } from "zustand";
 
 export type AppearancePref = "light" | "dark" | "system";
 
-const STORAGE_KEY = "wiseflow.appearance.v1";
+const STORAGE_KEY = "alphax.appearance.v1";
 
 /** 把偏好落到原生外观: system → null (跟随系统), 否则强制. */
 function apply(pref: AppearancePref): void {

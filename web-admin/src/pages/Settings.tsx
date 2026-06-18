@@ -6,13 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { clearToken, wiseflow, getApiBase, getToken, setApiBase, setToken } from "@/lib/api";
+import { clearToken, alphax, getApiBase, getToken, setApiBase, setToken } from "@/lib/api";
 import { useToast } from "@/components/ui/toaster";
 
 export function SettingsPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
-  const { data: me } = useQuery({ queryKey: ["me"], queryFn: wiseflow.me, staleTime: 60_000 });
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: alphax.me, staleTime: 60_000 });
 
   const [base, setBase] = React.useState(() => getApiBase());
   const [token, setLocalToken] = React.useState(getToken() ?? "");
@@ -31,7 +31,7 @@ export function SettingsPage() {
   };
 
   const changePw = useMutation({
-    mutationFn: () => wiseflow.changePassword(oldPw, newPw),
+    mutationFn: () => alphax.changePassword(oldPw, newPw),
     onSuccess: () => {
       toast({
         title: "密码已修改",

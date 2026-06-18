@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Loading, ErrorBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { Cpu, Rss } from "lucide-react";
 
@@ -69,17 +69,17 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 export function DashboardPage() {
   const overview = useQuery({
     queryKey: ["admin", "overview"],
-    queryFn: wiseflow.admin.stats.overview,
+    queryFn: alphax.admin.stats.overview,
     refetchInterval: 30_000,
   });
   const health = useQuery({
     queryKey: ["admin", "inference-health"],
-    queryFn: wiseflow.admin.inference.health,
+    queryFn: alphax.admin.inference.health,
     refetchInterval: 30_000,
   });
   const sys = useQuery({
     queryKey: ["dashboard-health"],
-    queryFn: wiseflow.health,
+    queryFn: alphax.health,
     refetchInterval: 15_000,
   });
 

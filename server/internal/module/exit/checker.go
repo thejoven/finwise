@@ -27,9 +27,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/metrics"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/metrics"
 )
 
 const (

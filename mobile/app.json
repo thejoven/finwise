@@ -1,10 +1,10 @@
 {
   "expo": {
     "name": "财知",
-    "slug": "wiseflow",
+    "slug": "alphax",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "wiseflow",
+    "scheme": "alphax",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "platforms": [
@@ -13,13 +13,13 @@
     ],
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.wiseflow.app",
+      "bundleIdentifier": "com.alphax.app",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.wiseflow.app",
+      "package": "com.alphax.app",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
       }

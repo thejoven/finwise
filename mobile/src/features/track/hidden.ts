@@ -11,7 +11,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-const STORAGE_KEY = "wiseflow.hiddenAssets.v1";
+const STORAGE_KEY = "alphax.hiddenAssets.v1";
 
 interface HiddenAssetsState {
   hydrated: boolean;

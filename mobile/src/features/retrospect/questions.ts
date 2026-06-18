@@ -4,7 +4,7 @@
  * Phase 3 v2 由 Mastra Diagnostician 根据 commitment 上下文动态出题. 现在 hardcode.
  * 维度顺序固定 1:perception → 2:inference → 3:evaluation → 4:execution.
  *
- * 题面与选项锚定 WiseFlow Pro Lens (与 mastra/src/agents/lens.ts 一致):
+ * 题面与选项锚定 AlphaX Pro Lens (与 mastra/src/agents/lens.ts 一致):
  *   - perception → L1 根因还原 + L10 叙事生命周期 (录入时你站在 narrative 哪一段)
  *   - inference  → L2 多元思维栅格 + L3 二阶思考 (链条跑到第几跳, 用了几个 lens)
  *   - evaluation → L8 安全边际 + L9 凸性 (退出条件是否能把 optionality 还原为现金)

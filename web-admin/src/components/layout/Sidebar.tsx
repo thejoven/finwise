@@ -80,7 +80,7 @@ export function Sidebar() {
           W
         </div>
         <div className="flex flex-col leading-tight">
-          <span className="text-sm font-semibold tracking-tight">WiseFlow</span>
+          <span className="text-sm font-semibold tracking-tight">AlphaX</span>
           <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             运营后台
           </span>
@@ -122,7 +122,7 @@ export function Sidebar() {
 
       <div className="border-t p-3 text-[10px] text-muted-foreground">
         <p className="font-mono">192.168.1.205 · 内网</p>
-        <p className="mt-0.5">© WiseFlow Engine</p>
+        <p className="mt-0.5">© AlphaX Engine</p>
       </div>
     </aside>
   );

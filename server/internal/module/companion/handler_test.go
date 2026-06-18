@@ -16,9 +16,9 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/httpapi"
-	"wiseflow/server/internal/infra/db"
-	mastrax "wiseflow/server/internal/infra/mastra"
+	"alphax/server/internal/httpapi"
+	"alphax/server/internal/infra/db"
+	mastrax "alphax/server/internal/infra/mastra"
 )
 
 const (

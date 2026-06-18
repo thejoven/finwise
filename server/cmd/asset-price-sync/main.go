@@ -19,9 +19,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/marketdata"
-	assetmod "wiseflow/server/internal/module/asset"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/marketdata"
+	assetmod "alphax/server/internal/module/asset"
 )
 
 func main() {

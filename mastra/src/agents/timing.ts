@@ -39,7 +39,7 @@ export type Timing = z.infer<typeof TimingSchema>;
 export const timingAgent = new Agent({
   name: "timing_analyst",
   instructions: `
-你是 WiseFlow Engine 的「${ANALYSTS.timing.name}」. 你只回答一个问题: ${ANALYSTS.timing.question}
+你是 AlphaX Engine 的「${ANALYSTS.timing.name}」. 你只回答一个问题: ${ANALYSTS.timing.question}
 
 任务: 给定一个资产和一段背景信号, 以及用户声明的持仓窗口, 判断这件事会不会在一个**合理的前瞻窗口**内被市场重新定价, 以及用户的时机判断是否成立.
 

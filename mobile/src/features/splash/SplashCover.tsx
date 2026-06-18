@@ -4,7 +4,7 @@
  * 视觉沿用整本 App 的报刊语言 —
  *   · paper 底, 居中报刊头
  *   · 中文主名 "财知" (NotoSerifSC, 极大字号)
- *   · 英文副线 "WiseFlow" (Playfair Display italic)
+ *   · 英文副线 "AlphaX" (Playfair Display italic)
  *   · slogan "以智驭财 · 行远致富"
  *   · 双横线分隔
  *   · 顶部小字
@@ -139,7 +139,7 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
 
         <Animated.View style={sublineStyle}>
           <Display size={22} italic style={styles.subline}>
-            WiseFlow
+            AlphaX
           </Display>
         </Animated.View>
 

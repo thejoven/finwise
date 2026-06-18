@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -36,7 +36,7 @@ export function RetrospectsPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "retrospects", focused?.id ?? "all", state],
     queryFn: () =>
-      wiseflow.admin.retrospects.list({ user_id: focused?.id, state: state || undefined, limit: 100 }),
+      alphax.admin.retrospects.list({ user_id: focused?.id, state: state || undefined, limit: 100 }),
   });
   const rows = data?.retrospects ?? [];
 

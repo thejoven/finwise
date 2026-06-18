@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/xsource"
 )
 
 // 解析按真实样本对齐 (docs/api/samples/twitterdata/, @elonmusk, 2026-06-16). 与 twtapi 的差异:

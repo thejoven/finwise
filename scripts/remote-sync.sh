@@ -4,11 +4,11 @@
 #
 # Default workflow (Go only):
 #   1. rsync everything (minus node_modules / build artifacts / .env / .git)
-#      to root@192.168.1.205:/opt/wiseflow/
-#   2. on the server: go build → install binary → systemctl restart wiseflow-api
+#      to root@192.168.1.205:/opt/alphax/
+#   2. on the server: go build → install binary → systemctl restart alphax-api
 #   3. tail the last lines of the api log so we see the boot ok
 #
-# Mastra service (wiseflow-mastra.service) is NOT touched by default — Go-only
+# Mastra service (alphax-mastra.service) is NOT touched by default — Go-only
 # changes don't need a mastra restart, and mastra restart costs ~5s of LLM
 # warmup + NATS reconnection. Use --mastra or --all to bounce it.
 #
@@ -16,20 +16,20 @@
 #   ./scripts/remote-sync.sh              # rsync + Go rebuild + restart api
 #   ./scripts/remote-sync.sh --no-build   # rsync only (docs / configs only)
 #   ./scripts/remote-sync.sh --logs       # tail current api log
-#   ./scripts/remote-sync.sh --mastra     # rsync + restart wiseflow-mastra (TS changes only)
+#   ./scripts/remote-sync.sh --mastra     # rsync + restart alphax-mastra (TS changes only)
 #   ./scripts/remote-sync.sh --all        # rsync + Go rebuild + restart api + restart mastra
 #   ./scripts/remote-sync.sh --mastra-install   # rsync + npm install + restart mastra (package.json changed)
 #   ./scripts/remote-sync.sh --mastra-logs      # tail mastra log
 #
 # Env overrides:
 #   REMOTE_HOST   (default: root@192.168.1.205)
-#   REMOTE_DIR    (default: /opt/wiseflow)
+#   REMOTE_DIR    (default: /opt/alphax)
 #   SSH_KEY       (default: $HOME/.ssh/id_ed25519_clh_520jwenlee)
 
 set -euo pipefail
 
 REMOTE_HOST="${REMOTE_HOST:-root@192.168.1.205}"
-REMOTE_DIR="${REMOTE_DIR:-/opt/wiseflow}"
+REMOTE_DIR="${REMOTE_DIR:-/opt/alphax}"
 SSH_KEY="${SSH_KEY:-$HOME/.ssh/id_ed25519_clh_520jwenlee}"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -65,42 +65,42 @@ do_rsync() {
 }
 
 do_build_restart() {
-  echo "→ build + restart wiseflow-api on $REMOTE_HOST"
+  echo "→ build + restart alphax-api on $REMOTE_HOST"
   remote 'set -e
-    cd /opt/wiseflow/server
-    mkdir -p /opt/wiseflow/bin
-    /usr/local/go/bin/go build -o /opt/wiseflow/bin/wiseflow-api ./cmd/api
-    systemctl restart wiseflow-api
+    cd /opt/alphax/server
+    mkdir -p /opt/alphax/bin
+    /usr/local/go/bin/go build -o /opt/alphax/bin/alphax-api ./cmd/api
+    systemctl restart alphax-api
     sleep 1
-    systemctl is-active wiseflow-api
+    systemctl is-active alphax-api
   '
 }
 
 do_logs() {
-  echo "→ last 40 lines of /var/log/wiseflow-api.log:"
-  remote "tail -40 /var/log/wiseflow-api.log"
+  echo "→ last 40 lines of /var/log/alphax-api.log:"
+  remote "tail -40 /var/log/alphax-api.log"
 }
 
 do_restart_mastra() {
-  echo "→ restart wiseflow-mastra on $REMOTE_HOST"
+  echo "→ restart alphax-mastra on $REMOTE_HOST"
   remote 'set -e
-    systemctl restart wiseflow-mastra
+    systemctl restart alphax-mastra
     sleep 4
-    systemctl is-active wiseflow-mastra
+    systemctl is-active alphax-mastra
   '
 }
 
 do_mastra_install() {
-  echo "→ npm install in /opt/wiseflow/mastra on $REMOTE_HOST"
+  echo "→ npm install in /opt/alphax/mastra on $REMOTE_HOST"
   remote 'set -e
-    cd /opt/wiseflow/mastra
+    cd /opt/alphax/mastra
     /usr/local/bin/npm install --no-fund --no-audit
   '
 }
 
 do_mastra_logs() {
-  echo "→ last 30 lines of /var/log/wiseflow-mastra.log:"
-  remote "tail -30 /var/log/wiseflow-mastra.log"
+  echo "→ last 30 lines of /var/log/alphax-mastra.log:"
+  remote "tail -30 /var/log/alphax-mastra.log"
 }
 
 case "${1:-sync}" in

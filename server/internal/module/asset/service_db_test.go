@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/infra/db"
 )
 
 // 集成测试: 跑真实 Postgres (需 migration 025 已应用). 无 DATABASE_URL 时跳过, 故

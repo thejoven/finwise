@@ -1,6 +1,6 @@
 # mobile/
 
-WiseFlow Engine 客户端 — Expo SDK 54 + React Native 0.81 + Expo Router 6 + TypeScript.
+AlphaX Engine 客户端 — Expo SDK 54 + React Native 0.81 + Expo Router 6 + TypeScript.
 
 ```
 app/                      # Expo Router (文件路由)

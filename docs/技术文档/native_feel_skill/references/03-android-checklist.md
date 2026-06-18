@@ -89,7 +89,7 @@ useFocusEffect(useCallback(() => {
 
 ### § 7. 财富密码 反主流项
 
-和 iOS 一致(见 `05-wiseflow-restraint.md`):
+和 iOS 一致(见 `05-alphax-restraint.md`):
 - 不弹 Toast
 - 不用 FAB
 - 不用红点

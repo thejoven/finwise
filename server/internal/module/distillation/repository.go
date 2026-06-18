@@ -21,7 +21,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/infra/db"
 )
 
 var ErrNotFound = errors.New("distillation not found")

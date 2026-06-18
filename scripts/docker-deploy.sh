@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # 把 repo 推到目标服务器 + docker compose 重建 + 起服务.
-# 默认目标是 SERVER.md 里的 root@192.168.1.205, 也可以通过 WISEFLOW_HOST 覆盖.
+# 默认目标是 SERVER.md 里的 root@192.168.1.205, 也可以通过 ALPHAX_HOST 覆盖.
 #
 # 用法:
 #   ./scripts/docker-deploy.sh                  # 推代码 + build + up
@@ -10,14 +10,14 @@
 #   ./scripts/docker-deploy.sh --logs           # 只看 api + mastra 日志
 #
 # 前置:
-#   - 服务器 /opt/wiseflow/.env 已配好 (.env.docker.example 模板).
+#   - 服务器 /opt/alphax/.env 已配好 (.env.docker.example 模板).
 #   - SSH key 已加到服务器 authorized_keys.
 
 set -euo pipefail
 
-HOST="${WISEFLOW_HOST:-root@192.168.1.205}"
-REMOTE_DIR="${WISEFLOW_REMOTE_DIR:-/opt/wiseflow}"
-SSH_OPTS="${WISEFLOW_SSH_OPTS:-}"
+HOST="${ALPHAX_HOST:-root@192.168.1.205}"
+REMOTE_DIR="${ALPHAX_REMOTE_DIR:-/opt/alphax}"
+SSH_OPTS="${ALPHAX_SSH_OPTS:-}"
 COMPOSE="docker compose --profile prod"
 
 repo_root="$(cd "$(dirname "$0")/.." && pwd)"

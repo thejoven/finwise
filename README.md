@@ -115,7 +115,7 @@ make test
 ## C. Docker 全栈部署
 
 把后端 (postgres + redis + iii + iii-console + api + mastra + web-admin) 全跑在一台 Linux 主机的
-docker compose 里; iii engine 现在也是 compose service (`wiseflow-iii`, image `iiidev/iii:0.16.1`),
+docker compose 里; iii engine 现在也是 compose service (`alphax-iii`, image `iiidev/iii:0.16.1`),
 api / mastra 走 compose 网络的服务名 `iii` 接它, 不再依赖 host systemd / host.docker.internal. 适合:
 
 - 在另一台机器搭一份测试环境
@@ -138,7 +138,7 @@ api / mastra 走 compose 网络的服务名 `iii` 接它, 不再依赖 host syst
                            ▼                   ▼
    ┌──────────┐     ┌──────────────────────────────────┐
    │  redis   │     │            iii engine            │
-   │  :6380   │     │  wiseflow-iii (iiidev/iii:0.16.1) │
+   │  :6380   │     │  alphax-iii (iiidev/iii:0.16.1) │
    └──────────┘     │  HTTP :3111   WS :49134          │
    ┌──────────┐     │  queue+state -> iiidata volume   │
    │web-admin │     └────────────────┬─────────────────┘
@@ -205,7 +205,7 @@ docker compose --profile prod down -v
 ### 推到远程主机
 
 `scripts/docker-deploy.sh` 把代码 rsync 上去 + 在远端 docker compose build/up.
-默认目标是 `root@192.168.1.205` (与现行 SERVER.md 一致, 可通过 `WISEFLOW_HOST` 覆盖).
+默认目标是 `root@192.168.1.205` (与现行 SERVER.md 一致, 可通过 `ALPHAX_HOST` 覆盖).
 
 ```bash
 # 推 + build + 跑迁移 + 起服务
@@ -218,7 +218,7 @@ make docker-deploy
 ./scripts/docker-deploy.sh --logs            # 跟远端日志
 
 # 推到别的机器
-WISEFLOW_HOST=root@10.0.0.50 ./scripts/docker-deploy.sh
+ALPHAX_HOST=root@10.0.0.50 ./scripts/docker-deploy.sh
 ```
 
 部署目标机的前置:
@@ -229,10 +229,10 @@ ssh root@target 'docker --version && docker compose version'
 # 装新版见 https://docs.docker.com/engine/install/ubuntu/
 
 # 目标目录 (与 docker-deploy.sh 默认对齐):
-ssh root@target 'mkdir -p /opt/wiseflow && chmod 700 /opt/wiseflow'
+ssh root@target 'mkdir -p /opt/alphax && chmod 700 /opt/alphax'
 
 # 服务器侧 .env 必须先手动创建一次 (含 LLM key + 强密码), 之后由 rsync 跳过.
-ssh root@target 'test -f /opt/wiseflow/.env || echo "需要先 scp .env.docker.example 模板填好上传"'
+ssh root@target 'test -f /opt/alphax/.env || echo "需要先 scp .env.docker.example 模板填好上传"'
 ```
 
 ### 镜像构建参数 (墙内提速)
@@ -254,13 +254,13 @@ NPM_REGISTRY=https://registry.npmmirror.com/
 
 | 维度 | systemd (SERVER.md) | Docker (本节) |
 |---|---|---|
-| API 进程 | `systemctl status wiseflow-api` | `docker compose logs api` |
-| Mastra | `systemctl status wiseflow-mastra` | `docker compose logs mastra` |
+| API 进程 | `systemctl status alphax-api` | `docker compose logs api` |
+| Mastra | `systemctl status alphax-mastra` | `docker compose logs mastra` |
 | iii engine | docker compose `iii` (基础设施层) | docker compose `iii` (同一份 compose) |
 | Web admin | 宿主 nginx 直接 serve dist/ | nginx 容器 + 反代 api 容器 |
 | 迁移 | `bash scripts/migrate.sh up` (宿主) | `make docker-migrate` (一次性容器) |
 | INTERNAL_LOOPBACK | `true` (同机 loopback) | **`false`** (容器之间走 docker 网络) |
-| 重启某个组件 | `systemctl restart wiseflow-mastra` | `docker compose restart mastra` |
+| 重启某个组件 | `systemctl restart alphax-mastra` | `docker compose restart mastra` |
 
 两条路可以同机切换, 但不要同时跑 (iii queue 同名 consumer 多实例会争消息, mastra 会冲突).
 
@@ -333,7 +333,7 @@ A: `.env` 没拷或没填. 跑 `cp .env.example .env` 并填 `DEV_USER_ID`.
 A: docker 没起或 postgres 还没 healthy. `docker compose ps` 看一下, 等 healthcheck 变 `healthy` 再 migrate.
 
 **Q: `make docker-up` 卡在 `Error response from daemon: pull access denied`**
-A: 这里不需要 pull, 是本地 build. 检查 `docker compose --profile prod config` 看 image 字段是不是 `wiseflow/*:local`. 如果是, 跑一次 `docker compose --profile prod build` 强制构建.
+A: 这里不需要 pull, 是本地 build. 检查 `docker compose --profile prod config` 看 image 字段是不是 `alphax/*:local`. 如果是, 跑一次 `docker compose --profile prod build` 强制构建.
 
 **Q: docker compose 报 `DEV_USER_ID required, run uuidgen and set it in .env`**
 A: 用了 `--profile prod`, 但 `.env` 没填关键字段. 这是有意的硬失败 — 见 `.env.docker.example`.

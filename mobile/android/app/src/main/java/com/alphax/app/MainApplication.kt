@@ -1,4 +1,4 @@
-package com.wiseflow.app
+package com.alphax.app
 
 import android.app.Application
 import android.content.res.Configuration

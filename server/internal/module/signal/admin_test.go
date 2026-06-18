@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/domain"
+	"alphax/server/internal/domain"
 )
 
 // TestAdminReinferRoutesNoConflict 确认 POST /signals/reinfer (静态) 与 POST

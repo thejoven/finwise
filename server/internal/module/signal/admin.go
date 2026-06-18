@@ -16,7 +16,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"wiseflow/server/internal/domain"
+	"alphax/server/internal/domain"
 )
 
 type AdminSignalFilter struct {

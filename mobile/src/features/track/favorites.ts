@@ -10,7 +10,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { create } from "zustand";
 
-const STORAGE_KEY = "wiseflow.favoriteAssets.v1";
+const STORAGE_KEY = "alphax.favoriteAssets.v1";
 
 interface FavoriteAssetsState {
   hydrated: boolean;

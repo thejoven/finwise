@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 import { useToast } from "@/components/ui/toaster";
@@ -43,7 +43,7 @@ export function SignalsPage() {
   const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["admin", "signals", focused?.id ?? "all", status, submittedQ],
     queryFn: () =>
-      wiseflow.admin.signals.list({
+      alphax.admin.signals.list({
         user_id: focused?.id,
         status: status || undefined,
         q: submittedQ || undefined,
@@ -53,7 +53,7 @@ export function SignalsPage() {
 
   // 行内按需重推失败信号. 重推不立即改 status (经 outbox 重发, mastra 重跑后才回写); 刷新列表.
   const reinfer = useMutation({
-    mutationFn: (id: string) => wiseflow.admin.signals.reinfer(id),
+    mutationFn: (id: string) => alphax.admin.signals.reinfer(id),
     onSuccess: (r) => {
       toast({
         title: "已入队重推",

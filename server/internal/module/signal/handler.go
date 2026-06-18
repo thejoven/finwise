@@ -9,8 +9,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/httpapi/auth"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/httpapi/auth"
 )
 
 // Handler hosts the HTTP entry points for the signal module.

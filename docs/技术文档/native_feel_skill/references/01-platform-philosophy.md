@@ -139,7 +139,7 @@ Alert.alert('确认', '放弃这张草稿?', [...]);
 
 ### 2.4 ❌ 不用 ActivityIndicator
 
-完全不显示 loading, 或用打字机效果。见 `05-wiseflow-restraint.md`。
+完全不显示 loading, 或用打字机效果。见 `05-alphax-restraint.md`。
 
 ### 2.5 ❌ 不用第三方 Toast 库
 

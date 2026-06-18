@@ -13,8 +13,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/mastra"
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/mastra"
+	"alphax/server/internal/infra/xsource"
 )
 
 var (

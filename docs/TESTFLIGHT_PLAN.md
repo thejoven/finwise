@@ -28,10 +28,10 @@
 ### 1.2 App Store Connect
 
 注册成功后在 <https://appstoreconnect.apple.com> 创建 App:
-- Bundle ID: `com.wiseflow.app` (已在 app.json 配)
+- Bundle ID: `com.alphax.app` (已在 app.json 配)
 - App Name: `财富密码`
 - Primary Language: Simplified Chinese
-- SKU: 任意, 如 `wiseflow-001`
+- SKU: 任意, 如 `alphax-001`
 - User Access: Full Access (单用户)
 
 ---

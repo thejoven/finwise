@@ -5,7 +5,7 @@
 //
 // 用法 (需要 DATABASE_URL; 规则啃不动的中文名/裸 ticker 走 Mastra LLM, 故也需 MASTRA_HTTP_URL):
 //
-//	# 在 205 上 (sources /opt/wiseflow/.env 拿连接串):
+//	# 在 205 上 (sources /opt/alphax/.env 拿连接串):
 //	go run ./cmd/asset-backfill
 //	# 仅规则归一 (不配 Mastra, 其余一律 untrackable):
 //	go run ./cmd/asset-backfill -mastra-url ''
@@ -21,9 +21,9 @@ import (
 
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/db"
-	mastrax "wiseflow/server/internal/infra/mastra"
-	assetmod "wiseflow/server/internal/module/asset"
+	"alphax/server/internal/infra/db"
+	mastrax "alphax/server/internal/infra/mastra"
+	assetmod "alphax/server/internal/module/asset"
 )
 
 func main() {

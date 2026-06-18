@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/httpapi/auth"
+	"alphax/server/internal/httpapi/auth"
 )
 
 type Handler struct {

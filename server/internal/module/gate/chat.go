@@ -11,8 +11,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/infra/mastra"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/infra/mastra"
 )
 
 // 归档页"与分析师继续对话".

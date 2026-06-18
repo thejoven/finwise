@@ -20,8 +20,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/httpapi"
-	"wiseflow/server/internal/infra/db"
+	"alphax/server/internal/httpapi"
+	"alphax/server/internal/infra/db"
 )
 
 const (

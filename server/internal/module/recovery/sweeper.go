@@ -34,8 +34,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/metrics"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/metrics"
 )
 
 // Config 巡检参数. 零值由 New 补默认 (与 config.go 的 env 默认对齐).
@@ -186,7 +186,7 @@ func (s *Sweeper) reviveFailedTweets(ctx context.Context) ([]string, error) {
 }
 
 // sampleExhausted 采样"已放弃"的记录数 (复活次数到顶仍卡住) 写进 gauge.
-// 这是让静默永久失败可见的关键指标 —— 对 wiseflow_recovery_exhausted > 0 告警.
+// 这是让静默永久失败可见的关键指标 —— 对 alphax_recovery_exhausted > 0 告警.
 func (s *Sweeper) sampleExhausted(ctx context.Context) {
 	const q = `
 		SELECT

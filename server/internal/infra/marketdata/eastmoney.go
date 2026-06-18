@@ -88,7 +88,7 @@ func (e *EastMoney) get(ctx context.Context, path string, q url.Values) ([]byte,
 		return nil, err
 	}
 	// 非官方端点对 UA 不挑, 但带一个常规 UA 更稳.
-	req.Header.Set("User-Agent", "Mozilla/5.0 (wiseflow marketdata)")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (alphax marketdata)")
 
 	resp, err := e.hc.Do(req)
 	if err != nil {

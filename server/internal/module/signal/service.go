@@ -10,7 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/domain"
+	"alphax/server/internal/domain"
 )
 
 // ErrInvalidInput is the family of "user typed something we won't accept".

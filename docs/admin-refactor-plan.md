@@ -4,7 +4,7 @@
 
 确认的方向（用户拍板）：
 - 范围：**全面运营后台** —— 跨用户全局视图，后端先补齐 `/v1/admin/*` 聚合接口，再做前端。
-- 视觉：**顺带做一次视觉刷新** —— 统一品牌头（WiseFlow，替换占位 F logo）、配色与信息密度。
+- 视觉：**顺带做一次视觉刷新** —— 统一品牌头（AlphaX，替换占位 F logo）、配色与信息密度。
 
 ---
 
@@ -70,14 +70,14 @@
 ## 4. 前端改造
 
 ### 4a. api 客户端（`web-admin/src/lib/api.ts`）
-新增 `wiseflow.admin.stats.overview()`、`.inference.health()/.reinfer()`、`.signals.list(params)`、`.subscriptions.list()`、`.holdings.list()`、`.gate.list()`、`.users.overview(id)` + 对应 TS 类型。
+新增 `alphax.admin.stats.overview()`、`.inference.health()/.reinfer()`、`.signals.list(params)`、`.subscriptions.list()`、`.holdings.list()`、`.gate.list()`、`.users.overview(id)` + 对应 TS 类型。
 
 ### 4b. 路由与页面（`App.tsx` + `pages/`）
 按 §2 IA 重排路由。新增页：Subscriptions、Projects、Distillation、AiPipeline。重写为跨用户：Dashboard、Signals、Gate、Positions(Commitments+Holdings)、Refinement、Retrospects、Users(增强)。保留：Metrics、Invites、Settings/System。
 
 ### 4c. App 壳 + 视觉刷新
 - 重写 `layout/AppShell` + `layout/Sidebar` 为分组导航（section 标签）。
-- 视觉系统：品牌头（WiseFlow 字标，替换 F 占位）、配色/密度/统一 PageHeader、表格与状态 pill 规范。沿用 shadcn 基元，收紧 token（`index.css` / `tailwind.config.js`）。
+- 视觉系统：品牌头（AlphaX 字标，替换 F 占位）、配色/密度/统一 PageHeader、表格与状态 pill 规范。沿用 shadcn 基元，收紧 token（`index.css` / `tailwind.config.js`）。
 - 「聚焦到用户」：全局 selected-user context + 顶部 banner；置位后域页面带 `user_id` 调 admin 端点。
 
 ---

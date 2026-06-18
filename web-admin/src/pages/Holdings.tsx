@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { ErrorBox, Loading, EmptyBox } from "@/components/QueryState";
-import { wiseflow, type HoldingRow } from "@/lib/api";
+import { alphax, type HoldingRow } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 function StatusBadge({ s }: { s: string }) {
@@ -45,7 +45,7 @@ export function HoldingsPage() {
 
   const { data, refetch, isFetching, isLoading, isError, error } = useQuery({
     queryKey: ["holdings", "list"],
-    queryFn: wiseflow.holdings.list,
+    queryFn: alphax.holdings.list,
   });
 
   const rows = data?.holdings ?? [];
@@ -142,7 +142,7 @@ function HoldingDetail({ h }: { h: HoldingRow }) {
   // holding.id == commitment.id → 拉对应承诺书拿完整 thesis.
   const { data: commit, isLoading: commitLoading, isError: commitError } = useQuery({
     queryKey: ["commitments", "detail", h.id],
-    queryFn: () => wiseflow.commitments.get(h.id),
+    queryFn: () => alphax.commitments.get(h.id),
     retry: 0,
   });
 

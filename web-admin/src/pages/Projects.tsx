@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loading, ErrorBox, EmptyBox } from "@/components/QueryState";
-import { wiseflow } from "@/lib/api";
+import { alphax } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import { useFocusedUser } from "@/lib/focusedUser";
 
@@ -24,7 +24,7 @@ export function ProjectsPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["admin", "projects", focused?.id ?? "all", includeArchived],
     queryFn: () =>
-      wiseflow.admin.projects.list({
+      alphax.admin.projects.list({
         user_id: focused?.id,
         include_archived: includeArchived,
         limit: 200,

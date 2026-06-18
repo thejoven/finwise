@@ -31,7 +31,7 @@ export type Distilled = z.infer<typeof DistilledSchema>;
 export const distiller = new Agent({
   name: "distiller",
   instructions: `
-你是 WiseFlow Engine 的 Distiller (降噪).
+你是 AlphaX Engine 的 Distiller (降噪).
 
 用户刚答完五轮追问. 你的任务: 把"这条信号 + 用户五轮里暴露的认知"降噪成一段清醒的判断.
 

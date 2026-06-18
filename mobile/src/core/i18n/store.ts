@@ -16,7 +16,7 @@ import i18n from "./index";
 import { coercePref, resolveLanguage, type LanguagePref, type SupportedLanguage } from "./languages";
 import { pushLanguageToServer } from "./sync";
 
-const STORAGE_KEY = "wiseflow.language.v1";
+const STORAGE_KEY = "alphax.language.v1";
 
 interface LanguageState {
   hydrated: boolean;

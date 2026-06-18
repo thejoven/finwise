@@ -18,7 +18,7 @@
 
 import { runNarrator } from "../agents/narrator.js";
 import type { CommitmentActionT } from "../agents/narrator.js";
-import { getRefinementSession, postCommitmentDraft } from "../tools/wiseflow-api.js";
+import { getRefinementSession, postCommitmentDraft } from "../tools/alphax-api.js";
 import { config } from "../config/env.js";
 
 const DEFAULT_POSITION_PCT = 5;

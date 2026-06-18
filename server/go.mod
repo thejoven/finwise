@@ -1,4 +1,4 @@
-module wiseflow/server
+module alphax/server
 
 go 1.24
 

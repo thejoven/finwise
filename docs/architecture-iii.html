@@ -200,7 +200,7 @@
         <!-- Go API :8080 (tall: includes outbox indicator) -->
         <rect x="360" y="105" width="200" height="220" rx="6" fill="#0f172a"/>
         <rect x="360" y="105" width="200" height="220" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="460" y="128" fill="white" font-size="13" font-weight="600" text-anchor="middle">Go API · wiseflow-api</text>
+        <text x="460" y="128" fill="white" font-size="13" font-weight="600" text-anchor="middle">Go API · alphax-api</text>
         <text x="460" y="145" fill="#94a3b8" font-size="9" text-anchor="middle">gin :8080 · systemd</text>
         <text x="460" y="167" fill="#34d399" font-size="9" font-weight="600" text-anchor="middle">业务路由</text>
         <text x="460" y="181" fill="#94a3b8" font-size="8" text-anchor="middle">signal · refinement · gate</text>
@@ -220,7 +220,7 @@
         <!-- iii engine -->
         <rect x="640" y="105" width="220" height="215" rx="6" fill="#0f172a"/>
         <rect x="640" y="105" width="220" height="215" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="2"/>
-        <text x="750" y="127" fill="white" font-size="13" font-weight="600" text-anchor="middle">iii Engine · wiseflow-iii</text>
+        <text x="750" y="127" fill="white" font-size="13" font-weight="600" text-anchor="middle">iii Engine · alphax-iii</text>
         <text x="750" y="144" fill="#94a3b8" font-size="9" text-anchor="middle">v0.16.0 · docker (iiidev/iii)</text>
         <!-- ports -->
         <rect x="654" y="156" width="90" height="22" rx="4" fill="rgba(251, 146, 60, 0.4)" stroke="#fb923c" stroke-width="0.8"/>
@@ -247,7 +247,7 @@
         <!-- Mastra worker -->
         <rect x="920" y="105" width="220" height="215" rx="6" fill="#0f172a"/>
         <rect x="920" y="105" width="220" height="215" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
-        <text x="1030" y="127" fill="white" font-size="13" font-weight="600" text-anchor="middle">Mastra · wiseflow-mastra</text>
+        <text x="1030" y="127" fill="white" font-size="13" font-weight="600" text-anchor="middle">Mastra · alphax-mastra</text>
         <text x="1030" y="144" fill="#94a3b8" font-size="9" text-anchor="middle">Node 20 · tsx · systemd</text>
         <!-- iii sdk worker half -->
         <rect x="938" y="158" width="184" height="80" rx="4" fill="rgba(251, 146, 60, 0.18)" stroke="#fb923c" stroke-width="1"/>
@@ -281,7 +281,7 @@
         <rect x="640" y="500" width="400" height="115" rx="6" fill="#0f172a"/>
         <rect x="640" y="500" width="400" height="115" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1.5" stroke-dasharray="3,2"/>
         <text x="840" y="522" fill="white" font-size="12" font-weight="600" text-anchor="middle">iiidata · docker named volume</text>
-        <text x="840" y="538" fill="#94a3b8" font-size="8" text-anchor="middle">/var/lib/docker/volumes/wiseflow_iiidata/_data/</text>
+        <text x="840" y="538" fill="#94a3b8" font-size="8" text-anchor="middle">/var/lib/docker/volumes/alphax_iiidata/_data/</text>
         <text x="840" y="558" fill="#a78bfa" font-size="9" text-anchor="middle">iii-queue builtin (file_based)</text>
         <text x="840" y="571" fill="#94a3b8" font-size="7" text-anchor="middle">queue_store.db/ — 4 命名队列持久化</text>
         <text x="840" y="588" fill="#a78bfa" font-size="9" text-anchor="middle">iii-state kv (file_based)</text>
@@ -299,9 +299,9 @@
         <rect x="440" y="500" width="180" height="115" rx="6" fill="#0f172a"/>
         <rect x="440" y="500" width="180" height="115" rx="6" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1.5"/>
         <text x="530" y="522" fill="white" font-size="12" font-weight="600" text-anchor="middle">iii Console</text>
-        <text x="530" y="538" fill="#94a3b8" font-size="9" text-anchor="middle">wiseflow-iii-console · :3113</text>
+        <text x="530" y="538" fill="#94a3b8" font-size="9" text-anchor="middle">alphax-iii-console · :3113</text>
         <text x="530" y="556" fill="#fb923c" font-size="8" text-anchor="middle">docker (自建镜像)</text>
-        <text x="530" y="569" fill="#94a3b8" font-size="7" text-anchor="middle">wiseflow/iii-console:0.16.0</text>
+        <text x="530" y="569" fill="#94a3b8" font-size="7" text-anchor="middle">alphax/iii-console:0.16.0</text>
         <text x="530" y="582" fill="#94a3b8" font-size="7" text-anchor="middle">(iii/Dockerfile.console)</text>
         <text x="530" y="598" fill="#94a3b8" font-size="8" text-anchor="middle">DLQ · queue stats</text>
         <text x="530" y="610" fill="#94a3b8" font-size="8" text-anchor="middle">functions · OTel</text>
@@ -386,8 +386,8 @@
           <li>• <b>Postgres :5432</b> (docker) 业务数据 + pgvector + outbox 表</li>
           <li>• <b>iiidata named volume</b> iii queue + state 文件持久化 (0.16.0 用 KV file_based，不再走 Redis)</li>
           <li>• <b>Redis :6380</b> (docker) 留着但无业务依赖，可删</li>
-          <li>• 2 个 systemd: <code>wiseflow-api</code> · <code>wiseflow-mastra</code></li>
-          <li>• 4 个 docker compose: <code>wiseflow-postgres</code> · <code>wiseflow-redis</code> · <code>wiseflow-iii</code> · <code>wiseflow-iii-console</code></li>
+          <li>• 2 个 systemd: <code>alphax-api</code> · <code>alphax-mastra</code></li>
+          <li>• 4 个 docker compose: <code>alphax-postgres</code> · <code>alphax-redis</code> · <code>alphax-iii</code> · <code>alphax-iii-console</code></li>
           <li>• 部署: <code>./scripts/remote-sync.sh --all</code> (rsync + go build + 重启 api+mastra)；iii 用 <code>docker compose pull iii && up -d iii</code></li>
           <li>• iii engine 重启不影响 mastra（SDK 自动重连 + 重新 register triggers）</li>
           <li>• iii console: 上游没出镜像，自己用 <code>iii/Dockerfile.console</code> build (alpine + musl 二进制)；Mac 上必须 <code>buildx --platform linux/amd64</code> 再 save/load 上 205</li>
@@ -427,7 +427,7 @@
         const pad = 32;
         const canvas = await html2canvas(document.body, { backgroundColor: '#020617', scale: 2, useCORS: true, ignoreElements: (e) => e.classList && e.classList.contains('toolbar'), x: r.left + window.scrollX - pad, y: r.top + window.scrollY - pad, width: r.width + pad * 2, height: r.height + pad * 2 });
         const link = document.createElement('a');
-        link.download = 'wiseflow-iii-architecture.png';
+        link.download = 'alphax-iii-architecture.png';
         link.href = canvas.toDataURL('image/png');
         link.click();
         btn.textContent = '✓ Done!';
@@ -450,7 +450,7 @@
         const orientation = canvas.width > canvas.height ? 'landscape' : 'portrait';
         const pdf = new jsPDF({ orientation, unit: 'px', format: [canvas.width, canvas.height], hotfixes: ['px_scaling'] });
         pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
-        pdf.save('wiseflow-iii-architecture.pdf');
+        pdf.save('alphax-iii-architecture.pdf');
         btn.textContent = '✓ Done!';
       } catch (e) {
         btn.textContent = '✗ Failed';

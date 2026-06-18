@@ -101,7 +101,7 @@ func (t *Tencent) get(ctx context.Context, path string, q url.Values) ([]byte, e
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("User-Agent", "Mozilla/5.0 (wiseflow marketdata)")
+		req.Header.Set("User-Agent", "Mozilla/5.0 (alphax marketdata)")
 		req.Header.Set("Referer", "https://gu.qq.com/")
 		resp, err := t.hc.Do(req)
 		if err != nil {

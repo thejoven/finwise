@@ -27,8 +27,8 @@
       <dict>
         <key>CFBundleURLSchemes</key>
         <array>
-          <string>wiseflow</string>
-          <string>com.wiseflow.app</string>
+          <string>alphax</string>
+          <string>com.alphax.app</string>
         </array>
       </dict>
     </array>

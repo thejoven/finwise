@@ -8,7 +8,7 @@ dist/
 
 # 部署脚本是宿主 nginx 那条路用的, 不进容器.
 deploy/deploy.sh
-deploy/wiseflow-admin.nginx.conf
+deploy/alphax-admin.nginx.conf
 
 .DS_Store
 .vscode/

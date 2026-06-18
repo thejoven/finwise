@@ -8,7 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"wiseflow/server/internal/domain"
+	"alphax/server/internal/domain"
 )
 
 var ErrInvalidInput = errors.New("invalid input")

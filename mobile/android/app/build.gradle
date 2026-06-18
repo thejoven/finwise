@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.wiseflow.app'
+    namespace 'com.alphax.app'
     defaultConfig {
-        applicationId 'com.wiseflow.app'
+        applicationId 'com.alphax.app'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

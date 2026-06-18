@@ -3,7 +3,7 @@ package asset
 import (
 	"testing"
 
-	"wiseflow/server/internal/infra/mastra"
+	"alphax/server/internal/infra/mastra"
 )
 
 func TestClassifyByRule_codes(t *testing.T) {

@@ -9,8 +9,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"wiseflow/server/internal/domain"
-	"wiseflow/server/internal/infra/mastra"
+	"alphax/server/internal/domain"
+	"alphax/server/internal/infra/mastra"
 )
 
 var ErrInvalidInput = errors.New("invalid input")

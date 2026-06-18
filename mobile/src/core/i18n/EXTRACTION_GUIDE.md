@@ -26,7 +26,7 @@
 
 | 简体 | 繁体 | English |
 |---|---|---|
-| 财知（产品名/品牌出现处） | 財知 | WiseFlow |
+| 财知（产品名/品牌出现处） | 財知 | AlphaX |
 | 信号 | 訊號 | signal |
 | 降噪 / 降噪页 | 降噪 | Distill / Distilled view |
 | 投决会（原“四道门”） | 投決會 | Investment Committee（可简称 Committee） |

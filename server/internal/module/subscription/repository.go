@@ -20,8 +20,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"wiseflow/server/internal/infra/db"
-	"wiseflow/server/internal/infra/xsource"
+	"alphax/server/internal/infra/db"
+	"alphax/server/internal/infra/xsource"
 )
 
 var ErrNotFound = errors.New("subscription: not found")
