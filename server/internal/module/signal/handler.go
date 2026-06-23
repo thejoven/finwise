@@ -15,12 +15,22 @@ import (
 
 // Handler hosts the HTTP entry points for the signal module.
 type Handler struct {
-	svc *Service
+	svc       *Service
+	asrURL    string       // GLM-ASR 内部服务地址 (语音转写代理); 空 = 关闭
+	asrClient *http.Client // 长超时 (CPU 推理慢)
 }
 
 func NewHandler(svc *Service) *Handler {
-	return &Handler{svc: svc}
+	return &Handler{
+		svc:       svc,
+		asrClient: &http.Client{Timeout: 120 * time.Second},
+	}
 }
+
+// SetASR 注入 GLM-ASR 内部服务地址 (语音转写代理). 空 → POST /signals/transcribe 返 503.
+// 用 setter 而非 NewHandler 参数, 沿用 Service.SetAfterInference 的约定, 不改既有调用方
+// (含 refinement/gate 的 handler_test) 签名.
+func (h *Handler) SetASR(url string) { h.asrURL = url }
 
 // Register attaches routes to the route groups.
 // - publicV1: /v1, requires the dev bearer / session token
@@ -28,6 +38,7 @@ func NewHandler(svc *Service) *Handler {
 // - adminV1: /v1/admin, requires Bearer + RequireAdmin
 func (h *Handler) Register(publicV1, internalV1, adminV1 *gin.RouterGroup) {
 	publicV1.POST("/signals", h.capture)
+	publicV1.POST("/signals/transcribe", h.transcribe) // 语音转写 (代理 GLM-ASR)
 	publicV1.GET("/signals", h.list)
 	publicV1.GET("/signals/:id", h.get)
 	publicV1.POST("/signals/:id/reinfer", h.reinfer)

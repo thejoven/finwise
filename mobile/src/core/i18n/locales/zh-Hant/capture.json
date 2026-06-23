@@ -6,6 +6,15 @@
     "submit": "記下",
     "cancel": "再想想"
   },
+  "voice": {
+    "record": "語音輸入",
+    "stop": "停止",
+    "cancel": "取消",
+    "recording": "聆聽中…",
+    "transcribing": "辨識中…",
+    "permissionDenied": "需要麥克風權限才能語音輸入",
+    "failed": "辨識失敗，請重試或手動輸入"
+  },
   "category": {
     "stamp": "◆ 歸到哪個分類",
     "empty": "還沒有分類，先建一個",

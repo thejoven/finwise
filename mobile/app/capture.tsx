@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Display, Serif, Sans, TapEffect, DoubleRule } from "@/shared/components";
 import { NativeField } from "@/shared/native";
 import { theme } from "@/core/theme";
-import { CaptureCategoryPicker, useCaptureSignal } from "@/features/capture";
+import { CaptureCategoryPicker, VoiceControl, useCaptureSignal, useVoiceInput } from "@/features/capture";
 import { useActiveProject } from "@/features/project";
 
 /**
@@ -35,7 +35,18 @@ export default function CaptureModal() {
   );
   const { submit, isSubmitting } = useCaptureSignal();
 
-  const canSubmit = text.trim().length > 0 && projectId !== null && !isSubmitting;
+  // 语音转写结果回填: 已有文字则追加, 否则置入. 用户可继续编辑.
+  const appendTranscript = useCallback((transcript: string) => {
+    setText((prev) => {
+      const base = prev.trimEnd();
+      return base ? `${base} ${transcript}` : transcript;
+    });
+  }, []);
+  const voice = useVoiceInput(appendTranscript);
+
+  // 录音 / 识别中不允许提交 (等转写落定).
+  const canSubmit =
+    text.trim().length > 0 && projectId !== null && !isSubmitting && voice.status === "idle";
 
   async function handleSubmit() {
     if (!canSubmit) return;
@@ -75,6 +86,15 @@ export default function CaptureModal() {
             bare
             containerStyle={styles.inputWrap}
             inputStyle={styles.input}
+          />
+
+          <VoiceControl
+            status={voice.status}
+            errorKey={voice.error}
+            onStart={voice.start}
+            onStop={voice.stop}
+            onCancel={voice.cancel}
+            onDismissError={voice.clearError}
           />
         </View>
 

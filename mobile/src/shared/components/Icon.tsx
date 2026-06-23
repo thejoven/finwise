@@ -13,9 +13,11 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  Mic,
   Pencil,
   Plus,
   Search,
+  Square,
   Star,
   X,
 } from "lucide-react-native";
@@ -65,7 +67,9 @@ export type IconName =
   | "star"
   | "starFill"
   | "eye"
-  | "eyeOff";
+  | "eyeOff"
+  | "mic"
+  | "stop";
 
 /** 语义名 → SF Symbol (iOS) + lucide 组件 (兜底). SF 名见 Apple「SF Symbols」app. */
 const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
@@ -90,6 +94,9 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   // 隐藏 / 取消隐藏 (标的追踪页). eye.slash = 藏起来, eye = 重新显示.
   eyeOff: { sf: "eye.slash", lucide: EyeOff },
   eye: { sf: "eye", lucide: Eye },
+  // 语音输入 (录入页). mic = 开始录音, stop = 停止.
+  mic: { sf: "mic.fill", lucide: Mic },
+  stop: { sf: "stop.fill", lucide: Square },
 };
 
 /** lucide strokeWidth → SF Symbol weight. 项目描边只用 1.5 / 1.75 / 2. */

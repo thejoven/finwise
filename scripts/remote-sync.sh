@@ -60,6 +60,10 @@ do_rsync() {
     --exclude 'web-admin/node_modules/' \
     --exclude 'web-admin/dist/' \
     --exclude 'server/ent/' \
+    --exclude 'asr/venv/' \
+    --exclude 'asr/models/' \
+    --exclude 'asr/samples/' \
+    --exclude 'asr/__pycache__/' \
     -e "ssh $SSH_OPTS" \
     "$repo_root/" "$REMOTE_HOST:$REMOTE_DIR/"
 }

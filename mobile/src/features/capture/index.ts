@@ -8,6 +8,8 @@ export {
 
 export { usePendingSignals, type PendingSignal } from "./store";
 export { CaptureCategoryPicker } from "./CategoryPicker";
+export { VoiceControl } from "./VoiceControl";
+export { useVoiceInput, type VoiceStatus } from "./useVoiceInput";
 export { SignalRow } from "./SignalRow";
 export { DenoisedRow } from "./DenoisedRow";
 export { DenoiseView } from "./DenoiseView";

@@ -178,6 +178,7 @@ func run() error {
 			return &actives[0].ID, nil
 		})
 	signalHandler := signalmod.NewHandler(signalSvc)
+	signalHandler.SetASR(cfg.ASRServiceURL) // 语音转写代理 → GLM-ASR
 
 	refinementRepo := refinementmod.NewRepository(pool)
 	// signalOwnerCheck: refinement.Start 用它确认 primary_signal_id 属于 user.

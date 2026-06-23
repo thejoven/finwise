@@ -6,6 +6,15 @@
     "submit": "记下",
     "cancel": "再想想"
   },
+  "voice": {
+    "record": "语音输入",
+    "stop": "停止",
+    "cancel": "取消",
+    "recording": "聆听中…",
+    "transcribing": "识别中…",
+    "permissionDenied": "需要麦克风权限才能语音输入",
+    "failed": "识别失败，请重试或手动输入"
+  },
   "category": {
     "stamp": "◆ 归到哪个分类",
     "empty": "还没有分类，先建一个",

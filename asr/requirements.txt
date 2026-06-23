@@ -1,0 +1,15 @@
+# GLM-ASR CPU 推理服务依赖.
+# torch / torchaudio 由 install-asr.sh 单独从 CPU wheel index 装 (避免拉到 CUDA 构建).
+#
+# GLM-ASR-Nano-2512 需要 transformers 5.0+ (内置 GLM-ASR 模型类).
+# 若 PyPI 暂无 5.0 正式版, install-asr.sh 会退到 git 源码安装.
+transformers>=5.0.0
+accelerate
+soundfile
+librosa
+fastapi
+uvicorn[standard]
+python-multipart
+# 模型下载: 墙内首选 modelscope (原生 CDN), huggingface_hub 作兜底.
+modelscope
+huggingface_hub

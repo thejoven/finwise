@@ -11,6 +11,14 @@
 
 > 只记影响部署/运行的实质变更, 新的在上.
 
+### 2026-06-22 · 新增 alphax-asr (GLM-ASR 语音转写)
+
+「手动新增信号」语音输入落地: 新增 **alphax-asr.service** —— 自托管 [GLM-ASR-Nano-2512](https://github.com/zai-org/GLM-ASR) 的 CPU 推理 HTTP 服务 (FastAPI + transformers 5.x), 仅绑 `127.0.0.1:18900`. Go `POST /v1/signals/transcribe` 内部代理它, 移动端录音上传 → 转写文本回填录入框 (用户校对后再提交, 录入链路不变).
+
+- **无 GPU → CPU**: 服务器只有一块 2009 年 GT 220 (现代 PyTorch 不支持), 纯 CPU. 官方 SGLang 部署面向 GPU, 改用 transformers + FastAPI. dtype **fp32** (CPU 只有 AVX2, bf16 反而更慢; 线程 36≈最优, 72 更差). 延迟约 3× 音频时长 (5s→~15s, 30s→~55s, 故移动端异步 UX + 录音封顶 30s); RSS ~8.5G (systemd `MemoryMax=12G`).
+- **部署**: 代码在 repo `asr/`. 装依赖+下模型 `bash /opt/alphax/asr/install-asr.sh` (幂等; 模型走 ModelScope `ZhipuAI/GLM-ASR-Nano-2512`, HF 镜像兜底). 装服务见 [asr/README.md](asr/README.md). 日常改 `asr_server.py` → rsync + `systemctl restart alphax-asr`.
+- **⚠️ `scripts/remote-sync.sh` 已加 `asr/{venv,models,samples}` 排除** — 否则 `rsync --delete` 会抹掉服务器上的 venv + 4.5G 模型权重.
+
 ### 2026-06-01 · iii 0.16.0 → 0.16.1 升级
 
 升级 iii 引擎 + console + iii-sdk 到 **0.16.1**. 三者现都跑 0.16.1, 全栈健康.
@@ -44,11 +52,14 @@
 | Mastra log | `/var/log/alphax-mastra.log` |
 | Mastra env | `/opt/alphax/mastra/.env` (含 LLM_API_KEY, 600 权限) |
 | Server .env | `/opt/alphax/.env` (gitignored, token 已生成; 含 `TWTAPI_API_KEY` 推文订阅采集用 — 仅在 205, 不进 repo) |
+| ASR 路径 | `/opt/alphax/asr/` (FastAPI + venv + `models/GLM-ASR-Nano-2512`; venv/models gitignored, 装/更新见 [asr/README.md](asr/README.md)) |
+| ASR service | `systemctl status alphax-asr` (GLM-ASR CPU 语音转写, 供 `/v1/signals/transcribe` 代理) |
+| ASR log | `/var/log/alphax-asr.log` |
 | iii engine | docker compose service `iii` (image `iiidev/iii:0.16.1`), config bind-mount `/opt/alphax/iii/config.yaml`, 数据 named volume `alphax_iiidata` |
 | iii 容器 user | `65532` (nonroot), volume mountpoint 必须 `chown 65532:65532` (见"灾难恢复") |
 | iii console (UI) | docker compose service `iii-console` (image `alphax/iii-console:0.16.1`, 自己用 [iii/Dockerfile.console](iii/Dockerfile.console) build, 上游没出 docker 镜像), 默认监听 `0.0.0.0:3113` |
 | iii console URL | `http://192.168.1.205:3113` (LAN 任意机器可访问) |
-| 端口 | 8080 (API) · 9091 (mastra, **loopback only**, 9090 被 mihomo 占了) · 5432 (postgres) · 6380 (redis, 6379 被 mm-redis 占) · 3111 (iii HTTP) · 49134 (iii WS, SDK worker) · 3113 (iii console UI) · 9464 (iii prometheus) · 8082 (web-admin nginx) |
+| 端口 | 8080 (API) · 9091 (mastra, **loopback only**, 9090 被 mihomo 占了) · 18900 (alphax-asr, **loopback only**) · 5432 (postgres) · 6380 (redis, 6379 被 mm-redis 占) · 3111 (iii HTTP) · 49134 (iii WS, SDK worker) · 3113 (iii console UI) · 9464 (iii prometheus) · 8082 (web-admin nginx) |
 
 UFW 已禁用 + iptables INPUT 空. 局域网内任意机器可访问.
 

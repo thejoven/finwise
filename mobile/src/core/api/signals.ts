@@ -63,6 +63,29 @@ export async function captureSignal(input: CaptureInput): Promise<CaptureResp> {
   return CaptureResp.parse(json);
 }
 
+const TranscribeResp = z.object({
+  text: z.string(),
+  elapsed_ms: z.number().optional(),
+});
+export type TranscribeResp = z.infer<typeof TranscribeResp>;
+
+/**
+ * transcribeAudio — 上传一段录音, 经 Go 代理转到自托管 GLM-ASR, 返回转写文本.
+ *
+ * 文本只是回填到录入文本框供用户校对, 不直接成为信号 (录入链路不变).
+ * CPU 推理较慢, 故单独设长超时并关掉重试 (避免超时后重复上传/重复推理).
+ */
+export async function transcribeAudio(uri: string): Promise<TranscribeResp> {
+  const form = new FormData();
+  // RN 的 FormData 接受 {uri,name,type} 形式的文件描述; 文件名/类型仅作提示,
+  // ASR 端用 ffmpeg 按内容探测格式.
+  form.append("audio", { uri, name: "audio.m4a", type: "audio/m4a" } as unknown as Blob);
+  const json = await api
+    .post("v1/signals/transcribe", { body: form, timeout: 120_000, retry: 0 })
+    .json();
+  return TranscribeResp.parse(json);
+}
+
 export interface ListInput {
   limit?: number;
   before?: string; // RFC3339

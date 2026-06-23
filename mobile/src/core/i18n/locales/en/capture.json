@@ -6,6 +6,15 @@
     "submit": "Note It Down",
     "cancel": "On second thought"
   },
+  "voice": {
+    "record": "Voice input",
+    "stop": "Stop",
+    "cancel": "Cancel",
+    "recording": "Listening…",
+    "transcribing": "Transcribing…",
+    "permissionDenied": "Microphone access is needed for voice input",
+    "failed": "Couldn't transcribe — try again or type it in"
+  },
   "category": {
     "stamp": "◆ Which category",
     "empty": "No categories yet — create one first",

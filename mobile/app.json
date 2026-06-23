@@ -39,7 +39,13 @@
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "expo-localization"
+      "expo-localization",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "财知需要使用麦克风，将你的语音转写成文字记成信号。"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

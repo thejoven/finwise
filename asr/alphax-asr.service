@@ -1,0 +1,23 @@
+# 安装: 复制到 /etc/systemd/system/alphax-asr.service
+#   systemctl daemon-reload && systemctl enable --now alphax-asr
+# 仿 alphax-api.service. 只绑 127.0.0.1, 内部代理调用.
+[Unit]
+Description=AlphaX ASR (GLM-ASR CPU inference)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/alphax/asr
+EnvironmentFile=-/opt/alphax/asr/.env
+ExecStart=/opt/alphax/asr/venv/bin/python /opt/alphax/asr/asr_server.py
+Restart=on-failure
+RestartSec=5
+# 模型冷启动 (加载 ~6G fp32 权重) 需要时间, 给足.
+TimeoutStartSec=300
+# 保护协租容器: 限制内存上限, 防止 ASR 把整机拖到 OOM. 据 benchmark 调整.
+MemoryMax=12G
+StandardOutput=append:/var/log/alphax-asr.log
+StandardError=append:/var/log/alphax-asr.log
+
+[Install]
+WantedBy=multi-user.target
