@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
   },
   inputWrap: { flex: 1 },
   input: {
-    fontFamily: theme.fontFamily.serifRegular,
     fontSize: 16,
     lineHeight: 22,
     color: theme.color.ink,

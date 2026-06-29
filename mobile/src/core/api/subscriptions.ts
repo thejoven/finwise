@@ -73,6 +73,28 @@ const TweetMedia = z.object({
 });
 export type TweetMedia = z.infer<typeof TweetMedia>;
 
+/** 推文相关标的 (AI 抽取 + 归一; tracked = 当前用户是否已通过信号追踪该标的). */
+export const TweetAsset = z.object({
+  canonical: z.string(),
+  name: z.string(),
+  market: z.string(), // a | hk | us | other
+  tracked: z.boolean(),
+});
+export type TweetAsset = z.infer<typeof TweetAsset>;
+
+/** 转帖原文 — 引用推文(quote)被引、或纯转推(RT)被转的原推; 归一化为原作者+正文+媒体. */
+export const QuotedTweet = z.object({
+  id: z.string(),
+  handle: z.string(),
+  display_name: z.string(),
+  avatar_url: z.string(),
+  text: z.string(),
+  lang: z.string().optional(),
+  created_at: z.string(),
+  media: z.array(TweetMedia).nullable().optional(),
+});
+export type QuotedTweet = z.infer<typeof QuotedTweet>;
+
 export const TweetItem = z.object({
   id: z.string(),
   subscription_id: z.string(),
@@ -100,8 +122,10 @@ export const TweetItem = z.object({
   summary: z.string().nullable().optional(),
   category: z.string().nullable().optional(),
   relevance: z.number().nullable().optional(),
+  related_assets: z.array(TweetAsset).nullable().optional(),
   classify_status: z.enum(["pending", "done", "failed"]),
   read: z.boolean(),
+  quoted: QuotedTweet.nullable().optional(),
 });
 export type TweetItem = z.infer<typeof TweetItem>;
 
@@ -113,7 +137,7 @@ const TweetFeed = z.object({
 export type TweetFeed = z.infer<typeof TweetFeed>;
 
 export interface FeedQuery {
-  filter: "unread" | "all";
+  filter: "unread" | "all" | "saved";
   subscription_id?: string;
   cursor?: string;
   limit?: number;
@@ -158,4 +182,34 @@ export type PromoteResp = z.infer<typeof PromoteResp>;
 export async function promoteTweet(id: string, note?: string): Promise<PromoteResp> {
   const json = await api.post(`v1/tweets/${id}/promote`, { json: { note: note ?? "" } }).json();
   return PromoteResp.parse(json);
+}
+
+/** 不感兴趣 — 隐藏当条 + 按内容标签累积厌恶 (减少后续同类). 返回本次新静音的标签. */
+export async function notInterested(id: string): Promise<string[]> {
+  const json = await api.post(`v1/tweets/${id}/not-interested`).json();
+  return z.object({ muted_tags: z.array(z.string()) }).parse(json).muted_tags;
+}
+
+/** 稍后读 — 移出未读 + 收进稍后读 bucket (= 标记已读 + 存). */
+export async function saveTweet(id: string): Promise<void> {
+  await api.post(`v1/tweets/${id}/save`);
+}
+
+/** 取消稍后读 (稍后读列表里). */
+export async function unsaveTweet(id: string): Promise<void> {
+  await api.delete(`v1/tweets/${id}/save`);
+}
+
+// ───────────────────── 内容偏好 (静音标签) ─────────────────────
+
+export const MutedTag = z.object({ tag: z.string(), weight: z.number() });
+export type MutedTag = z.infer<typeof MutedTag>;
+
+export async function getMutedTags(): Promise<MutedTag[]> {
+  const json = await api.get("v1/content-prefs").json();
+  return z.object({ muted_tags: z.array(MutedTag) }).parse(json).muted_tags;
+}
+
+export async function unmuteTag(tag: string): Promise<void> {
+  await api.post("v1/content-prefs/unmute", { json: { tag } });
 }

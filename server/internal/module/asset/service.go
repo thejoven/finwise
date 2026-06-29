@@ -35,6 +35,13 @@ func NewService(repo *Repository, mastraClient *mastra.Client, logger *zap.Logge
 	return &Service{repo: repo, mastra: mastraClient, logger: logger}
 }
 
+// ResolveReference 把一条自由文本指称归一到 asset_id (复用别名/规则/LLM 归一, 见 resolver.go).
+// 供订阅模块把推文 AI 抽取的 ticker 落成 asset 用 (写 tweet_assets). 瞬时失败上抛, 调用方跳过.
+func (s *Service) ResolveReference(ctx context.Context, reference, contextText string) (uuid.UUID, error) {
+	id, _, err := s.resolveReference(ctx, reference, contextText)
+	return id, err
+}
+
 // Prices 读标的 [from,to] 日线 + meta (GET /v1/assets/:id/prices). 标的不存在 → ErrNotFound.
 // from/to 零值表示不设该侧边界.
 func (s *Service) Prices(ctx context.Context, assetID uuid.UUID, from, to time.Time) (*AssetPricesView, error) {

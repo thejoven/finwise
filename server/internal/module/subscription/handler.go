@@ -35,6 +35,13 @@ func (h *Handler) Register(publicV1, adminV1 *gin.RouterGroup) {
 	publicV1.GET("/tweets/:id", h.getTweet)
 	publicV1.POST("/tweets/:id/read", h.markRead)
 	publicV1.POST("/tweets/:id/promote", h.promote)
+	publicV1.POST("/tweets/:id/not-interested", h.notInterested)
+	publicV1.POST("/tweets/:id/save", h.saveTweet)
+	publicV1.DELETE("/tweets/:id/save", h.unsaveTweet)
+
+	// 内容偏好 (静音标签管理, profile 入口).
+	publicV1.GET("/content-prefs", h.contentPrefs)
+	publicV1.POST("/content-prefs/unmute", h.unmuteTag)
 
 	// 运营后台跨用户订阅源 (按账号).
 	adminV1.GET("/subscriptions", h.adminListAccounts)
@@ -89,9 +96,24 @@ type tweetDTO struct {
 	Relevance      *float32        `json:"relevance,omitempty"`
 	ClassifyStatus string          `json:"classify_status"`
 	Read           bool            `json:"read"`
+	Quoted         json.RawMessage `json:"quoted,omitempty"`
+	RelatedAssets  []tweetAssetDTO `json:"related_assets,omitempty"`
+}
+
+type tweetAssetDTO struct {
+	Canonical string `json:"canonical"`
+	Name      string `json:"name"`
+	Market    string `json:"market"`
+	Tracked   bool   `json:"tracked"`
 }
 
 func toTweetDTO(v TweetView) tweetDTO {
+	assets := make([]tweetAssetDTO, 0, len(v.RelatedAssets))
+	for _, a := range v.RelatedAssets {
+		assets = append(assets, tweetAssetDTO{
+			Canonical: a.Canonical, Name: a.Name, Market: a.Market, Tracked: a.Tracked,
+		})
+	}
 	return tweetDTO{
 		ID:             v.ID,
 		SubscriptionID: v.SubscriptionID.String(),
@@ -111,6 +133,8 @@ func toTweetDTO(v TweetView) tweetDTO {
 		Relevance:      v.Relevance,
 		ClassifyStatus: v.ClassifyStatus,
 		Read:           v.Read,
+		Quoted:         v.Quoted,
+		RelatedAssets:  assets,
 	}
 }
 
@@ -227,6 +251,7 @@ func (h *Handler) feed(c *gin.Context) {
 	in := FeedInput{
 		UserID:      userID,
 		IncludeRead: c.Query("filter") == "all", // 默认 unread (产品主视图)
+		Saved:       c.Query("filter") == "saved", // 稍后读 bucket
 		Cursor:      c.Query("cursor"),
 	}
 	if v := c.Query("subscription_id"); v != "" {
@@ -359,4 +384,104 @@ func (h *Handler) promote(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"signal_id": signalID.String(), "duplicate": duplicate})
+}
+
+// notInterested — 下滑「不感兴趣」: 隐藏当条 + 按内容标签累积厌恶 (减少后续同类),
+// 顺手记已读. 返回本次新静音的标签 (供客户端提示「已少推 #x」).
+func (h *Handler) notInterested(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	muted, err := h.svc.NotInterested(c.Request.Context(), userID, c.Param("id"))
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	if muted == nil {
+		muted = []string{}
+	}
+	c.JSON(http.StatusOK, gin.H{"muted_tags": muted})
+}
+
+// saveTweet — 上滑「稍后读」: 移出未读 deck + 收进稍后读 bucket.
+func (h *Handler) saveTweet(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	if err := h.svc.SaveTweet(c.Request.Context(), userID, c.Param("id")); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			return
+		}
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "saved"})
+}
+
+// unsaveTweet — 取消稍后读 (稍后读列表里操作).
+func (h *Handler) unsaveTweet(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	if err := h.svc.UnsaveTweet(c.Request.Context(), userID, c.Param("id")); err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "unsaved"})
+}
+
+// contentPrefs — 内容偏好: 列出该用户已静音的内容标签.
+func (h *Handler) contentPrefs(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	tags, err := h.svc.ListMutedTags(c.Request.Context(), userID)
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	out := make([]gin.H, 0, len(tags))
+	for _, m := range tags {
+		out = append(out, gin.H{"tag": m.Tag, "weight": m.Weight})
+	}
+	c.JSON(http.StatusOK, gin.H{"muted_tags": out})
+}
+
+// unmuteTag — 取消静音某标签.
+func (h *Handler) unmuteTag(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	var req struct {
+		Tag string `json:"tag"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil || req.Tag == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "tag required"})
+		return
+	}
+	if err := h.svc.UnmuteTag(c.Request.Context(), userID, req.Tag); err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "unmuted"})
 }

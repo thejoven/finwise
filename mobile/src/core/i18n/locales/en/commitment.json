@@ -35,7 +35,7 @@
       "hint": "Hold extended to {{months}} months"
     },
     "userInput": {
-      "label": "I see it differently — let me say so",
+      "label": "See it differently? Write it down",
       "hint": "In your own words, at least 10 characters",
       "placeholder": "e.g. I'll buy, but only 3% — this signal hasn't crossed the supply-chain layer yet"
     }
@@ -43,10 +43,10 @@
   "slowSign": "Still signing it in…",
   "signing": "Signing…",
   "signButton": {
-    "asDrafted": "Sign and Commit",
-    "lowerPosition": "Sign the More Conservative Call",
-    "longerHold": "Sign the More Patient Call",
-    "userInput": "Sign My Call"
+    "asDrafted": "Sign and commit",
+    "lowerPosition": "Sign the conservative call",
+    "longerHold": "Sign the patient call",
+    "userInput": "Sign your call"
   },
   "postpone": "Leave it for now",
   "action": {

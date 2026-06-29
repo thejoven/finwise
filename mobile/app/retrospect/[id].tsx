@@ -374,7 +374,6 @@ const styles = StyleSheet.create({
     padding: theme.spacing.md,
   },
   openText: {
-    fontFamily: "SourceSerif4-Regular",
     fontSize: 14,
     lineHeight: 22,
     color: theme.color.ink,

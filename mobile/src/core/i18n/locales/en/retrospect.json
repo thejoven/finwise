@@ -13,7 +13,7 @@
     "body": "Press the button below when you're ready. No rush."
   },
   "finalized": {
-    "stamp": "TRAINING FOCUS · Your Next Focus",
+    "stamp": "TRAINING FOCUS · Next time",
     "fallbackText": "Next time, push the inference chain one step further.",
     "note": "This goes into your training file. Next time you run the five rounds, the AI puts it in the first line."
   },
@@ -21,9 +21,9 @@
     "backToInbox": "Back to Inbox",
     "submitting": "Saving…",
     "submitLast": "Save Q4",
-    "submitNext": "Save This Answer · Next",
+    "submitNext": "Save · Next",
     "finalizing": "Wrapping up…",
-    "finalize": "Finish · See Yourself"
+    "finalize": "Finish · See yourself clearly"
   },
   "dim": {
     "perception": "Perception",

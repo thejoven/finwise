@@ -138,7 +138,7 @@ export function SplashCover({ onFinish }: SplashCoverProps) {
         </Animated.View>
 
         <Animated.View style={sublineStyle}>
-          <Display size={22} italic style={styles.subline}>
+          <Display size={22} italic serif style={styles.subline}>
             AlphaX
           </Display>
         </Animated.View>

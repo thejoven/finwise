@@ -142,6 +142,13 @@ export interface SessionView {
   primary_asset?: string;
   primary_signal_raw_text?: string;
   primary_signal_summary?: string;
+  /** Analyst 推演结论 (signals.inference_*), 注入 socratic 出题作参照 — 在已推的一阶/二阶受益方上再追一层. */
+  primary_signal_tags?: string[];
+  primary_signal_related_assets?: Array<{
+    ticker: string;
+    rationale: string;
+    order: "first" | "second" | "third";
+  }>;
   /** 分类上下文 (经 signal.project_id JOIN projects). 注入 socratic/narrator/attention prompt. */
   project_name?: string;
   project_guidance?: string;

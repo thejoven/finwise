@@ -52,9 +52,12 @@ func TestParseTimelineFixture(t *testing.T) {
 			t.Fatalf("views not parsed (views.count): %+v", tw.Metrics)
 		}
 		if tw.Quoted != nil {
-			sawQuote = true
-			if !tw.IsQuote {
-				t.Fatal("quoted set but is_quote false")
+			// Quoted 现承载引用原推(quote)与纯转推(RT)被转的原推两类.
+			if !tw.IsQuote && !tw.IsRetweet {
+				t.Fatal("quoted set but neither is_quote nor is_retweet")
+			}
+			if tw.IsQuote {
+				sawQuote = true
 			}
 			if tw.Quoted.ID == "" || tw.Quoted.Text == "" {
 				t.Fatalf("nested quote incomplete: %+v", tw.Quoted)

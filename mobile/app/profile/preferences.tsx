@@ -2,7 +2,14 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 
-import { Display, DoubleRule, ModalTopBar, SectionHeader, Serif, TapEffect } from "@/shared/components";
+import {
+  Display,
+  DoubleRule,
+  ModalTopBar,
+  SectionHeader,
+  Serif,
+  TapEffect,
+} from "@/shared/components";
 import { UI, MODS, hasNativeUI } from "@/shared/native";
 import { theme, useThemeColors } from "@/core/theme";
 import { useAppearance, type AppearancePref } from "@/core/theme/store";
@@ -16,7 +23,12 @@ import { useLanguage, LANGUAGE_ENDONYMS, type LanguagePref } from "@/core/i18n";
  */
 
 const APPEARANCE_KEYS = ["light", "dark", "system"] as const satisfies readonly AppearancePref[];
-const LANGUAGE_KEYS = ["system", "zh-Hans", "zh-Hant", "en"] as const satisfies readonly LanguagePref[];
+const LANGUAGE_KEYS = [
+  "system",
+  "zh-Hans",
+  "zh-Hant",
+  "en",
+] as const satisfies readonly LanguagePref[];
 
 /** 语言行/选项的展示名: system 走翻译, 具体语言用本族写法(endonym). */
 function languageLabel(key: LanguagePref, systemLabel: string): string {
@@ -33,7 +45,7 @@ export default function PreferencesScreen() {
   );
 }
 
-/** 原生 SwiftUI Form 路径 —— 标题钉顶 + 原生分组选择器充满其下. */
+/** 原生 SwiftUI Form 路径 —— 原生大标题 + 原生分组选择器, 整页一棵树自带滚动. */
 function NativePreferences() {
   const c = useThemeColors();
   const { t } = useTranslation();
@@ -43,50 +55,69 @@ function NativePreferences() {
   const setLang = useLanguage((s) => s.setLanguage);
 
   const { Host, Form, Section, Picker, Text: T } = UI!;
-  const { pickerStyle, tag, listRowBackground, scrollContentBackground, tint } = MODS!;
+  const {
+    pickerStyle,
+    tag,
+    listRowBackground,
+    listRowInsets,
+    listRowSeparator,
+    scrollContentBackground,
+    font,
+    foregroundStyle,
+    tint,
+  } = MODS!;
 
   return (
-    <View style={styles.nativeRoot}>
-      <View style={styles.header}>
-        <Display size={26} italic style={styles.title}>
-          {t("profile.preferences.title")}
-        </Display>
-        <DoubleRule />
-        <Serif size={13} italic style={styles.hint}>
-          {t("settings.language.footer")}
-        </Serif>
-      </View>
-      <Host style={styles.nativeHost}>
-        <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
-          <Section modifiers={[listRowBackground(c.paper2)]}>
-            <Picker
-              label={t("settings.appearance.title")}
-              selection={pref}
-              onSelectionChange={(value) => void setPref(value as AppearancePref)}
-              modifiers={[pickerStyle("menu")]}
-            >
-              {APPEARANCE_KEYS.map((k) => (
-                <T key={k} modifiers={[tag(k)]}>
-                  {t(`settings.appearance.${k}`)}
-                </T>
-              ))}
-            </Picker>
-            <Picker
-              label={t("settings.language.title")}
-              selection={langPref}
-              onSelectionChange={(value) => void setLang(value as LanguagePref)}
-              modifiers={[pickerStyle("menu")]}
-            >
-              {LANGUAGE_KEYS.map((k) => (
-                <T key={k} modifiers={[tag(k)]}>
-                  {languageLabel(k, t("settings.language.system"))}
-                </T>
-              ))}
-            </Picker>
-          </Section>
-        </Form>
-      </Host>
-    </View>
+    <Host style={styles.nativeHost}>
+      <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
+        {/* 原生大标题 —— 平铺于页底色, 与 profile 主页同款. */}
+        <Section
+          modifiers={[
+            listRowBackground(c.paper),
+            listRowInsets({ top: 4, leading: 20, bottom: 6, trailing: 20 }),
+            listRowSeparator("hidden"),
+          ]}
+        >
+          <T modifiers={[font({ size: 34, weight: "bold" }), foregroundStyle(c.ink)]}>
+            {t("profile.preferences.title")}
+          </T>
+        </Section>
+
+        <Section
+          modifiers={[listRowBackground(c.paper2)]}
+          footer={
+            <T modifiers={[font({ size: 12 }), foregroundStyle(c.muted)]}>
+              {t("settings.language.footer")}
+            </T>
+          }
+        >
+          <Picker
+            label={t("settings.appearance.title")}
+            selection={pref}
+            onSelectionChange={(value) => void setPref(value as AppearancePref)}
+            modifiers={[pickerStyle("menu")]}
+          >
+            {APPEARANCE_KEYS.map((k) => (
+              <T key={k} modifiers={[tag(k)]}>
+                {t(`settings.appearance.${k}`)}
+              </T>
+            ))}
+          </Picker>
+          <Picker
+            label={t("settings.language.title")}
+            selection={langPref}
+            onSelectionChange={(value) => void setLang(value as LanguagePref)}
+            modifiers={[pickerStyle("menu")]}
+          >
+            {LANGUAGE_KEYS.map((k) => (
+              <T key={k} modifiers={[tag(k)]}>
+                {languageLabel(k, t("settings.language.system"))}
+              </T>
+            ))}
+          </Picker>
+        </Section>
+      </Form>
+    </Host>
   );
 }
 
@@ -164,12 +195,7 @@ function LanguageRows() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.color.paper },
-  nativeRoot: { flex: 1 },
   nativeHost: { flex: 1, backgroundColor: theme.color.paper },
-  header: {
-    paddingHorizontal: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-  },
   scroll: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.sm,

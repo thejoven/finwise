@@ -22,6 +22,11 @@ func (h *Handler) Register(adminV1 *gin.RouterGroup) {
 	adminV1.GET("/stats/overview", h.getOverview)
 	adminV1.GET("/inference/health", h.getInferenceHealth)
 	adminV1.GET("/users/:id/overview", h.getUserOverview)
+
+	// 对象存储 (R2) 后台配置. PUT 的 secret 留空 = 保留原值; GET 不回传 secret.
+	adminV1.GET("/settings/storage", h.getStorageConfig)
+	adminV1.PUT("/settings/storage", h.putStorageConfig)
+	adminV1.POST("/settings/storage/test", h.testStorage)
 }
 
 // ───── DTOs ─────
@@ -214,4 +219,80 @@ func (h *Handler) getUserOverview(c *gin.Context) {
 		resp.DisplayName = *v.DisplayName
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// ────── 对象存储配置 (R2) handlers ──────
+
+type storageConfigView struct {
+	Enabled          bool   `json:"enabled"`
+	AccountID        string `json:"account_id"`
+	Endpoint         string `json:"endpoint"`
+	Region           string `json:"region"`
+	Bucket           string `json:"bucket"`
+	AccessKeyID      string `json:"access_key_id"`
+	SecretConfigured bool   `json:"secret_configured"`
+}
+
+func toStorageConfigView(v StorageConfigView) storageConfigView {
+	return storageConfigView{
+		Enabled:          v.Enabled,
+		AccountID:        v.AccountID,
+		Endpoint:         v.Endpoint,
+		Region:           v.Region,
+		Bucket:           v.Bucket,
+		AccessKeyID:      v.AccessKeyID,
+		SecretConfigured: v.SecretConfigured,
+	}
+}
+
+type storageConfigRequest struct {
+	Enabled         bool    `json:"enabled"`
+	AccountID       string  `json:"account_id"`
+	Endpoint        string  `json:"endpoint"`
+	Region          string  `json:"region"`
+	Bucket          string  `json:"bucket"`
+	AccessKeyID     string  `json:"access_key_id"`
+	SecretAccessKey *string `json:"secret_access_key"` // nil/"" = 保留原值
+}
+
+func (h *Handler) getStorageConfig(c *gin.Context) {
+	v, err := h.svc.GetStorageConfig(c.Request.Context())
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, toStorageConfigView(v))
+}
+
+func (h *Handler) putStorageConfig(c *gin.Context) {
+	var req storageConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid json: " + err.Error()})
+		return
+	}
+	v, err := h.svc.SaveStorageConfig(c.Request.Context(), SaveStorageConfigInput{
+		Enabled:         req.Enabled,
+		AccountID:       req.AccountID,
+		Endpoint:        req.Endpoint,
+		Region:          req.Region,
+		Bucket:          req.Bucket,
+		AccessKeyID:     req.AccessKeyID,
+		SecretAccessKey: req.SecretAccessKey,
+	})
+	if err != nil {
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+		return
+	}
+	c.JSON(http.StatusOK, toStorageConfigView(v))
+}
+
+// testStorage 连通性自检. 失败也回 200 (ok:false + 原因), 让后台直接展示, 不当 HTTP 错.
+func (h *Handler) testStorage(c *gin.Context) {
+	if err := h.svc.TestStorage(c.Request.Context()); err != nil {
+		c.JSON(http.StatusOK, gin.H{"ok": false, "error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true})
 }

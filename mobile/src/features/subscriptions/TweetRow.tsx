@@ -9,6 +9,7 @@ import { relativeTimeZh } from "@/shared/format";
 import type { TweetItem } from "@/core/api/subscriptions";
 
 import { useMarkTweetRead } from "./hooks";
+import { QuotedCard } from "./QuotedCard";
 
 /**
  * TweetRow — 报纸条目, 不是社交卡片 (无头像大图、无互动计数).
@@ -68,6 +69,8 @@ export const TweetRow = memo(function TweetRow({ tweet }: { tweet: TweetItem }) 
           {snippet}
         </Serif>
       ) : null}
+
+      {tweet.quoted ? <QuotedCard quoted={tweet.quoted} compact /> : null}
 
       <View style={styles.tagRow}>
         {tweet.category ? (

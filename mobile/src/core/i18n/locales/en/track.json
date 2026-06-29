@@ -43,7 +43,7 @@
   },
   "asOf": "As of {{date}} · {{source}}",
   "commitment": {
-    "label": "How it's done",
+    "label": "How it's doing",
     "meta": "PERFORMANCE"
   },
   "market": {

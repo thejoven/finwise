@@ -1,8 +1,9 @@
 {
   "tabs": {
-    "subscriptions": "Subscriptions",
+    "subscriptions": "Feed",
+    "morning": "Brief",
     "caizhi": "Home",
-    "track": "Tracker",
-    "profile": "Profile"
+    "track": "Watch",
+    "profile": "Me"
   }
 }

@@ -1,0 +1,21 @@
+{
+  "masthead": {
+    "title": "早报",
+    "subtitle": "AlphaX 严选"
+  },
+  "stamp": {
+    "signals": "收录 {{count}} 条信号"
+  },
+  "forYou": "为你导读",
+  "assets": {
+    "heading": "标的观察",
+    "meta": "{{count}} 条信号"
+  },
+  "quiet": "安静日",
+  "empty": {
+    "title": "今日早报还没出炉",
+    "subtitle": "每天清晨 8 点更新，明早见。"
+  },
+  "error": "早报加载失败，下拉重试。",
+  "footer": "AlphaX 编辑部"
+}

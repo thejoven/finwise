@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import {
+  Avatar,
   Display,
   DoubleRule,
   Icon,
@@ -20,13 +21,15 @@ import { theme, useThemeColors } from "@/core/theme";
 import { getMe, logout, readErrorMessage } from "@/core/api/account";
 import { useAuth, type AuthUser } from "@/core/auth/store";
 import { useNotifications } from "@/features/notifications";
+import { StatStrip, useMyStats } from "@/features/profile";
 
 /**
  * 个人资料 tab.
  *
  * 编排:
- *   · 上半「报刊头」(RN, 始终自绘): 档案标识 + 标题 + 方形字母章 + 昵称/邮箱/加入日期 + bio.
- *     ——这是 bespoke editorial 面, 按约定保持自绘 (见 memory: mobile-native-ui-conventions).
+ *   · 上半「报刊头」(RN, 始终自绘): 档案标识 + 标题 + 圆形头像 + 昵称/邮箱/加入日期 + bio.
+ *     ——这是 bespoke editorial 面, 按约定保持自绘 (见 memory: mobile-native-ui-conventions);
+ *     头像走自绘还因 SwiftUI Image 只吃 SF Symbols, 拿不了远程头像图, 故两路统一自绘头.
  *   · 下半「设置」: 原生 SwiftUI `Form` (@expo/ui) —— 真·原生 iOS 分组列表, 自带分组卡片 /
  *     分隔线 / 触感 / 动态明暗. 只两组:「账号」「偏好」+ 退出登录, 不再四组零散.
  *     原生不可用时 (Android / Expo Go / 未 rebuild) 优雅回退到自绘行, 同样两组.
@@ -116,18 +119,18 @@ export default function ProfileScreen() {
     );
   }
 
-  const header = <ProfileHeader user={user} error={error} refreshing={refreshing} />;
-
-  // ── 原生 SwiftUI Form 路径 ─────────────────────────────────────────
-  // 报刊头钉在顶部 (RN), 原生 Form 充满其下 (自带滚动) —— 避免 RN ScrollView 套原生
-  // 滚动列表的测高/嵌套滚动问题. 内容短, 顶对齐, 不会落到悬浮 tab 之下.
+  // ── 原生路径 ────────────────────────────────────────────────────
+  // 自绘报刊头 (含圆形头像) 在上 + 原生 SwiftUI 设置 Form (Host > Form) 在下.
   if (hasNativeUI) {
     return (
       <SafeAreaView style={styles.root} edges={["top"]}>
-        <View style={styles.nativeRoot}>
-          <View style={styles.nativeHeader}>{header}</View>
-          <NativeSettingsForm token={token} onLogout={handleLogout} />
-        </View>
+        <NativeProfile
+          user={user}
+          error={error}
+          refreshing={refreshing}
+          token={token}
+          onLogout={handleLogout}
+        />
       </SafeAreaView>
     );
   }
@@ -136,14 +139,14 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.root} edges={["top"]}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad }]}>
-        {header}
+        <ProfileHeader user={user} error={error} refreshing={refreshing} />
         <FallbackSettings token={token} onLogout={handleLogout} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-/** 报刊头 — 档案标识 / 标题 / 字母章 + 身份 / bio / 同步状态. 原生与回退两路共用 (始终 RN 自绘). */
+/** 报刊头 — 档案标识 / 标题 / 圆形头像 + 身份 / bio / 同步状态. 两路 (原生 + 回退) 共用. */
 function ProfileHeader({
   user,
   error,
@@ -155,7 +158,6 @@ function ProfileHeader({
 }) {
   const { t } = useTranslation();
   const displayName = user?.display_name?.trim() || user?.email || "—";
-  const initial = displayName.charAt(0).toUpperCase();
   const createdLabel = user?.created_at
     ? new Date(user.created_at).toISOString().slice(0, 10)
     : "—";
@@ -170,13 +172,9 @@ function ProfileHeader({
       </Display>
       <DoubleRule />
 
-      {/* 字母章 + 身份 */}
+      {/* 圆形头像 + 身份 */}
       <View style={styles.headBlock}>
-        <View style={styles.monogram}>
-          <Display size={30} style={styles.monogramText}>
-            {initial}
-          </Display>
-        </View>
+        <Avatar uri={user?.avatar_url} name={displayName} size={56} />
         <View style={styles.identity}>
           <Serif size={20} weight="semibold" style={styles.name}>
             {displayName}
@@ -221,27 +219,47 @@ function ProfileHeader({
 }
 
 /**
- * 原生 iOS 设置表 —— 真·原生 SwiftUI `Form` (@expo/ui). 仅在 `hasNativeUI` 时渲染, 故内部
- * 放心用 `UI!` / `MODS!`. 分模块:
+ * 原生路径 Profile —— 自绘报刊头 (ProfileHeader, 含圆形头像) 在上 + 原生 SwiftUI `Host > Form`
+ * (@expo/ui) 的设置列表在下. 仅在 `hasNativeUI` 时渲染, 故内部放心用 `UI!` / `MODS!`.
+ *   · 报刊头 —— 档案章 / 标题 / 双线 / 圆形头像 + 身份 / bio (RN 自绘, 远程头像 SwiftUI 渲染不了).
+ *   · 数据统计 —— 三联指标 + 「数据统计」入口 (点阵图在二级页)
  *   · 账号  —— 编辑资料 / 修改密码 / 消息通知 (未读数红字)
- *   · 设置  —— 偏好 (二级页: 外观 / 语言) / 卷首语·关于
+ *   · 设置  —— 偏好 / 内容偏好 / 卷首语·关于 (各自二级页)
  *   · 退出登录 —— 独立 destructive section
- *
- * 偏好(外观/语言)挪进二级页 app/profile/preferences, 主页只留导航入口, 让设置项分模块更清爽.
  *
  * 配色: 原生修饰符只吃 hex 字符串, 故用 `useThemeColors()` 拿当前明暗的纯 hex (外观切换会
  *   重渲染). 画到 paper/paper2 上 (而非系统灰), 与全 App 纸感统一; 结构 (分组卡 / 分隔线 /
  *   触感) 仍是系统原生.
  */
-function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogout: () => void }) {
+function NativeProfile({
+  user,
+  error,
+  refreshing,
+  token,
+  onLogout,
+}: {
+  user: AuthUser | null;
+  error: string | null;
+  refreshing: boolean;
+  token: string | null;
+  onLogout: () => void;
+}) {
   const c = useThemeColors();
   const { t } = useTranslation();
   const items = useNotifications((s) => s.items);
   const unread = items.filter((n) => !n.read).length;
+  const { data: stats } = useMyStats();
 
-  const { Host, Form, Section, Button, HStack, Spacer, Text: T, Image } = UI!;
-  const { buttonStyle, foregroundStyle, tint, listRowBackground, scrollContentBackground, bold } =
-    MODS!;
+  const { Host, Form, Section, Button, HStack, VStack, Spacer, Text: T, Image } = UI!;
+  const {
+    buttonStyle,
+    foregroundStyle,
+    tint,
+    listRowBackground,
+    scrollContentBackground,
+    font,
+    bold,
+  } = MODS!;
 
   /** 标准导航行: 主标题 + 可选尾随值 + 灰 chevron, 整行可点 (List 行里 Button 天然全宽命中). */
   const navRow = (label: string, onPress: () => void, trailing?: ReactElement) => (
@@ -255,43 +273,78 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
     </Button>
   );
 
+  /** 内嵌指标列: 大号数字 + 灰小标, 居中. 三联放在统计 Section 一行里. */
+  const statCol = (value: number, label: string) => (
+    <VStack alignment="center" spacing={2}>
+      <T modifiers={[font({ size: 22, weight: "semibold" }), foregroundStyle(c.ink)]}>
+        {String(value)}
+      </T>
+      <T modifiers={[font({ size: 10 }), foregroundStyle(c.muted)]}>{label}</T>
+    </VStack>
+  );
+
   return (
-    <Host style={styles.nativeHost}>
-      <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
-        <Section title={t("profile.sections.account")} modifiers={[listRowBackground(c.paper2)]}>
-          {navRow(t("profile.account.editProfile"), () => router.push("/profile/edit"))}
-          {navRow(t("profile.account.changePassword"), () => router.push("/profile/password"))}
-          {navRow(
-            t("profile.account.notifications"),
-            () => router.push("/notifications"),
-            unread > 0 ? <T modifiers={[foregroundStyle(c.red)]}>{String(unread)}</T> : undefined,
-          )}
-        </Section>
-
-        <Section title={t("profile.sections.settings")} modifiers={[listRowBackground(c.paper2)]}>
-          {navRow(t("profile.sections.preferences"), () => router.push("/profile/preferences"))}
-          {navRow(t("profile.preferences.colophon"), () => router.push("/colophon"))}
-        </Section>
-
-        {token ? (
-          <Section modifiers={[listRowBackground(c.paper2)]}>
-            <Button
-              // @expo/ui SwiftUI ButtonRole (native), 非 ARIA role —— aria-role 规则在此为误报
-              // react-doctor-disable-next-line react-doctor/aria-role
-              role="destructive"
-              onPress={onLogout}
-              modifiers={[tint(c.red)]}
-            >
+    <View style={styles.nativeRoot}>
+      {/* 报刊式编辑头 (自绘): 档案章 / 标题 / 双线 / 圆形头像 + 身份 / bio. 与回退路径同款,
+          因 SwiftUI Image 只吃 SF Symbols (拿不了远程头像), 故身份头统一走自绘 RN, 设置列表仍走原生 Form. */}
+      <View style={styles.nativeHeaderPad}>
+        <ProfileHeader user={user} error={error} refreshing={refreshing} />
+      </View>
+      <Host style={styles.nativeHost}>
+        <Form modifiers={[scrollContentBackground("hidden"), tint(c.red)]}>
+          {/* 数据统计 — 三联指标 + 「数据统计」入口 (点阵图在二级页). */}
+          <Section
+            title={t("profile.stats.sectionTitle")}
+            modifiers={[listRowBackground(c.paper2)]}
+          >
+            {stats ? (
               <HStack>
+                {statCol(stats.metrics.signals_total, t("profile.stats.cards.signals"))}
                 <Spacer />
-                <T modifiers={[foregroundStyle(c.red), bold()]}>{t("profile.logout.action")}</T>
+                {statCol(stats.metrics.active_days, t("profile.stats.cards.activeDays"))}
                 <Spacer />
+                {statCol(stats.metrics.current_streak, t("profile.stats.cards.currentStreak"))}
               </HStack>
-            </Button>
+            ) : null}
+            {navRow(t("profile.stats.viewAll"), () => router.push("/profile/stats"))}
           </Section>
-        ) : null}
-      </Form>
-    </Host>
+
+          <Section title={t("profile.sections.account")} modifiers={[listRowBackground(c.paper2)]}>
+            {navRow(t("profile.account.editProfile"), () => router.push("/profile/edit"))}
+            {navRow(t("profile.account.changePassword"), () => router.push("/profile/password"))}
+            {navRow(
+              t("profile.account.notifications"),
+              () => router.push("/notifications"),
+              unread > 0 ? <T modifiers={[foregroundStyle(c.red)]}>{String(unread)}</T> : undefined,
+            )}
+          </Section>
+
+          <Section title={t("profile.sections.settings")} modifiers={[listRowBackground(c.paper2)]}>
+            {navRow(t("profile.sections.preferences"), () => router.push("/profile/preferences"))}
+            {navRow(t("profile.contentPrefs.title"), () => router.push("/profile/content-prefs"))}
+            {navRow(t("profile.preferences.colophon"), () => router.push("/colophon"))}
+          </Section>
+
+          {token ? (
+            <Section modifiers={[listRowBackground(c.paper2)]}>
+              <Button
+                // @expo/ui SwiftUI ButtonRole (native), 非 ARIA role —— aria-role 规则在此为误报
+                // react-doctor-disable-next-line react-doctor/aria-role
+                role="destructive"
+                onPress={onLogout}
+                modifiers={[tint(c.red)]}
+              >
+                <HStack>
+                  <Spacer />
+                  <T modifiers={[foregroundStyle(c.red), bold()]}>{t("profile.logout.action")}</T>
+                  <Spacer />
+                </HStack>
+              </Button>
+            </Section>
+          ) : null}
+        </Form>
+      </Host>
+    </View>
   );
 }
 
@@ -300,11 +353,21 @@ function NativeSettingsForm({ token, onLogout }: { token: string | null; onLogou
  */
 function FallbackSettings({ token, onLogout }: { token: string | null; onLogout: () => void }) {
   const { t } = useTranslation();
+  const { data: stats } = useMyStats();
   return (
     <>
       <View style={styles.section}>
+        <SectionHeader label={t("profile.stats.sectionTitle")} />
+        {stats ? <StatStrip m={stats.metrics} /> : null}
+        <RowLink label={t("profile.stats.viewAll")} onPress={() => router.push("/profile/stats")} />
+      </View>
+
+      <View style={styles.section}>
         <SectionHeader label={t("profile.sections.account")} />
-        <RowLink label={t("profile.account.editProfile")} onPress={() => router.push("/profile/edit")} />
+        <RowLink
+          label={t("profile.account.editProfile")}
+          onPress={() => router.push("/profile/edit")}
+        />
         <RowLink
           label={t("profile.account.changePassword")}
           onPress={() => router.push("/profile/password")}
@@ -318,7 +381,14 @@ function FallbackSettings({ token, onLogout }: { token: string | null; onLogout:
           label={t("profile.sections.preferences")}
           onPress={() => router.push("/profile/preferences")}
         />
-        <RowLink label={t("profile.preferences.colophon")} onPress={() => router.push("/colophon")} />
+        <RowLink
+          label={t("profile.contentPrefs.title")}
+          onPress={() => router.push("/profile/content-prefs")}
+        />
+        <RowLink
+          label={t("profile.preferences.colophon")}
+          onPress={() => router.push("/colophon")}
+        />
       </View>
 
       {token ? (
@@ -396,9 +466,9 @@ const styles = StyleSheet.create({
     paddingTop: theme.spacing.md,
     paddingBottom: theme.spacing.xxxl,
   },
-  // 原生路径: 报刊头钉顶 + Form 充满其下.
-  nativeRoot: { flex: 1 },
-  nativeHeader: {
+  // 原生路径: 自绘报刊头 (含圆形头像) 在上, 原生 SwiftUI 设置 Form 在下 (flex 充满余下).
+  nativeRoot: { flex: 1, backgroundColor: theme.color.paper },
+  nativeHeaderPad: {
     paddingHorizontal: theme.spacing.lg,
     paddingTop: theme.spacing.md,
   },
@@ -421,16 +491,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: theme.spacing.base,
   },
-  monogram: {
-    width: 56,
-    height: 56,
-    borderWidth: 1.5,
-    borderColor: theme.color.ink,
-    backgroundColor: theme.color.paper2,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  monogramText: { color: theme.color.ink },
   identity: {
     flex: 1,
     gap: theme.spacing.xs,

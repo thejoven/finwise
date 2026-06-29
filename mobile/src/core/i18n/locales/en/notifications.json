@@ -3,16 +3,16 @@
   "toolbar": {
     "unread": "{{unread}} unread / {{total}} total",
     "allRead": "{{total}} total · all read",
-    "markAllRead": "Mark All Read",
+    "markAllRead": "Mark all as read",
     "clear": "Clear"
   },
   "clearConfirm": {
     "title": "Clear notifications",
-    "message": "All past notifications will be deleted and cannot be recovered."
+    "message": "This deletes all past notifications and can't be undone."
   },
   "empty": {
     "title": "No notifications.",
-    "hint": "Async events — AI analysis finished, five rounds of questioning completed — show up here. You can revisit them even if you missed the toast."
+    "hint": "When AI finishes analyzing or a session wraps up, it shows up here — so you can catch anything you missed."
   },
   "group": {
     "today": "Today",

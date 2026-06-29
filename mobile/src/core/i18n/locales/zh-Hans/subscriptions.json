@@ -2,6 +2,7 @@
   "masthead": {
     "title": "订阅",
     "manage": "管理",
+    "saved": "稍后读",
     "subtitle": "你订的人, 替你盯的事。"
   },
   "unread": "未读 {{count}}",
@@ -74,6 +75,25 @@
     "aiReading": "AI 正在读…",
     "photo": "[图]",
     "video": "[视频]"
+  },
+  "quoted": {
+    "label": "原文",
+    "openOnX": "在 X 看原文 →"
+  },
+  "swipe": {
+    "actRead": "已读",
+    "actSave": "稍后读",
+    "actSkip": "不感兴趣",
+    "actSignal": "信号",
+    "read": "已读 · 归入已读",
+    "saved": "已存稍后读",
+    "notInterested": "按内容减噪 · 少推此类",
+    "undo": "撤销"
+  },
+  "saved": {
+    "topBar": "稍后读 · LATER",
+    "remove": "移出",
+    "empty": "还没有稍后读的内容。在卡片上上滑就能存到这里。"
   },
   "detail": {
     "stamp": "订阅",

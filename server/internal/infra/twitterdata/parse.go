@@ -206,6 +206,13 @@ func decodeTweet(raw json.RawMessage) (*xsource.Tweet, error) {
 			}
 		}
 	}
+	// 纯转推原推: Text 是 "RT @x: …" 截断版, 原文藏在 retweeted_status_result —— 同样填进 Quoted,
+	// 让前端展开原作者+全文 (引用已填则不覆盖).
+	if p.Quoted == nil && t.Legacy.RetweetedStatusResult != nil && len(t.Legacy.RetweetedStatusResult.Result) > 0 {
+		if q, err := decodeTweet(t.Legacy.RetweetedStatusResult.Result); err == nil {
+			p.Quoted = q
+		}
+	}
 	return p, nil
 }
 

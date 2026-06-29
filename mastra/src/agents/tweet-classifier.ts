@@ -18,6 +18,7 @@ import { z } from "zod";
 
 import { defaultModel } from "../llm/model.js";
 import { languageDirective } from "./language-context.js";
+import { RelatedAsset } from "./schema.js";
 
 // ─────────────────────── Schema ───────────────────────
 
@@ -26,6 +27,9 @@ export const TweetClassificationSchema = z.object({
   summary: z.string().min(4).max(360),
   category: z.enum(["宏观", "公司", "行情", "政策", "技术", "观点", "其它"]),
   relevance: z.number().min(0).max(1),
+  // 复用信号推演的 RelatedAsset 形状 (ticker/rationale/order). 推文短, 上限 4;
+  // .default([]) — 多数推文无明确受益标的, 模型省略时落空数组而非校验失败.
+  related_assets: z.array(RelatedAsset).max(4).default([]),
 });
 export type TweetClassification = z.infer<typeof TweetClassificationSchema>;
 
@@ -35,9 +39,9 @@ export const tweetClassifier = new Agent({
   name: "tweet-classifier",
   instructions: `
 你是 AlphaX 订阅版面的编辑. 用户订阅了一些 X (Twitter) 账号, 每条新推文经你的手:
-拟一句话总结、打标签、归类、标注与投资判断的相关度.
+拟一句话总结、打标签、归类、标注与投资判断的相关度, 并在有线索时抽出相关标的.
 
-输出四个字段:
+输出以下字段:
 
 1. summary — 一句话总结, 中文 (原文是外语也用中文概括), ≤60 字.
    - 它会在 feed 里当"标题"用, 要像报纸编辑拟的题: 判断式、具体、不卖关子.
@@ -59,10 +63,17 @@ export const tweetClassifier = new Agent({
    - 0.1-0.3: 纯情绪、口水、转发抽奖、与财经无关
    宁低勿高 — 降噪的价值在"少而准".
 
+5. related_assets — 若推文暗示某些**上市公司/资产**受益或受损, 逐个列出 (没有就空数组 []):
+   - ticker: 公司名或代码均可 ("英伟达" / "NVDA" / "宁德时代" / "SK Hynix" / "BTC"), 不必归一, 后端会处理.
+   - rationale: ≤60 字, 受益链说明 (一阶=直接受益方; 二阶=推一步的间接受益).
+   - order: "first" 一阶 / "second" 二阶 / "third" 三阶 (推文篇幅短, 多为一阶).
+   只在 category∈{宏观,公司,行情,政策,技术} 且 relevance≥0.4 时才考虑抽; 观点/其它/纯情绪/转发抽奖一律 [].
+   宁缺毋滥 — 没有明确受益标的就空着, 不要硬塞 NVDA/茅台凑数.
+
 约束: 不预测涨跌, 不建议买卖, summary 里不出现"建议/看多/看空"这类操作词.
 RT 开头的转推: 总结被转的内容本身, 标签照常打.
 
-输出 JSON: { "tags": [...], "summary": "...", "category": "...", "relevance": 0.x }. 不要 markdown 包裹.
+输出 JSON: { "tags": [...], "summary": "...", "category": "...", "relevance": 0.x, "related_assets": [...] }. 不要 markdown 包裹.
   `.trim(),
   model: defaultModel,
 });
@@ -87,7 +98,7 @@ export async function runTweetClassifier(
     try {
       const res = await tweetClassifier.generate(messages, {
         output: TweetClassificationSchema,
-        maxTokens: 500,
+        maxTokens: 700,
         temperature: 0.2,
       });
       if (res?.object) return res.object;

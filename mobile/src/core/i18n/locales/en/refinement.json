@@ -15,8 +15,8 @@
   },
   "footer": {
     "submitting": "Saving…",
-    "submit": "Submit This Round",
-    "viewDistilled": "See This Signal Distilled"
+    "submit": "Submit this round",
+    "viewDistilled": "See the distilled signal"
   },
   "completed": {
     "label": "Done",
@@ -53,7 +53,7 @@
     "userInputModalPlaceholder": "Which overlooked link, which angle the market missed"
   },
   "clues": {
-    "label": "Related Clues",
+    "label": "Related clues",
     "triggerLabel": "Clues",
     "triggerCount": "Clues · {{count}}",
     "triggerLoading": "Clues · …",
@@ -78,7 +78,7 @@
     "volume": "Volume {{amount}}"
   },
   "history": {
-    "label": "Five Rounds · Record",
+    "label": "Five rounds · Log",
     "completedAt": "Completed {{date}}",
     "metaRounds_one": "{{count}} round",
     "metaRounds_other": "{{count}} rounds",

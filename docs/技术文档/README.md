@@ -47,6 +47,7 @@
 - **12 · 主动信号推荐 开发文档** ⚠️草案 · **P0 画像底座已落地 (2026-06-15)** — 用行为轨迹算出每用户 alpha 画像, 从订阅 firehose 策展极少数信号, 嵌入归档/承诺复盘; 红线=不做成 FOMO 推送流, 宁可不推。P0=`user_alpha_profile` 表 + recommend builder (内部重算端点), 已部署 205; P1+(策展漏斗/feed 标记/UI)规划中
 - **12 · 主动信号推荐 开发计划** — 12 的执行版任务单: P0 已落地基线 + **P1「持仓相关情报」**工作包(漏斗/Mastra recommender/移动端/验收); P2+ 待排
 - **13 · 标的追踪 开发文档** 🚧 P0+P1 已落地 2026-06-16 / P2 承诺表现 + P4 标的专页反查 后端 2026-06-17 / 移动端待做 — 标的归一(迁移 025 + resolver + 回填)+ 行情底座(迁移 029 + marketdata 抽象, 默认腾讯源, A股日线从锚点回填日更)+ 承诺表现后端(`GET /v1/commitments/:id/track`, 发现/签字双锚累计涨跌)+ 标的专页反查(`GET /v1/assets/:id/theses`)+ 新信号实时归一(推演→自动 signal_assets→自动定价, 闭环自持)+ Hub 聚合页后端(`GET /v1/track/overview` 罗列最新 关联标的/信号/订阅推文)已成; 移动端 Hub 页 + 曲线/sparkline/专页 UI + 喂 12 收益真值 待做; 为 12 提供客观地面真值
+- **14 · 新用户引导与订阅分层 开发文档** 🆕 规格 (2026-06-22, 未开工) — 首次进入「一问一功能」6 题(每题揭示一功能 + 个性化)→ 合成画像 → 三档付费墙 → 注册登录 → 财知; 分层 = 2 内容档 × 3 SKU(周=Entry 限量 / 月=终身=Full + 成长模式), 复用 `user_entitlements` 多档(无迁移)+ 双 entitlement `entry`/`pro`; 成长模式 = 把已有 Mastra 记忆 + Tier1 RAG + alpha 画像收成 Full 门禁(Tier1 未部署 = 零回收); 进门 = 邀请免费内测(comp entitlement)/ 付费 Pro 并行, 单漏斗 + 邀请码 escape hatch; onboarding 答案落 `user_onboarding`(迁移 031)喂画像种子
 
 ### Agent Skills
 

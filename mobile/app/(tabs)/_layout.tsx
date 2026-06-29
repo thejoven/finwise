@@ -44,6 +44,7 @@ export default function TabLayout() {
       screenOptions={{ headerShown: false }}
     >
       <Tabs.Screen name="subscriptions" />
+      <Tabs.Screen name="morning" />
       <Tabs.Screen name="caizhi" />
       <Tabs.Screen name="track" />
       <Tabs.Screen name="profile" />

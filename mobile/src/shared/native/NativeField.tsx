@@ -154,7 +154,6 @@ const styles = StyleSheet.create({
   hostFill: { flex: 1, alignSelf: "stretch" },
   // RN 兜底文本样式 (原 formFieldStyles.input 的文本部分).
   input: {
-    fontFamily: theme.fontFamily.serifRegular,
     fontSize: 16,
     lineHeight: 24,
     color: theme.color.ink,

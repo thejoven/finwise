@@ -2,13 +2,13 @@
  * CategoryDropdown — 锚定在分类触发器旁弹出的分类下拉框.
  *
  * 替代旧的"全部 + chips 横滑条". 产品要求 (见 GOAL):
- *   - 点击分类触发器 (现为底栏的独立分类格) → 在其近旁弹出此下拉框.
+ *   - 点击分类触发器 (财知报头里的分类格) → 在其近旁弹出此下拉框.
  *   - 列表里**没有"全部"**, 每一项都是真实分类; 点一项即切换并关闭.
  *   - 末尾 "＋ 新建分类"; 每行右侧铅笔进入编辑. 二者都委托父级打开 ProjectSelectModal,
  *     避免在 Modal 里再套 Modal.
  *
  * 锚点 anchor 是触发器在屏幕坐标系里的矩形 (measureInWindow 得到). 面板就近弹出:
- *   锚点在屏幕上半部 → 贴下沿向下弹; 在下半部 (如底栏的分类格) → 贴上沿向上弹.
+ *   锚点在屏幕上半部 (如财知报头的分类格) → 贴下沿向下弹; 在下半部 → 贴上沿向上弹.
  * 进出动画与 ProjectSelectModal 同套路: progress 控不透明度, 卡片 scale + 轻微位移
  *   (位移方向随弹出方向翻转).
  */
@@ -26,6 +26,7 @@ import Animated, {
   Easing,
   runOnJS,
   useAnimatedStyle,
+  useReducedMotion,
   useSharedValue,
   withTiming,
 } from "react-native-reanimated";
@@ -84,6 +85,7 @@ export function CategoryDropdown({
   // 打开时 effect 挂载并放入场动画, 关闭时放完退场再卸载.
   const [mounted, setMounted] = useState(false);
   const progress = useSharedValue(0);
+  const reduce = useReducedMotion();
   const c = useThemeColors();
   const { t } = useTranslation();
 
@@ -119,13 +121,20 @@ export function CategoryDropdown({
 
   // 入场位移方向: 向下弹从上方 -6 落下; 向上弹从下方 +6 升起.
   const enterFrom = dropUp ? 6 : -6;
-  const panelStyle = useAnimatedStyle(() => ({
-    opacity: progress.value,
-    transform: [
-      { translateY: (1 - progress.value) * enterFrom },
-      { scale: 0.96 + progress.value * 0.04 },
-    ],
-  }));
+  const panelStyle = useAnimatedStyle(() =>
+    // 减少动态: 只留淡入淡出, 去掉位移与缩放 (前庭敏感项).
+    reduce
+      ? { opacity: progress.value }
+      : {
+          opacity: progress.value,
+          transform: [
+            { translateY: (1 - progress.value) * enterFrom },
+            { scale: 0.96 + progress.value * 0.04 },
+          ],
+        },
+  );
+  // 背景遮罩与面板**同步**淡入淡出 —— 此前 backdrop 硬切, 面板淡入而遮罩瞬间糊上, 不同步.
+  const backdropStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
 
   // 屏幕宽度内夹住面板水平位置: 以触发器中心对齐, 不越出左右安全边距.
   const margin = theme.spacing.md;
@@ -147,7 +156,13 @@ export function CategoryDropdown({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t("common.close")} />
+      <Animated.View style={[styles.backdrop, backdropStyle]}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityLabel={t("common.close")}
+        />
+      </Animated.View>
       <Animated.View
         style={[
           styles.panel,

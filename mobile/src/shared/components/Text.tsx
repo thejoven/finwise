@@ -10,12 +10,18 @@
 import { Text as RNText, type TextProps } from "react-native";
 import { theme } from "@/core/theme";
 
-// ───────── Display (Playfair Display + 中文 fallback) ─────────
+// ───────── Display (系统字体 SF Pro · 中文 fallback PingFang) ─────────
+//
+// 英文标题默认走系统字体 (iOS = SF Pro, Android = Roboto), 中文自动 fallback 到
+// 系统中文字体. 唯一例外: AlphaX 品牌字 / masthead 报头副线传 `serif`, 回到
+// Playfair Display —— 那是刻意保留的"报刊感"招牌字, 不随正文一起换。
 
 export interface DisplayProps extends TextProps {
   size?: number;
   italic?: boolean;
   weight?: "regular" | "bold";
+  /** 招牌字 (AlphaX / 报头副线) 用 Playfair Display 衬线体; 其余一律系统字体. */
+  serif?: boolean;
 }
 
 export function Display({
@@ -24,10 +30,11 @@ export function Display({
   size = 28,
   italic = false,
   weight = "bold",
+  serif = false,
   allowFontScaling = false, // 大标题不缩放
   ...props
 }: DisplayProps) {
-  const family =
+  const serifFamily =
     italic && weight === "bold"
       ? theme.fontFamily.displayBoldItalic
       : italic
@@ -41,7 +48,10 @@ export function Display({
       allowFontScaling={allowFontScaling}
       style={[
         {
-          fontFamily: family,
+          // serif: Playfair 用文件名定字重/字形; 系统态: 用 fontWeight + fontStyle.
+          ...(serif
+            ? { fontFamily: serifFamily }
+            : { fontWeight: weight === "bold" ? "700" : "400", fontStyle: italic ? "italic" : "normal" }),
           fontSize: size,
           lineHeight: size * 1.15,
           letterSpacing: -size * 0.02,
@@ -56,7 +66,10 @@ export function Display({
   );
 }
 
-// ───────── Serif Body (Source Serif 4 + 中文 fallback) ─────────
+// ───────── Serif Body → 系统字体 (SF Pro · 中文 fallback PingFang) ─────────
+//
+// 正文/对话/引文的英文走系统字体 SF Pro (历史上是 Source Serif 4 衬线, 2026-06-28
+// 改为苹果系统字体); 中文照旧 fallback 系统中文字体. 组件名 Serif 保留以免动 200+ 调用点。
 
 export interface SerifProps extends TextProps {
   size?: number;
@@ -73,18 +86,14 @@ export function Serif({
   maxFontSizeMultiplier = 1.2,
   ...props
 }: SerifProps) {
-  const family = italic
-    ? theme.fontFamily.serifItalic
-    : weight === "semibold"
-      ? theme.fontFamily.serifSemibold
-      : theme.fontFamily.serifRegular;
-
   return (
     <RNText
       maxFontSizeMultiplier={maxFontSizeMultiplier}
       style={[
         {
-          fontFamily: family,
+          // 不设 fontFamily — 让系统选 SF Pro (iOS) / Roboto (Android).
+          fontWeight: weight === "semibold" ? "600" : "400",
+          fontStyle: italic ? "italic" : "normal",
           fontSize: size,
           lineHeight: size * 1.5,
           color: theme.color.ink2,

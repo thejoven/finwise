@@ -301,11 +301,19 @@ type TweetClassifyRequest struct {
 	Language     string `json:"language,omitempty"` // 输出语言: 标签/总结写哪门语言
 }
 
+// TweetRelatedAsset — tweet-classifier 抽出的相关标的 (自由文本 ticker, 未归一; Go 侧 resolve).
+type TweetRelatedAsset struct {
+	Ticker    string `json:"ticker"`
+	Rationale string `json:"rationale"`
+	Order     string `json:"order"` // first|second|third
+}
+
 type TweetClassifyResponse struct {
-	Tags      []string `json:"tags"`
-	Summary   string   `json:"summary"`
-	Category  string   `json:"category"`
-	Relevance float64  `json:"relevance"`
+	Tags          []string            `json:"tags"`
+	Summary       string              `json:"summary"`
+	Category      string              `json:"category"`
+	Relevance     float64             `json:"relevance"`
+	RelatedAssets []TweetRelatedAsset `json:"related_assets,omitempty"`
 }
 
 func (c *Client) ClassifyTweet(ctx context.Context, req TweetClassifyRequest) (*TweetClassifyResponse, error) {
@@ -346,6 +354,121 @@ func (c *Client) ResolveSymbol(ctx context.Context, req SymbolResolveRequest) (*
 	}
 	var resp SymbolResolveResponse
 	if err := c.post(ctx, "/symbol-resolve", "symbol_resolve", req, &resp, 20*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ───── MorningReport (早报 · 平台每日去标识化编者早报) ─────
+
+// ReportAssetStat — 昨日某标的的去标识聚合计数 (跨用户, 仅 AI 蒸馏层).
+type ReportAssetStat struct {
+	Ticker      string `json:"ticker"`
+	Name        string `json:"name,omitempty"`
+	Mentions    int    `json:"mentions"`
+	SignalCount int    `json:"signal_count"`
+}
+
+// ReportTagStat — 昨日某标签的去标识聚合计数.
+type ReportTagStat struct {
+	Tag         string `json:"tag"`
+	Mentions    int    `json:"mentions"`
+	SignalCount int    `json:"signal_count"`
+}
+
+// ReportAssetNote — 送 LLM 的去标识摘要语料 (已 k-匿名过滤; 只含 AI 摘要, 无原文/无用户身份).
+type ReportAssetNote struct {
+	Ticker  string `json:"ticker"`
+	Summary string `json:"summary"`
+}
+
+// MorningReportSection — 早报一个主题板块. ID 稳定, 供 per-user 重排引用.
+type MorningReportSection struct {
+	ID      string   `json:"id"`
+	Heading string   `json:"heading"`
+	Body    string   `json:"body"`
+	Assets  []string `json:"assets"`
+	Tags    []string `json:"tags"`
+}
+
+type MorningReportRequest struct {
+	Language  string            `json:"language,omitempty"` // zh-Hans|zh-Hant|en
+	TopAssets []ReportAssetStat `json:"top_assets"`
+	TopTags   []ReportTagStat   `json:"top_tags"`
+	Summaries []ReportAssetNote `json:"summaries"`
+	IsQuiet   bool              `json:"is_quiet"`
+}
+
+type MorningReportResponse struct {
+	Headline string                 `json:"headline"`
+	Dek      string                 `json:"dek"`
+	Sections []MorningReportSection `json:"sections"`
+}
+
+// MorningReport 生成某语言的共享去标识化社论 (一天最多 3 次/语言). 走 hcLong (长文本).
+func (c *Client) MorningReport(ctx context.Context, req MorningReportRequest) (*MorningReportResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("morning_report", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp MorningReportResponse
+	if err := c.postWith(ctx, c.hcLong, "/morning-report", "morning_report", req, &resp, 90*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// MorningReportForUserRequest — 为单个用户写整份个性化简报. 聚合已按其关注过滤 (top_assets/
+// top_tags/summaries 只含命中该用户的标的/主题; k-匿名由服务层先做). 复用整份社论结构.
+type MorningReportForUserRequest struct {
+	Language      string            `json:"language,omitempty"`
+	TrackedTokens []string          `json:"tracked_tokens"`
+	TopAssets     []ReportAssetStat `json:"top_assets"`
+	TopTags       []ReportTagStat   `json:"top_tags"`
+	Summaries     []ReportAssetNote `json:"summaries"`
+	IsQuiet       bool              `json:"is_quiet"`
+}
+
+// MorningReportForUser 生成某用户的整份个性化简报. 懒加载 + 缓存, 故每用户每天最多 1 次. 走 hcLong.
+func (c *Client) MorningReportForUser(ctx context.Context, req MorningReportForUserRequest) (*MorningReportResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("morning_report_for_you", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp MorningReportResponse
+	// 整份社论可重试 3 次 (mastra 侧), 单轮中文长稿可达 ~25s, 故给 120s 上限避免末轮被取消.
+	if err := c.postWith(ctx, c.hcLong, "/morning-report-for-you", "morning_report_for_you", req, &resp, 120*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ReportPersonalAsset — "为你导读"里命中用户关注的标的 + 一句缘由.
+type ReportPersonalAsset struct {
+	Ticker string `json:"ticker"`
+	Reason string `json:"reason"`
+}
+
+// MorningReportPersonalRequest — 为单个用户写"为你导读" (只给全局 sections + 用户关注标的 token,
+// 无用户身份、无原文). 这一调用是早报唯一的 per-user LLM, 故懒加载 + 缓存 + 无命中即跳过.
+type MorningReportPersonalRequest struct {
+	Language      string                 `json:"language,omitempty"`
+	Sections      []MorningReportSection `json:"sections"`
+	TrackedTokens []string               `json:"tracked_tokens"`
+}
+
+type MorningReportPersonalResponse struct {
+	PersonalIntro  string                `json:"personal_intro"`
+	RelevantAssets []ReportPersonalAsset `json:"relevant_assets"`
+}
+
+func (c *Client) MorningReportPersonal(ctx context.Context, req MorningReportPersonalRequest) (*MorningReportPersonalResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("morning_report_personal", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp MorningReportPersonalResponse
+	if err := c.postWith(ctx, c.hcLong, "/morning-report-personal", "morning_report_personal", req, &resp, 60*time.Second); err != nil {
 		return nil, err
 	}
 	return &resp, nil

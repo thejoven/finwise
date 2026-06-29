@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
 import { Icon, Sans, TapEffect } from "@/shared/components";
+import { HeaderCategoryCell } from "@/features/project";
 import { theme } from "@/core/theme";
 import { monthDayLabel, weekdayLabel } from "@/shared/format";
 
@@ -12,7 +13,8 @@ import { monthDayLabel, weekdayLabel } from "@/shared/format";
  * 财知页固定报头 (不折叠版).
  *
  * 视觉与 CollapsibleMasthead 的"折叠态"一脉相承 —— 顶条 (左 放大镜 → 搜索, 中日期,
- * 右 ＋ → 记录) + 常驻刊名「财知」. 区别: 这里**始终固定**, 不随滚动折叠 (滚动折叠交给各子页
+ * 右 ＋ → 记录) + 常驻刊名「财知」(右侧紧贴分类格, 切换当前分类). 区别: 这里**始终固定**,
+ * 不随滚动折叠 (滚动折叠交给各子页
  * 自己的列表, host 的报头/分段栏常驻). 装饰性副线 (AlphaX / slogan) 略去, 给三页腾出高度.
  *
  * 作为 PagerView 的兄弟节点常驻在顶部, 故无需 absolute 浮层 + paddingTop 让位 —— 直接
@@ -49,10 +51,12 @@ export function CaizhiHeader() {
         </TapEffect>
       </View>
 
+      {/* 报名「财知」+ 紧贴右侧的分类格 (整组居中). 分类切换只此一处, 作用于财知四张子页. */}
       <View style={styles.nameplateRow}>
         <RNText allowFontScaling={false} style={styles.nameplate}>
           {t("caizhi.nameplate")}
         </RNText>
+        <HeaderCategoryCell />
       </View>
     </View>
   );
@@ -82,8 +86,10 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   nameplateRow: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
+    gap: theme.spacing.xs, // 报名与分类格之间 (报名尾部 letterSpacing 已自带一点缝)
     paddingVertical: 6,
   },
   nameplate: {
@@ -92,6 +98,6 @@ const styles = StyleSheet.create({
     lineHeight: 28,
     color: theme.color.ink,
     letterSpacing: 3,
-    paddingLeft: 3, // 抵消尾部 letterSpacing 让视觉居中
+    paddingLeft: 3, // 抵消尾部 letterSpacing, 让"财知"两字本身视觉均衡
   },
 });

@@ -3,6 +3,7 @@ package account
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -14,10 +15,17 @@ import (
 
 type Handler struct {
 	svc *Service
+	// signer 给头像私有读代理签发/校验短期 URL. nil = 未装配 (DTO 不带 avatar_url). 经 SetAvatarSigner 注入.
+	signer *AvatarSigner
 }
 
 func NewHandler(svc *Service) *Handler {
 	return &Handler{svc: svc}
+}
+
+// SetAvatarSigner 注入头像 URL 签名器 (装配期调用; 不改构造签名以免破坏 cmd/admin).
+func (h *Handler) SetAvatarSigner(signer *AvatarSigner) {
+	h.signer = signer
 }
 
 // Register 把 account 路由挂到 router. 注意 register/login 是 unauth 的, 不能
@@ -38,6 +46,15 @@ func (h *Handler) Register(anon, publicV1, internalV1, adminV1 *gin.RouterGroup)
 	me.GET("", h.getMe)
 	me.PATCH("", h.updateMe)
 	me.POST("/password", h.changePassword)
+	me.GET("/stats", h.getMyStats)
+	// 头像: 预签名直传 → confirm 校验 → 移除. 私有读代理 (/v1/avatars/:id) 挂 anon (签名自证, 见下).
+	me.POST("/avatar/upload-url", h.avatarUploadURL)
+	me.POST("/avatar/confirm", h.avatarConfirm)
+	me.DELETE("/avatar", h.avatarRemove)
+
+	// /v1/avatars/:id — 头像私有读代理. 不走 Bearer (SwiftUI Image / <img> 无法带头),
+	// 靠 HMAC 签名 (?exp=&sig=) 自证. 只有后端现签的 URL 能命中.
+	anon.GET("/avatars/:id", h.getAvatar)
 
 	users := adminV1.Group("/users")
 	users.GET("", h.adminListUsers)
@@ -62,8 +79,8 @@ type loginRequest struct {
 type updateMeRequest struct {
 	DisplayName *string `json:"display_name"`
 	Bio         *string `json:"bio"`
-	AvatarURL   *string `json:"avatar_url"`
 	Language    *string `json:"language"`
+	// avatar_url 不在此 — 头像走 /v1/me/avatar/* 上传链路, DTO 的 avatar_url 由后端现签.
 }
 
 type changePasswordRequest struct {
@@ -92,17 +109,28 @@ type authResponse struct {
 	Session sessionView `json:"session"`
 }
 
-func toUserView(u *PublicUser) userView {
-	return userView{
+// userView 把领域 PublicUser 转成 DTO; avatar_url 按 avatar_object_key 现签 (短期签名 URL).
+func (h *Handler) userView(u *PublicUser) userView {
+	v := userView{
 		ID:          u.ID.String(),
 		Email:       u.Email,
 		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarURL,
 		Bio:         u.Bio,
 		Language:    u.Language,
 		IsAdmin:     u.IsAdmin,
 		CreatedAt:   u.CreatedAt,
 	}
+	v.AvatarURL = h.signedAvatarURL(u.AvatarObjectKey, u.ID, u.UpdatedAt)
+	return v
+}
+
+// signedAvatarURL 有头像键且签名器就绪时, 返回现签的相对 avatar_url; 否则 nil.
+func (h *Handler) signedAvatarURL(key *string, id uuid.UUID, updatedAt time.Time) *string {
+	if key == nil || *key == "" || h.signer == nil {
+		return nil
+	}
+	s := h.signer.SignedPath(id, updatedAt.Unix())
+	return &s
 }
 
 func toSessionView(t *SessionToken) sessionView {
@@ -127,7 +155,7 @@ func (h *Handler) register(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusCreated, authResponse{User: toUserView(u), Session: toSessionView(tok)})
+	c.JSON(http.StatusCreated, authResponse{User: h.userView(u), Session: toSessionView(tok)})
 }
 
 func (h *Handler) login(c *gin.Context) {
@@ -144,7 +172,7 @@ func (h *Handler) login(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, authResponse{User: toUserView(u), Session: toSessionView(tok)})
+	c.JSON(http.StatusOK, authResponse{User: h.userView(u), Session: toSessionView(tok)})
 }
 
 func (h *Handler) logout(c *gin.Context) {
@@ -169,7 +197,23 @@ func (h *Handler) getMe(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toUserView(u))
+	c.JSON(http.StatusOK, h.userView(u))
+}
+
+// getMyStats GET /v1/me/stats — 个人资料页指标汇总 + 一年活动点阵.
+// Stats 结构体自带 json tag, 直接序列化.
+func (h *Handler) getMyStats(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	stats, err := h.svc.GetStats(c.Request.Context(), userID)
+	if err != nil {
+		writeServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, stats)
 }
 
 func (h *Handler) updateMe(c *gin.Context) {
@@ -186,14 +230,13 @@ func (h *Handler) updateMe(c *gin.Context) {
 	u, err := h.svc.UpdateMe(c.Request.Context(), userID, UpdateMeCommand{
 		DisplayName: req.DisplayName,
 		Bio:         req.Bio,
-		AvatarURL:   req.AvatarURL,
 		Language:    req.Language,
 	})
 	if err != nil {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toUserView(u))
+	c.JSON(http.StatusOK, h.userView(u))
 }
 
 func (h *Handler) changePassword(c *gin.Context) {
@@ -214,6 +257,104 @@ func (h *Handler) changePassword(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+// ────── 头像 (avatar) handlers ──────
+
+type avatarUploadURLResponse struct {
+	UploadURL string    `json:"upload_url"`
+	Method    string    `json:"method"`
+	ExpiresAt time.Time `json:"expires_at"`
+}
+
+// avatarUploadURL POST /v1/me/avatar/upload-url — 发预签名 PUT URL, 客户端直传 R2.
+func (h *Handler) avatarUploadURL(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	url, exp, err := h.svc.CreateAvatarUploadURL(c.Request.Context(), userID)
+	if err != nil {
+		writeAvatarError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, avatarUploadURLResponse{UploadURL: url, Method: http.MethodPut, ExpiresAt: exp})
+}
+
+// avatarConfirm POST /v1/me/avatar/confirm — 校验已直传对象并落库, 返回更新后的用户 (含现签 avatar_url).
+func (h *Handler) avatarConfirm(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	u, err := h.svc.ConfirmAvatar(c.Request.Context(), userID)
+	if err != nil {
+		writeAvatarError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, h.userView(u))
+}
+
+// avatarRemove DELETE /v1/me/avatar — 移除头像.
+func (h *Handler) avatarRemove(c *gin.Context) {
+	userID, ok := auth.UserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id missing"})
+		return
+	}
+	u, err := h.svc.RemoveAvatar(c.Request.Context(), userID)
+	if err != nil {
+		writeAvatarError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, h.userView(u))
+}
+
+// getAvatar GET /v1/avatars/:id?exp=&sig=&v= — 头像私有读代理. 不走 Bearer, 靠 HMAC 签名自证.
+func (h *Handler) getAvatar(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad user id"})
+		return
+	}
+	exp, _ := strconv.ParseInt(c.Query("exp"), 10, 64)
+	if h.signer == nil || !h.signer.Verify(idStr, exp, c.Query("sig")) {
+		c.JSON(http.StatusForbidden, gin.H{"error": "bad or expired signature"})
+		return
+	}
+	rc, ctype, size, err := h.svc.OpenAvatar(c.Request.Context(), id)
+	if err != nil {
+		writeAvatarError(c, err)
+		return
+	}
+	defer rc.Close()
+	if ctype == "" {
+		ctype = "application/octet-stream"
+	}
+	c.Header("Cache-Control", "private, max-age=600")
+	c.DataFromReader(http.StatusOK, size, ctype, rc, nil)
+}
+
+// writeAvatarError 把头像相关错误映射成 HTTP 状态.
+func writeAvatarError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, ErrStorageUnavailable):
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "对象存储未配置"})
+	case errors.Is(err, ErrObjectNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "头像不存在 (上传未完成?)"})
+	case errors.Is(err, ErrAvatarTooLarge):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "图片过大 (上限 5MB)"})
+	case errors.Is(err, ErrAvatarBadType):
+		c.JSON(http.StatusBadRequest, gin.H{"error": "仅支持 JPEG / PNG / WebP"})
+	case errors.Is(err, ErrNotFound):
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+	default:
+		c.Error(err) //nolint:errcheck
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "internal"})
+	}
+}
+
 // ────── admin handlers ──────
 
 type adminUserView struct {
@@ -228,12 +369,12 @@ type adminUserView struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
-func toAdminUserView(u AdminUserView) adminUserView {
+func (h *Handler) adminUserView(u AdminUserView) adminUserView {
 	return adminUserView{
 		ID:          u.ID.String(),
 		Email:       u.Email,
 		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarURL,
+		AvatarURL:   h.signedAvatarURL(u.AvatarObjectKey, u.ID, u.UpdatedAt),
 		Bio:         u.Bio,
 		IsAdmin:     u.IsAdmin,
 		SignalCount: u.SignalCount,
@@ -251,7 +392,7 @@ func (h *Handler) adminListUsers(c *gin.Context) {
 	}
 	out := make([]adminUserView, 0, len(users))
 	for _, u := range users {
-		out = append(out, toAdminUserView(u))
+		out = append(out, h.adminUserView(u))
 	}
 	c.JSON(http.StatusOK, gin.H{"users": out, "total": len(out)})
 }
@@ -268,7 +409,7 @@ func (h *Handler) adminGetUser(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toUserView(u))
+	c.JSON(http.StatusOK, h.userView(u))
 }
 
 type adminSetAdminRequest struct {
@@ -302,7 +443,7 @@ func (h *Handler) adminSetAdmin(c *gin.Context) {
 		writeServiceError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, toUserView(u))
+	c.JSON(http.StatusOK, h.userView(u))
 }
 
 func writeServiceError(c *gin.Context, err error) {

@@ -17,6 +17,54 @@
     "title": "偏好.",
     "topBar": "偏好 · PREFERENCES"
   },
+  "contentPrefs": {
+    "title": "內容偏好",
+    "topBar": "內容偏好 · CONTENT",
+    "hint": "下面這些內容標籤已被靜音, 不再出現在訂閱裡。取消靜音即可讓相關內容重新出現。",
+    "empty": "還沒有靜音的標籤。在訂閱裡下滑「不感興趣」, 同一標籤累計夠了會自動靜音。",
+    "unmute": "取消靜音"
+  },
+  "stats": {
+    "topBar": "數據統計 · STATS",
+    "stamp": "讀者數據",
+    "title": "數據統計.",
+    "sectionTitle": "數據統計",
+    "viewAll": "查看活躍度點陣",
+    "metricsStamp": "彙總指標 · METRICS",
+    "activityStamp": "全年活躍度 · ACTIVITY",
+    "loading": "統計中…",
+    "error": "統計暫時拉取失敗。",
+    "activityEmpty": "還沒有可統計的活動。開始錄入信號後，這裡會逐日點亮。",
+    "legendLess": "少",
+    "legendMore": "多",
+    "activitySummary": "全年活躍 {{active}} 天 · 最長連續 {{longest}} 天",
+    "joinedDays": "入駐第 {{count}} 天",
+    "months": [
+      "一月",
+      "二月",
+      "三月",
+      "四月",
+      "五月",
+      "六月",
+      "七月",
+      "八月",
+      "九月",
+      "十月",
+      "十一月",
+      "十二月"
+    ],
+    "cards": {
+      "signals": "信號",
+      "matured": "已推演",
+      "gatePassed": "過會",
+      "projects": "分類",
+      "activeDays": "活躍天",
+      "currentStreak": "連續天",
+      "ofTotal": "共 {{total}}",
+      "ofTries": "共 {{total}} 次",
+      "longest": "最長 {{count}}"
+    }
+  },
   "joinedOn": "加入於 {{date}}",
   "bioEmpty": "還沒寫個人簽名。",
   "syncing": "同步中…",
@@ -39,7 +87,21 @@
     "nameLabel": "暱稱",
     "namePlaceholder": "想被怎麼稱呼",
     "bioLabel": "簽名",
-    "bioPlaceholder": "一句話介紹自己"
+    "bioPlaceholder": "一句話介紹自己",
+    "avatar": {
+      "label": "頭像",
+      "cta": "更換頭像",
+      "add": "新增頭像",
+      "menuTitle": "頭像",
+      "library": "從相簿選取",
+      "camera": "拍照",
+      "remove": "移除頭像",
+      "cancel": "取消",
+      "uploading": "上傳中…",
+      "permissionDenied": "相簿存取未開啟，請在系統設定中允許後再選取。",
+      "failed": "頭像更新失敗。",
+      "unavailable": "頭像上傳暫未開放。"
+    }
   },
   "password": {
     "topBar": "修改密碼 · PASSWORD",

@@ -7,10 +7,7 @@
     "scheme": "alphax",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "platforms": [
-      "ios",
-      "android"
-    ],
+    "platforms": ["ios", "android"],
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.alphax.app",
@@ -22,7 +19,8 @@
       "package": "com.alphax.app",
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": ["android.permission.RECORD_AUDIO", "android.permission.MODIFY_AUDIO_SETTINGS"]
     },
     "plugins": [
       "expo-router",
@@ -45,6 +43,13 @@
         {
           "microphonePermission": "财知需要使用麦克风，将你的语音转写成文字记成信号。"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "财知需要访问你的相册，以便选取并设置个人头像。",
+          "cameraPermission": "财知需要使用相机，以便拍摄并设置个人头像。"
+        }
       ]
     ],
     "experiments": {
@@ -53,7 +58,11 @@
     "extra": {
       "router": {
         "origin": false
+      },
+      "eas": {
+        "projectId": "ccc086c6-edaa-4239-8d08-03887741c467"
       }
-    }
+    },
+    "owner": "jwen-apple"
   }
 }

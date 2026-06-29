@@ -1,23 +1,31 @@
 /**
- * BottomCategoryCell — 底栏左侧那颗独立的"分类格".
+ * HeaderCategoryCell — 财知报头里那颗紧凑的"分类格".
  *
  * 产品要求 (见 GOAL, 本轮调整):
- *   - 分类切换从报头 ("财知 · 分类名 ▾") 挪到底部, 作为一颗**独立胶囊**落在 tab 岛左侧,
- *     与右侧 tab 菜单**分离**(各自一颗玻璃药丸, 中间留缝, 不连成一条).
- *   - 形态紧凑: 圆点/emoji + 当前分类名 + 上扬的 ▴ (从底部往上弹下拉框).
+ *   - 分类切换收进「财知」, 紧贴报头主名「财知」**右侧**作为一颗轻量内联小药丸 (此前曾试过
+ *     底栏独立玻璃胶囊, 现回到报头) —— 仅财知出现, 因分类筛选只作用于财知内的信箱/降噪/
+ *     归档/统计四张子页.
+ *   - 形态紧凑: 圆点/emoji + 当前分类名 + ▾ (从报头往下弹分类下拉框).
  *   - 仍保证"任何时候都停在一个真实分类里": 挂 useEnsureCategory (无分类则自动建默认).
  *
- * 为什么活在 tab bar 里: tab bar 是常驻的底部浮层 (整个 Tabs 导航器只挂一次), 把分类格放这儿,
- *   useEnsureCategory 全程只跑一份, 且每个 tab 都能看到 / 切换当前分类 —— 比旧版绑在
- *   inbox/archive 两个 masthead 上更省、更一致.
+ * 与旧底栏玻璃胶囊不同, 这里不走玻璃 —— 贴着 22pt 报名的轻量小药丸 (paper3 软底 + 全圆角),
+ *   刻意压低视觉重量, 不与标题争主次. 点击经 measureInWindow 把锚点交给 CategoryDropdown;
+ *   锚点落在屏幕上半部, 故下拉框自动**向下**弹 (见 CategoryDropdown 的 dropUp 判定).
  *
- * 玻璃材质 / 高度 / 描边都走 `@/shared/components/glass`, 与右侧 tab 岛长成一对.
- * 下拉框 (CategoryDropdown) 会因锚点在屏幕下半部而自动向上弹.
+ * @see CategoryDropdown
+ * @see ./CaizhiHeader 的报名行 (本组件挂在那儿)
  */
 
 import { useEffect, useReducer, useRef, useState } from "react";
 import { StyleSheet, Text as RNText, View } from "react-native";
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { router } from "expo-router";
@@ -25,13 +33,11 @@ import { router } from "expo-router";
 import { archiveProject, listProjects, type ProjectView } from "@/core/api/project";
 import { theme } from "@/core/theme";
 import { haptic } from "@/core/haptics";
-// 走具体文件而非 "@/shared/components" barrel: 该 barrel 经 DynamicIslandTabBar/Masthead
-// 反向依赖本 feature, 走 barrel 会形成 shared ⇄ feature 的 require cycle. 具体路径切断回边.
+// 走具体文件而非 "@/shared/components" barrel: 该 barrel 历史上经 Masthead 反向依赖本 feature,
+// 走 barrel 易形成 shared ⇄ feature 的 require cycle. 具体路径切断回边, 稳妥.
 import { Icon } from "@/shared/components/Icon";
 import { Sans } from "@/shared/components/Text";
 import { TapEffect } from "@/shared/components/TapEffect";
-import { IslandGlass, PILL_HEIGHT, PILL_RADIUS } from "@/shared/components/glass";
-import { glassOverlay } from "@/shared/components/glass-overlay";
 
 import { useActiveProject } from "./store";
 import { useEnsureCategory } from "./useEnsureCategory";
@@ -50,7 +56,7 @@ function formReducer(s: FormState, patch: FormAction): FormState {
   return { ...s, ...patch };
 }
 
-export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
+export function HeaderCategoryCell() {
   const { t } = useTranslation();
   // 保证始终停在一个真实分类里 (无分类则自动创建默认分类).
   useEnsureCategory();
@@ -95,9 +101,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
     },
   });
 
-  const overlay = glassOverlay(isDark);
-
-  // ▴/▾ 箭头: 下拉框开 → 旋 180° (指上翻到指下), 关 → 转回 —— 给开合一点"变动"感.
+  // ▾ 箭头: 下拉框开 → 旋 180° (指下翻到指上), 关 → 转回 —— 给开合一点"变动"感.
   const arrowSpin = useSharedValue(0);
   useEffect(() => {
     arrowSpin.value = withTiming(dropdownOpen ? 1 : 0, { duration: 180 });
@@ -106,9 +110,23 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
     transform: [{ rotate: `${arrowSpin.value * 180}deg` }],
   }));
 
+  // 触发器按下"听到了": 轻缩一档, 松手弹簧回弹 —— 给这颗关键按压点 Emil 式即时 scale 反馈.
+  //   全局 TapEffect 仍保持"不做 scale"的克制 (见该文件注释), 此处只此一处特例, 不动全局.
+  const reduce = useReducedMotion();
+  const chipScale = useSharedValue(1);
+  const chipScaleStyle = useAnimatedStyle(() => ({ transform: [{ scale: chipScale.value }] }));
+  const onChipPressIn = () => {
+    if (reduce) return; // 减少动态: 不缩放
+    chipScale.value = withTiming(0.96, { duration: 120, easing: Easing.out(Easing.quad) });
+  };
+  const onChipPressOut = () => {
+    if (reduce) return;
+    chipScale.value = withSpring(1, { damping: 15, stiffness: 320, mass: 0.6 });
+  };
+
   const openDropdown = () => {
     void haptic.light(); // 下拉弹起 ≈ "ActionSheet 弹起", 走 light (06-haptic-grammar §2)
-    // measureInWindow 拿胶囊的屏幕坐标, 让下拉框贴着它弹 (在屏幕下半部会自动向上).
+    // measureInWindow 拿触发器的屏幕坐标, 让下拉框贴着它弹 (在屏幕上半部会自动向下).
     triggerRef.current?.measureInWindow((x, y, width, height) => {
       setAnchor({ x, y, width, height });
       setDropdownOpen(true);
@@ -133,7 +151,7 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
   };
 
   // 行内快捷归档: 不关下拉 —— 归档后该行从列表消失 (invalidate 刷新), 可连续清理;
-  //   归档当前 active 分类时 archiveMut 会把 active 切到下一个, 底栏分类格即时跟着变.
+  //   归档当前 active 分类时 archiveMut 会把 active 切到下一个, 报头分类格即时跟着变.
   const handleArchive = (id: string) => {
     void haptic.light();
     archiveMut.mutate(id);
@@ -162,17 +180,14 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
 
   return (
     <>
-      <View
-        ref={triggerRef}
-        collapsable={false}
-        style={[styles.cellFrame, { borderColor: overlay.border }]}
-      >
-        {/* 触发器嵌在玻璃内 (非铺在上面), 与右侧 tab 岛一致: 按压/长按时玻璃液态反应. */}
-        <IslandGlass isDark={isDark} isInteractive style={styles.cellGlass}>
+      {/* 贴着报名「财知」右侧的内联小药丸 (无玻璃). collapsable=false 保证 measureInWindow 量得到. */}
+      <View ref={triggerRef} collapsable={false}>
+        <Animated.View style={chipScaleStyle}>
           <TapEffect
             onPress={openDropdown}
-            disableEffect
-            style={styles.trigger}
+            onPressIn={onChipPressIn}
+            onPressOut={onChipPressOut}
+            style={styles.chip}
             hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
             accessibilityLabel={t("project.cell.activeLabel", {
               name: active?.name ?? t("project.cell.noneSelected"),
@@ -191,10 +206,10 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
               {active?.name ?? t("project.cell.placeholder")}
             </RNText>
             <Animated.View style={arrowStyle}>
-              <Icon name="chevronUp" size={12} color={theme.color.muted} strokeWidth={2} />
+              <Icon name="chevronDown" size={12} color={theme.color.muted} strokeWidth={2} />
             </Animated.View>
           </TapEffect>
-        </IslandGlass>
+        </Animated.View>
       </View>
 
       <CategoryDropdown
@@ -226,25 +241,15 @@ export function BottomCategoryCell({ isDark }: { isDark: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  // 外层"画框": 只描边 + 裁圆角; 尺寸由内层 GlassView 撑开 (与 tab 岛同构, 长成一对).
-  cellFrame: {
-    borderRadius: PILL_RADIUS, // 半高 = 左右两侧完全圆形
-    borderWidth: StyleSheet.hairlineWidth, // GlassView 不画 border, 故描边落在这层
-    overflow: "hidden", // 裁掉玻璃圆角外的极小溢出
-    // borderColor 走内联 overlay.border (随明暗手动给).
-  },
-  // 内层玻璃 (容器): 撑出胶囊高度 + 居中内容; 圆角交 GlassView 原生处理.
-  cellGlass: {
-    height: PILL_HEIGHT,
-    justifyContent: "center",
-    borderRadius: PILL_RADIUS,
-  },
-  trigger: {
+  // 贴着报名「财知」右侧的轻量小药丸: paper3 软底 + 全圆角, 压低重量不与标题争主次.
+  chip: {
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.xs,
-    // 胶囊端部是真半圆 (radius 28), 内容须退过弧线才不顶着弧边 —— base(16) 是标准胶囊水平内边距.
-    paddingHorizontal: theme.spacing.base,
+    paddingHorizontal: theme.spacing.sm,
+    paddingVertical: 5,
+    borderRadius: 999, // 全圆角小药丸
+    backgroundColor: theme.color.paper3,
   },
   emoji: {
     marginRight: 1,
@@ -257,9 +262,9 @@ const styles = StyleSheet.create({
   },
   name: {
     flexShrink: 1,
-    maxWidth: 72, // 窄屏兜底: 名字太长则省略, 不挤坏右侧 tab 岛
-    fontFamily: theme.fontFamily.cjkBold, // 与报头主名"财知"同款 (NotoSerifSC Bold), 字体样式一致
-    fontSize: 13, // iOS 紧凑控件的标准字号档 (12 在胶囊里偏小一号)
+    maxWidth: 96, // 名字太长则省略, 不把报名挤偏
+    fontFamily: theme.fontFamily.cjkBold, // 与报名"财知"同款 (NotoSerifSC Bold), 字体一致
+    fontSize: 13,
     color: theme.color.ink2,
     letterSpacing: 0.5,
   },

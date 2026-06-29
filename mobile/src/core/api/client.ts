@@ -16,6 +16,16 @@ import { getDevBearer } from "@/core/auth/devBearer";
 
 const baseUrl = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8080";
 
+/**
+ * 把后端相对路径 (如 /v1/avatars/<id>?sig=..) 拼成绝对 URL, 供 <Image source={{uri}}> 用.
+ * 已是绝对 URL 则原样返回. baseUrl 末尾斜杠归一.
+ */
+export function resolveApiUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+  const b = baseUrl.replace(/\/+$/, "");
+  return path.startsWith("/") ? `${b}${path}` : `${b}/${path}`;
+}
+
 export const api = ky.create({
   prefixUrl: baseUrl,
   timeout: 15_000,

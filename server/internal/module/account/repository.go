@@ -42,12 +42,14 @@ type User struct {
 	Email        string
 	PasswordHash string
 	DisplayName  *string
-	AvatarURL    *string
-	Bio          *string
-	Language     *string // 'zh-Hans' | 'zh-Hant' | 'en'; nil = 未设置 (按默认简体处理)
-	IsAdmin      bool
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	AvatarURL    *string // 旧列, 新流程不再写入 (头像改走 avatar_object_key + 现签 URL)
+	// AvatarObjectKey 是头像对象存储键 (avatars/<id>). nil = 无头像; 非 nil → DTO 现签 avatar_url.
+	AvatarObjectKey *string
+	Bio             *string
+	Language        *string // 'zh-Hans' | 'zh-Hant' | 'en'; nil = 未设置 (按默认简体处理)
+	IsAdmin         bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // CreateUserInput 是 Repository.CreateUser 的入参.
@@ -65,7 +67,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 	const q = `
 		INSERT INTO users (id, email, email_lower, password_hash, display_name)
 		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, in.ID, in.Email, emailLower, in.PasswordHash, in.DisplayName)
 	u, err := scanUser(row)
@@ -82,7 +84,7 @@ func (r *Repository) CreateUser(ctx context.Context, in CreateUserInput) (*User,
 // FindByEmail 用小写邮箱查找用户. 找不到返回 ErrNotFound.
 func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
 		FROM users
 		WHERE email_lower = $1
 	`
@@ -100,7 +102,7 @@ func (r *Repository) FindByEmail(ctx context.Context, email string) (*User, erro
 // FindByID 按 uuid 查用户.
 func (r *Repository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) {
 	const q = `
-		SELECT id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
+		SELECT id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -116,10 +118,10 @@ func (r *Repository) FindByID(ctx context.Context, id uuid.UUID) (*User, error) 
 }
 
 // UpdateProfileInput 是可选字段集. nil 表示该字段不动.
+// 头像不在此 (改走 avatar_object_key + 预签名直传 + 现签 URL, 见 SetAvatarKey).
 type UpdateProfileInput struct {
 	DisplayName *string
 	Bio         *string
-	AvatarURL   *string
 	Language    *string // nil = 不动; 否则覆盖 (mobile 切语言时静默 PATCH)
 }
 
@@ -129,19 +131,36 @@ func (r *Repository) UpdateProfile(ctx context.Context, id uuid.UUID, in UpdateP
 		UPDATE users SET
 			display_name = COALESCE($2, display_name),
 			bio          = COALESCE($3, bio),
-			avatar_url   = COALESCE($4, avatar_url),
-			language     = COALESCE($5, language),
+			language     = COALESCE($4, language),
 			updated_at   = NOW()
 		WHERE id = $1
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
 	`
-	row := r.pool.QueryRow(ctx, q, id, in.DisplayName, in.Bio, in.AvatarURL, in.Language)
+	row := r.pool.QueryRow(ctx, q, id, in.DisplayName, in.Bio, in.Language)
 	u, err := scanUser(row)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("update profile: %w", err)
+	}
+	return u, nil
+}
+
+// SetAvatarKey 设置 (或清除, key=nil) 头像对象键, 并 bump updated_at (兼作头像 URL 版本号).
+func (r *Repository) SetAvatarKey(ctx context.Context, id uuid.UUID, key *string) (*User, error) {
+	const q = `
+		UPDATE users SET avatar_object_key = $2, updated_at = NOW()
+		WHERE id = $1
+		RETURNING id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
+	`
+	row := r.pool.QueryRow(ctx, q, id, key)
+	u, err := scanUser(row)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("set avatar key: %w", err)
 	}
 	return u, nil
 }
@@ -197,7 +216,7 @@ func (r *Repository) SetAdminByEmail(ctx context.Context, email string, isAdmin 
 	const q = `
 		UPDATE users SET is_admin = $2, updated_at = NOW()
 		WHERE email_lower = $1
-		RETURNING id, email, password_hash, display_name, avatar_url, bio, language, is_admin, created_at, updated_at
+		RETURNING id, email, password_hash, display_name, avatar_url, avatar_object_key, bio, language, is_admin, created_at, updated_at
 	`
 	row := r.pool.QueryRow(ctx, q, strings.ToLower(strings.TrimSpace(email)), isAdmin)
 	u, err := scanUser(row)
@@ -222,7 +241,7 @@ type UserListRow struct {
 // 单 host 个人 app, 用户量小, 不分页.
 func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
 	const q = `
-		SELECT u.id, u.email, u.password_hash, u.display_name, u.avatar_url, u.bio, u.language,
+		SELECT u.id, u.email, u.password_hash, u.display_name, u.avatar_url, u.avatar_object_key, u.bio, u.language,
 		       u.is_admin, u.created_at, u.updated_at,
 		       COALESCE(sig.cnt, 0)        AS signal_count,
 		       sess.last_seen              AS last_seen_at
@@ -245,7 +264,7 @@ func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
 	for rows.Next() {
 		var row UserListRow
 		if err := rows.Scan(
-			&row.ID, &row.Email, &row.PasswordHash, &row.DisplayName, &row.AvatarURL, &row.Bio, &row.Language,
+			&row.ID, &row.Email, &row.PasswordHash, &row.DisplayName, &row.AvatarURL, &row.AvatarObjectKey, &row.Bio, &row.Language,
 			&row.IsAdmin, &row.CreatedAt, &row.UpdatedAt,
 			&row.SignalCount, &row.LastSeenAt,
 		); err != nil {
@@ -255,6 +274,82 @@ func (r *Repository) ListUsers(ctx context.Context) ([]UserListRow, error) {
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iter users: %w", err)
+	}
+	return out, nil
+}
+
+// ────── stats (个人资料页) ──────
+
+// StatsCounts 是个人资料页的汇总指标 (单条聚合查询的结果).
+type StatsCounts struct {
+	SignalsTotal   int // 录入信号总数
+	SignalsMatured int // 已推演 (inference_status='done')
+	GateTotal      int // 过会评估总次数
+	GatePassed     int // 四门全过的次数
+	Projects       int // 在用分类数 (未归档)
+}
+
+// ActivityDay 是某一天 (Asia/Shanghai 日历日) 的活动计数.
+type ActivityDay struct {
+	Day   time.Time // 当天 00:00 (date), UTC 解析但仅日期部分有意义
+	Count int
+}
+
+// StatsCounts 取一个用户的汇总指标. 五个子查询合一, 一次往返.
+func (r *Repository) StatsCounts(ctx context.Context, userID uuid.UUID) (StatsCounts, error) {
+	const q = `
+		SELECT
+			(SELECT COUNT(*) FROM signals          WHERE user_id = $1)                              AS signals_total,
+			(SELECT COUNT(*) FROM signals          WHERE user_id = $1 AND inference_status = 'done') AS signals_matured,
+			(SELECT COUNT(*) FROM gate_evaluations WHERE user_id = $1)                              AS gate_total,
+			(SELECT COUNT(*) FROM gate_evaluations WHERE user_id = $1 AND passed)                   AS gate_passed,
+			(SELECT COUNT(*) FROM projects         WHERE user_id = $1 AND archived_at IS NULL)      AS projects
+	`
+	var s StatsCounts
+	row := r.pool.QueryRow(ctx, q, userID)
+	if err := row.Scan(&s.SignalsTotal, &s.SignalsMatured, &s.GateTotal, &s.GatePassed, &s.Projects); err != nil {
+		return StatsCounts{}, fmt.Errorf("stats counts: %w", err)
+	}
+	return s, nil
+}
+
+// ActivitySince 返回 since (含) 起每个有活动的「日」的计数, 用于个人资料页的点阵图.
+// 口径 = 信号录入 (signals.captured_at) + 过会 (gate_evaluations.evaluated_at), 两者按
+// Asia/Shanghai 时区折算成日历日后逐日合并. 只回有活动的日 (稀疏), 空日由前端补 0.
+// since 是 Shanghai 日历日的字符串 (YYYY-MM-DD).
+func (r *Repository) ActivitySince(ctx context.Context, userID uuid.UUID, since string) ([]ActivityDay, error) {
+	const q = `
+		SELECT day, SUM(cnt)::int AS total
+		FROM (
+			SELECT (captured_at  AT TIME ZONE 'Asia/Shanghai')::date AS day, COUNT(*) AS cnt
+			  FROM signals
+			 WHERE user_id = $1 AND (captured_at  AT TIME ZONE 'Asia/Shanghai')::date >= $2::date
+			 GROUP BY 1
+			UNION ALL
+			SELECT (evaluated_at AT TIME ZONE 'Asia/Shanghai')::date AS day, COUNT(*) AS cnt
+			  FROM gate_evaluations
+			 WHERE user_id = $1 AND (evaluated_at AT TIME ZONE 'Asia/Shanghai')::date >= $2::date
+			 GROUP BY 1
+		) t
+		GROUP BY day
+		ORDER BY day
+	`
+	rows, err := r.pool.Query(ctx, q, userID, since)
+	if err != nil {
+		return nil, fmt.Errorf("activity since: %w", err)
+	}
+	defer rows.Close()
+
+	var out []ActivityDay
+	for rows.Next() {
+		var d ActivityDay
+		if err := rows.Scan(&d.Day, &d.Count); err != nil {
+			return nil, fmt.Errorf("scan activity day: %w", err)
+		}
+		out = append(out, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iter activity: %w", err)
 	}
 	return out, nil
 }
@@ -321,7 +416,7 @@ func (r *Repository) DeleteUserSessions(ctx context.Context, userID uuid.UUID) e
 
 func scanUser(row pgx.Row) (*User, error) {
 	var u User
-	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.Bio, &u.Language, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
+	if err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.DisplayName, &u.AvatarURL, &u.AvatarObjectKey, &u.Bio, &u.Language, &u.IsAdmin, &u.CreatedAt, &u.UpdatedAt); err != nil {
 		return nil, err
 	}
 	return &u, nil

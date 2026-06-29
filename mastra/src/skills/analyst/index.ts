@@ -29,6 +29,10 @@ import { defaultModel } from "../../llm/model.js";
 import { InferenceSchema, type Inference } from "../../agents/schema.js";
 import { JARGON_TRANSLATION_BLOCK } from "../../agents/lens.js";
 import { categoryContextBlock } from "../../agents/category.js";
+import {
+  recallSimilar,
+  type RecalledSignal,
+} from "../../memory/vector-store.js";
 import type { SearchResult } from "../../tools/exa-search.js";
 
 export interface CategoryContext {
@@ -56,7 +60,9 @@ function loadExamples(): string {
   const files = readdirSync(dir)
     .filter((f) => f.endsWith(".md"))
     .sort(); // 01-, 02-, ... 保证顺序稳定
-  return files.map((f) => readFileSync(join(dir, f), "utf8")).join("\n\n---\n\n");
+  return files
+    .map((f) => readFileSync(join(dir, f), "utf8"))
+    .join("\n\n---\n\n");
 }
 
 /** 构造 Agent 的 system instructions — module load 时一次性拼好 */
@@ -95,14 +101,39 @@ export const analyst = new Agent({
  *
  * searchContext 可选: 来自 Exa.ai 的实时检索. 注入 prompt 后让 Analyst
  * 用真实新闻做 grounding (避免靠预训练记忆瞎编). 空时按原行为跑.
+ *
+ * ragCtx 可选: 传了就按当前信号原文做向量召回, 把"该用户过去捕捉的相关信号"汇总进
+ * prompt —— 跨信号线索, 让 analyst 把二阶/三阶受益方推得更连贯 (与 thickness 同一套
+ * recallSimilar). 召回失败静默, 不阻断推演. 当前信号此刻还没 index, 召回只含历史信号.
  */
 export async function runAnalyst(
   rawText: string,
   searchContext?: SearchResult[],
   category?: CategoryContext,
   candidates?: ProjectCandidate[],
+  ragCtx?: { user_id: string; signal_id: string; project_id?: string | null },
 ) {
-  const userContent = buildAnalystPrompt(rawText, searchContext, category, candidates);
+  let priorSignals: RecalledSignal[] = [];
+  if (ragCtx) {
+    try {
+      priorSignals = await recallSimilar({
+        user_id: ragCtx.user_id,
+        query_text: rawText,
+        top_k: 6,
+        exclude_signal_id: ragCtx.signal_id,
+        project_id: ragCtx.project_id ?? undefined, // 同分类优先, 未分类退回跨分类
+      });
+    } catch {
+      priorSignals = []; // RAG 是增强不是核心, 召回挂了照常推
+    }
+  }
+  const userContent = buildAnalystPrompt(
+    rawText,
+    searchContext,
+    category,
+    candidates,
+    priorSignals,
+  );
   const messages = [{ role: "user" as const, content: userContent }];
   let lastErr: unknown;
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -127,7 +158,10 @@ export async function runAnalyst(
  *   - 下发了候选 → chosen 必须命中某个候选 id, 否则视为弃权置 null.
  * Go 端 RecordInference 再据 null = 弃权走兜底, 双保险.
  */
-function normalizeChosenProject(inference: Inference, candidates?: ProjectCandidate[]): Inference {
+function normalizeChosenProject(
+  inference: Inference,
+  candidates?: ProjectCandidate[],
+): Inference {
   if (!candidates || candidates.length === 0) {
     return { ...inference, chosen_project_id: null };
   }
@@ -142,16 +176,29 @@ function buildAnalystPrompt(
   searchContext?: SearchResult[],
   category?: CategoryContext,
   candidates?: ProjectCandidate[],
+  priorSignals?: RecalledSignal[],
 ): string {
   const cat = categoryContextBlock(category?.name, category?.guidance);
   const catPrefix = cat ? cat + "\n\n" : "";
   const candBlock = candidateSelectionBlock(candidates);
   const candSuffix = candBlock ? "\n\n" + candBlock : "";
-  if (!searchContext || searchContext.length === 0) return catPrefix + rawText + candSuffix;
 
-  // 按线索类型分流: 网页新闻 (Exa) 做背景 grounding; 预测市场 (Polymarket) 做 consensus 参照.
-  const webItems = searchContext.filter((r) => r.kind !== "market");
-  const marketItems = searchContext.filter((r) => r.kind === "market" && r.market);
+  // 按线索类型分流: 网页新闻 (Exa) 做背景 grounding; 预测市场 (Polymarket) 做 consensus 参照;
+  // 历史信号 (RAG) 做跨信号线索汇总.
+  const webItems = (searchContext ?? []).filter((r) => r.kind !== "market");
+  const marketItems = (searchContext ?? []).filter(
+    (r) => r.kind === "market" && r.market,
+  );
+  const historyItems = priorSignals ?? [];
+
+  // 三类增强材料都没有 → 退回最简 prompt (与旧行为一致).
+  if (
+    webItems.length === 0 &&
+    marketItems.length === 0 &&
+    historyItems.length === 0
+  ) {
+    return catPrefix + rawText + candSuffix;
+  }
 
   const sections: string[] = ["信号原文:", rawText, ""];
 
@@ -186,6 +233,25 @@ function buildAnalystPrompt(
       block,
       "",
       "把上面的市场概率当作当前共识参照来定 consensus_check: 你的判断比市场更早/更激进 → leading; 与市场基本一致 → aligned; 慢于市场 → lagging. 没有相关市场时按你自己的理解判断.",
+      "",
+    );
+  }
+
+  if (historyItems.length > 0) {
+    const block = historyItems
+      .slice(0, 5)
+      .map((r, i) => {
+        const date = (r.captured_at ?? "").slice(0, 10);
+        const tags = r.tags?.length ? ` (tags: ${r.tags.join(", ")})` : "";
+        const when = date ? `[${date}] ` : "";
+        return `[${i + 1}] ${when}${r.summary}${tags}`;
+      })
+      .join("\n");
+    sections.push(
+      "这个用户过去捕捉的相关信号 (向量召回, 仅作跨信号线索汇总参照):",
+      block,
+      "",
+      "用法: 若当前信号与上面某几条同属一条传导链 / 同一张主题地图, 据此把二阶 / 三阶受益方推得更连贯 (例: 用户已在跟踪某条上游, 这条正好补上下游). 但只在真正相关时用; 不相关就当没看见, 严禁为了「关联历史」而硬连、扩大 related_assets 或拔高 cognitive_layer.",
       "",
     );
   }

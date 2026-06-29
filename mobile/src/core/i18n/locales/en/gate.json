@@ -64,7 +64,7 @@
       "beneficiaryMeta": "Financial reasoning"
     },
     "financial": {
-      "label": "Financial Analysis",
+      "label": "Financial analysis",
       "meta": "Inferred targets",
       "orderFirst": "1st-order",
       "orderSecond": "2nd-order",

@@ -492,7 +492,6 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 38,
     maxHeight: 120,
-    fontFamily: theme.fontFamily.serifRegular,
     fontSize: 15,
     lineHeight: 21,
     color: theme.color.ink,

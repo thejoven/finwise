@@ -10,9 +10,9 @@
   "error": "Couldn't load your stats. Pull to refresh or try again later.",
   "loading": "Tallying…",
   "empty": {
-    "header": "No data yet",
+    "header": "Your attention file is coming",
     "meta": "Appears after your first five rounds",
-    "body": "After each set of five rounds, the system generates that session's attention file — four dimension scores, one insight, and one blind-spot note."
+    "body": "After every five rounds, you'll get an attention file for that session — four dimension scores, one insight, and one blind-spot note."
   },
   "scores": {
     "stamp": "Four Dimensions · Recent Average"

@@ -2,6 +2,7 @@
   "masthead": {
     "title": "Subscriptions",
     "manage": "Manage",
+    "saved": "Read later",
     "subtitle": "The people you follow, watching for you."
   },
   "unread": "{{count}} unread",
@@ -15,7 +16,7 @@
   "unknownDate": "Unknown date",
   "empty": {
     "noSubs": {
-      "title": "This paper has no wires yet.",
+      "title": "You're not following anyone yet.",
       "cta": "Add your first account"
     },
     "allRead": {
@@ -26,7 +27,7 @@
     "noContent": "Nothing yet. New posts will show up here."
   },
   "manage": {
-    "title": "Manage Subscriptions",
+    "title": "Manage subscriptions",
     "sourceTypeLabel": "Source type",
     "type": {
       "x": "X account",
@@ -41,7 +42,7 @@
     "handlePlaceholder": "elonmusk or @elonmusk",
     "resolve": "Resolve",
     "resolving": "Resolving…",
-    "subscribe": "Confirm Subscription",
+    "subscribe": "Subscribe",
     "subscribing": "Subscribing…",
     "subscribed": "Subscribed. Backfilling recent posts — new content will appear in your paper.",
     "listLabel": "X accounts · {{count}}",
@@ -58,14 +59,14 @@
     "generic": "Something went wrong, try again"
   },
   "promote": {
-    "title": "Convert to Signal",
+    "title": "Convert to signal",
     "doneDuplicate": "This one's already been converted.",
     "doneOk": "Filed to your inbox, alongside your own signals.",
     "goSignal": "View signal →",
     "noteLabel": "Say it in your own words (optional)",
     "notePlaceholder": "e.g. The bag-holder structure at the rate top — worth watching allocators' moves",
     "hint": "Leave it blank to pass the original through; the source is tagged via @{{handle}} automatically",
-    "confirm": "Convert to Signal",
+    "confirm": "Convert to signal",
     "confirming": "Converting…",
     "error": "Couldn't convert, try again."
   },
@@ -75,15 +76,34 @@
     "photo": "[Photo]",
     "video": "[Video]"
   },
+  "quoted": {
+    "label": "Original",
+    "openOnX": "See original on X →"
+  },
+  "swipe": {
+    "actRead": "Read",
+    "actSave": "Later",
+    "actSkip": "Not interested",
+    "actSignal": "Signal",
+    "read": "Read · filed away",
+    "saved": "Saved for later",
+    "notInterested": "Tuned down · less like this",
+    "undo": "Undo"
+  },
+  "saved": {
+    "topBar": "Read later",
+    "remove": "Remove",
+    "empty": "Nothing saved yet. Swipe a card up to keep it here."
+  },
   "detail": {
     "stamp": "Subscriptions",
     "loading": "Loading…",
     "notFound": "This post doesn't exist.",
     "retweet": "RT · ",
     "playOnX": "▶ Play on X",
-    "aiEditor": "AI Editor",
+    "aiEditor": "AI editor",
     "aiPending": "AI is reading…",
-    "promote": "Convert to Signal",
+    "promote": "Convert to signal",
     "openOnX": "Open on X"
   }
 }

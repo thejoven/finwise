@@ -80,6 +80,13 @@ type Config struct {
 	// ASRServiceURL — alphax-asr (GLM-ASR CPU 推理) 的内部地址, 语音转写代理用.
 	// 默认本机 loopback; 服务未起/未配时 POST /v1/signals/transcribe 返回 502/503.
 	ASRServiceURL string
+
+	// 早报 (Daily Morning Report) — 每日 08:00 当地把"前一天信号"去标识化聚合成编者早报.
+	ReportEnabled      bool          // REPORT_ENABLED, default true
+	ReportScanInterval time.Duration // REPORT_SCAN_MS, default 60000 (1min) — 轮询是否到点/已生成
+	ReportHourLocal    int           // REPORT_HOUR_LOCAL, default 8 (当地小时 0-23)
+	ReportTimezone     string        // REPORT_TZ, default "Asia/Shanghai"
+	ReportMinAssets    int           // REPORT_MIN_ASSETS, default 1 — 低于此为"安静日"短版
 }
 
 func Load() (*Config, error) {
@@ -198,6 +205,36 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("REC_CANDIDATE_WINDOW_DAYS must be int in [1,365]: %v", err)
 	}
 	c.RecCandidateWindowDays = recWindow
+
+	if v := os.Getenv("REPORT_ENABLED"); v != "" {
+		c.ReportEnabled = strings.EqualFold(v, "true") || v == "1"
+	} else {
+		c.ReportEnabled = true
+	}
+
+	reportScanMs, err := strconv.Atoi(getDefault("REPORT_SCAN_MS", "60000"))
+	if err != nil || reportScanMs < 1000 {
+		return nil, fmt.Errorf("REPORT_SCAN_MS must be int ≥ 1000: %v", err)
+	}
+	c.ReportScanInterval = time.Duration(reportScanMs) * time.Millisecond
+
+	reportHour, err := strconv.Atoi(getDefault("REPORT_HOUR_LOCAL", "8"))
+	if err != nil || reportHour < 0 || reportHour > 23 {
+		return nil, fmt.Errorf("REPORT_HOUR_LOCAL must be int in [0,23]: %v", err)
+	}
+	c.ReportHourLocal = reportHour
+
+	// fail-fast 校验时区, 让 worker 永不静默退化成 UTC.
+	c.ReportTimezone = getDefault("REPORT_TZ", "Asia/Shanghai")
+	if _, err := time.LoadLocation(c.ReportTimezone); err != nil {
+		return nil, fmt.Errorf("REPORT_TZ invalid: %w", err)
+	}
+
+	reportMinAssets, err := strconv.Atoi(getDefault("REPORT_MIN_ASSETS", "1"))
+	if err != nil || reportMinAssets < 0 {
+		return nil, fmt.Errorf("REPORT_MIN_ASSETS must be int ≥ 0: %v", err)
+	}
+	c.ReportMinAssets = reportMinAssets
 
 	var missing []string
 	if c.DatabaseURL == "" {

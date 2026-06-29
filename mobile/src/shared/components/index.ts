@@ -4,6 +4,9 @@
 export { Display, Serif, Sans, Mono } from "./Text";
 export type { DisplayProps, SerifProps, SansProps, MonoProps } from "./Text";
 
+export { Avatar } from "./Avatar";
+export type { AvatarProps } from "./Avatar";
+
 export { RichText } from "./RichText";
 
 export { Icon } from "./Icon";

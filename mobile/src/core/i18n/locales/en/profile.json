@@ -7,8 +7,8 @@
     "settings": "Settings"
   },
   "account": {
-    "editProfile": "Edit Profile",
-    "changePassword": "Change Password",
+    "editProfile": "Edit profile",
+    "changePassword": "Change password",
     "notifications": "Notifications",
     "noNotifications": "None"
   },
@@ -17,33 +17,82 @@
     "title": "Preferences.",
     "topBar": "Preferences"
   },
+  "contentPrefs": {
+    "title": "Content prefs",
+    "topBar": "Content preferences",
+    "hint": "These content tags are muted and no longer show up in your subscriptions. Unmute to bring them back.",
+    "empty": "No muted tags yet. Swipe \"Not interested\" on a tag enough times and it gets muted.",
+    "unmute": "Unmute"
+  },
+  "stats": {
+    "topBar": "STATS",
+    "stamp": "Reader Metrics",
+    "title": "Your stats.",
+    "sectionTitle": "Stats",
+    "viewAll": "View activity graph",
+    "metricsStamp": "SUMMARY · METRICS",
+    "activityStamp": "YEAR IN REVIEW · ACTIVITY",
+    "loading": "Loading…",
+    "error": "Couldn't load your stats.",
+    "activityEmpty": "No activity yet. Once you start logging signals, this lights up day by day.",
+    "legendLess": "Less",
+    "legendMore": "More",
+    "activitySummary": "{{active}} active days · longest streak {{longest}}",
+    "joinedDays": "Day {{count}} since joining",
+    "months": ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+    "cards": {
+      "signals": "Signals",
+      "matured": "Inferred",
+      "gatePassed": "Gate Passed",
+      "projects": "Projects",
+      "activeDays": "Active Days",
+      "currentStreak": "Streak",
+      "ofTotal": "of {{total}}",
+      "ofTries": "of {{total}}",
+      "longest": "best {{count}}"
+    }
+  },
   "joinedOn": "Joined {{date}}",
   "bioEmpty": "No bio yet.",
   "syncing": "Syncing…",
   "logout": {
-    "action": "Sign Out",
+    "action": "Sign out",
     "confirm": "Sign out of this account?",
     "cancel": "Not now",
-    "confirmAction": "Sign Out"
+    "confirmAction": "Sign out"
   },
   "devMode": {
     "notice": "Debug dev-token mode — not signed in to any account.",
-    "login": "Sign In"
+    "login": "Sign in"
   },
   "saving": "Saving…",
   "edit": {
-    "topBar": "Edit Profile",
-    "title": "Edit Profile.",
+    "topBar": "Edit profile",
+    "title": "Edit profile.",
     "hint": "Your email can't be changed here.\nYour name and bio are public, but for now only you can see them.",
     "emailLabel": "Email (read-only)",
     "nameLabel": "Display name",
-    "namePlaceholder": "What should we call you",
+    "namePlaceholder": "What should we call you?",
     "bioLabel": "Bio",
-    "bioPlaceholder": "A line about yourself"
+    "bioPlaceholder": "A line about yourself",
+    "avatar": {
+      "label": "Avatar",
+      "cta": "Change avatar",
+      "add": "Add a photo",
+      "menuTitle": "Avatar",
+      "library": "Choose from Library",
+      "camera": "Take Photo",
+      "remove": "Remove avatar",
+      "cancel": "Cancel",
+      "uploading": "Uploading…",
+      "permissionDenied": "Photo access is off. Turn it on in Settings to pick a photo.",
+      "failed": "Couldn't update your avatar.",
+      "unavailable": "Avatar upload isn't set up yet."
+    }
   },
   "password": {
-    "topBar": "Change Password",
-    "title": "Change Password.",
+    "topBar": "Change password",
+    "title": "Change password.",
     "hint": "After this, all devices are signed out and you'll need to sign in again with the new password.",
     "oldLabel": "Current password",
     "oldPlaceholder": "Current password",
@@ -52,11 +101,11 @@
     "confirmLabel": "Confirm new password",
     "confirmPlaceholder": "Enter it again",
     "mismatch": "The two entries don't match.",
-    "saveAndExit": "Save & Sign Out"
+    "saveAndExit": "Save & sign out"
   },
   "search": {
     "topBar": "Search",
-    "title": "Search Observations.",
+    "title": "Search your notes.",
     "placeholder": "Type a keyword…",
     "hint": "Search your raw notes and AI summaries by keyword.",
     "searching": "Searching…",

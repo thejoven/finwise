@@ -56,9 +56,13 @@ type Session struct {
 	// Joined from signals/projects — only填充 in Get (Mastra 用), Start 返回时为空.
 	PrimarySignalRawText string
 	PrimarySignalSummary *string
-	ProjectName          *string // 分类名 (经 signal.project_id JOIN projects)
-	ProjectGuidance      *string // 分类的分析指引, 注入 socratic/narrator/attention prompt
-	Language             *string // 用户语言 (经 user JOIN); 注入 socratic/distiller/beneficiary 让产出跟随语言
+	// Analyst 推演结论 (signals.inference_tags / inference_related_assets). 透传给 Mastra
+	// Socratic 出题作参照 —— 让出题在已推的一阶/二阶受益方之上再追一层, 而非从原文重推.
+	PrimarySignalTags          []string        // inference_tags
+	PrimarySignalRelatedAssets json.RawMessage // inference_related_assets (jsonb 原样透传, 含 ticker/rationale/order)
+	ProjectName                *string         // 分类名 (经 signal.project_id JOIN projects)
+	ProjectGuidance            *string         // 分类的分析指引, 注入 socratic/narrator/attention prompt
+	Language                   *string         // 用户语言 (经 user JOIN); 注入 socratic/distiller/beneficiary 让产出跟随语言
 }
 
 type Round struct {
@@ -495,6 +499,7 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 		SELECT rs.id, rs.user_id, rs.primary_signal_id, rs.primary_asset, rs.status, rs.rounds_done,
 		       rs.decision, rs.started_at, rs.completed_at, rs.updated_at,
 		       s.raw_text, s.inference_summary,
+		       s.inference_tags, s.inference_related_assets,
 		       p.name, p.guidance,
 		       u.language
 		FROM refinement_sessions rs
@@ -508,6 +513,7 @@ func (r *Repository) getSession(ctx context.Context, userID, id uuid.UUID) (*Ses
 		&s.ID, &s.UserID, &s.PrimarySignalID, &s.PrimaryAsset, &s.Status, &s.RoundsDone,
 		&s.Decision, &s.StartedAt, &s.CompletedAt, &s.UpdatedAt,
 		&s.PrimarySignalRawText, &s.PrimarySignalSummary,
+		&s.PrimarySignalTags, &s.PrimarySignalRelatedAssets,
 		&s.ProjectName, &s.ProjectGuidance,
 		&s.Language,
 	); err != nil {

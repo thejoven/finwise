@@ -39,6 +39,9 @@ const (
 	pollIntervalMax     = 10800 // 3h
 	maxBackfillPages    = 5
 	classifyMaxAttempts = 3
+	// notInterestedMuteThreshold — 同一标签被「不感兴趣」命中达此次数 → 静音 (feed 隐藏带该标签的推文).
+	// 取 2 而非 1: 一次下滑不立刻封一个标签, 累积才生效 (防误伤, 见开发文档 §3 硬二).
+	notInterestedMuteThreshold = 2
 )
 
 var handleRe = regexp.MustCompile(`^[A-Za-z0-9_]{1,15}$`)
@@ -47,17 +50,25 @@ var handleRe = regexp.MustCompile(`^[A-Za-z0-9_]{1,15}$`)
 // 闭包形式避免 subscription 反向 import signal 模块 (同 exit→retrospect 的先例).
 type CaptureSignalFn func(ctx context.Context, userID, clientEventID uuid.UUID, rawText string) (signalID uuid.UUID, duplicate bool, err error)
 
+// ResolveAssetFn — main.go 装配的闭包, 把推文 AI 抽取的 ticker 归一成 asset_id
+// (复用 asset.Service.ResolveReference). 闭包形式避免 subscription 反向 import asset (同 captureSignal 先例).
+type ResolveAssetFn func(ctx context.Context, reference, contextText string) (uuid.UUID, error)
+
 type Service struct {
 	repo          *Repository
 	provider      xsource.Provider
 	mastra        *mastra.Client
 	captureSignal CaptureSignalFn
+	resolveAsset  ResolveAssetFn
 	logger        *zap.Logger
 }
 
 func NewService(repo *Repository, provider xsource.Provider, mastraClient *mastra.Client, captureSignal CaptureSignalFn, logger *zap.Logger) *Service {
 	return &Service{repo: repo, provider: provider, mastra: mastraClient, captureSignal: captureSignal, logger: logger}
 }
+
+// SetResolveAsset 装配标的归一闭包 (main.go 在 asset.Service 建好后注入). nil → 不抽推文标的.
+func (s *Service) SetResolveAsset(fn ResolveAssetFn) { s.resolveAsset = fn }
 
 // ───────────────────────── 订阅 ─────────────────────────
 
@@ -181,6 +192,32 @@ func (s *Service) MarkAllRead(ctx context.Context, userID uuid.UUID, subscriptio
 
 func (s *Service) UnreadCount(ctx context.Context, userID uuid.UUID) (int, error) {
 	return s.repo.UnreadCount(ctx, userID)
+}
+
+// NotInterested — 下滑「不感兴趣」: 隐藏当条 + 按内容标签累积厌恶 + 顺手已读 (开发文档 §5).
+// 返回本次新静音的标签.
+func (s *Service) NotInterested(ctx context.Context, userID uuid.UUID, tweetID string) ([]string, error) {
+	return s.repo.RecordNotInterested(ctx, userID, tweetID, notInterestedMuteThreshold)
+}
+
+// SaveTweet — 上滑「稍后读」: 移出未读 deck + 收进稍后读 bucket.
+func (s *Service) SaveTweet(ctx context.Context, userID uuid.UUID, tweetID string) error {
+	return s.repo.SaveTweet(ctx, userID, tweetID)
+}
+
+// UnsaveTweet — 取消稍后读.
+func (s *Service) UnsaveTweet(ctx context.Context, userID uuid.UUID, tweetID string) error {
+	return s.repo.UnsaveTweet(ctx, userID, tweetID)
+}
+
+// ListMutedTags — 内容偏好: 列出已静音标签.
+func (s *Service) ListMutedTags(ctx context.Context, userID uuid.UUID) ([]MutedTag, error) {
+	return s.repo.ListMutedTags(ctx, userID)
+}
+
+// UnmuteTag — 取消静音某标签.
+func (s *Service) UnmuteTag(ctx context.Context, userID uuid.UUID, tag string) error {
+	return s.repo.UnmuteTag(ctx, userID, tag)
 }
 
 // ───────────────────────── 转为信号 ─────────────────────────
@@ -376,7 +413,37 @@ func (s *Service) DispatchPending(ctx context.Context, batch int) {
 				res.Tags, res.Summary, res.Category, res.Relevance); err != nil {
 				s.logger.Warn("record classify failed", zap.String("tweet_id", p.ID), zap.Error(err))
 			}
+			// P2: 归一并链接 AI 抽出的相关标的 (best-effort, 在 classify 回写之后).
+			s.linkTweetAssets(ctx, p.ID, p.Text, res.RelatedAssets)
 		}(it)
 	}
 	wg.Wait()
+}
+
+// linkTweetAssets 把推文 AI 抽取的 ticker 归一成 asset 并链到 tweet_assets (P2, 复用 signal 同款归一).
+// best-effort: 单个 ticker 归一/链接失败只记日志跳过, 不影响推文已回写的 classify 结果.
+func (s *Service) linkTweetAssets(ctx context.Context, tweetID, tweetText string, assets []mastra.TweetRelatedAsset) {
+	if s.resolveAsset == nil {
+		return
+	}
+	for _, a := range assets {
+		ticker := strings.TrimSpace(a.Ticker)
+		if ticker == "" {
+			continue
+		}
+		contextText := a.Rationale
+		if contextText == "" {
+			contextText = tweetText
+		}
+		assetID, err := s.resolveAsset(ctx, ticker, contextText)
+		if err != nil {
+			s.logger.Warn("tweet asset resolve failed",
+				zap.String("tweet_id", tweetID), zap.String("ticker", ticker), zap.Error(err))
+			continue
+		}
+		if err := s.repo.LinkTweetAsset(ctx, tweetID, assetID, a.Rationale); err != nil {
+			s.logger.Warn("tweet asset link failed",
+				zap.String("tweet_id", tweetID), zap.String("ticker", ticker), zap.Error(err))
+		}
+	}
 }

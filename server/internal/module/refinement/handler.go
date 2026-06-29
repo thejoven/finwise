@@ -57,9 +57,12 @@ type sessionResponse struct {
 	// 仅 Get 接口返回 (Start 接口的 fields 是空)
 	PrimarySignalRawText string  `json:"primary_signal_raw_text,omitempty"`
 	PrimarySignalSummary *string `json:"primary_signal_summary,omitempty"`
-	ProjectName          *string `json:"project_name,omitempty"`
-	ProjectGuidance      *string `json:"project_guidance,omitempty"`
-	Language             *string `json:"language,omitempty"`
+	// Analyst 推演结论 (透传给 Mastra Socratic 出题参照)
+	PrimarySignalTags          []string        `json:"primary_signal_tags,omitempty"`
+	PrimarySignalRelatedAssets json.RawMessage `json:"primary_signal_related_assets,omitempty"`
+	ProjectName                *string         `json:"project_name,omitempty"`
+	ProjectGuidance            *string         `json:"project_guidance,omitempty"`
+	Language                   *string         `json:"language,omitempty"`
 }
 
 type sessionViewResponse struct {
@@ -359,17 +362,19 @@ func (h *Handler) saveQuestion(c *gin.Context) {
 
 func toSessionResponse(s *Session) sessionResponse {
 	out := sessionResponse{
-		ID:                   s.ID.String(),
-		PrimarySignalID:      s.PrimarySignalID.String(),
-		PrimaryAsset:         s.PrimaryAsset,
-		Status:               s.Status,
-		RoundsDone:           s.RoundsDone,
-		StartedAt:            s.StartedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
-		PrimarySignalRawText: s.PrimarySignalRawText,
-		PrimarySignalSummary: s.PrimarySignalSummary,
-		ProjectName:          s.ProjectName,
-		ProjectGuidance:      s.ProjectGuidance,
-		Language:             s.Language,
+		ID:                         s.ID.String(),
+		PrimarySignalID:            s.PrimarySignalID.String(),
+		PrimaryAsset:               s.PrimaryAsset,
+		Status:                     s.Status,
+		RoundsDone:                 s.RoundsDone,
+		StartedAt:                  s.StartedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
+		PrimarySignalRawText:       s.PrimarySignalRawText,
+		PrimarySignalSummary:       s.PrimarySignalSummary,
+		PrimarySignalTags:          s.PrimarySignalTags,
+		PrimarySignalRelatedAssets: s.PrimarySignalRelatedAssets,
+		ProjectName:                s.ProjectName,
+		ProjectGuidance:            s.ProjectGuidance,
+		Language:                   s.Language,
 	}
 	if s.CompletedAt != nil {
 		out.CompletedAt = s.CompletedAt.UTC().Format("2006-01-02T15:04:05Z07:00")

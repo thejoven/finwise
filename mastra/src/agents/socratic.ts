@@ -27,7 +27,13 @@ import type { SearchResult } from "../tools/exa-search.js";
 
 // ─────────────────────────── Schemas ───────────────────────────
 
-export const QuestionKind = z.enum(["single", "multi", "ordering", "open", "commitment_setup"]);
+export const QuestionKind = z.enum([
+  "single",
+  "multi",
+  "ordering",
+  "open",
+  "commitment_setup",
+]);
 export type QuestionKindT = z.infer<typeof QuestionKind>;
 
 /**
@@ -65,7 +71,12 @@ export const QuestionSchema = z.object({
 });
 export type Question = z.infer<typeof QuestionSchema>;
 
-export const DiagnosisKind = z.enum(["correct", "partial_miss", "distractor", "weak"]);
+export const DiagnosisKind = z.enum([
+  "correct",
+  "partial_miss",
+  "distractor",
+  "weak",
+]);
 export type DiagnosisKindT = z.infer<typeof DiagnosisKind>;
 
 export const DiagnosisSchema = z.object({
@@ -85,6 +96,18 @@ export interface PriorRound {
     choice_ids?: string[];
     open_text?: string;
   };
+}
+
+// Analyst 对本条信号已推出的结论. 注入 Socratic 作出题参照 (不照搬), 让题目在
+// 已识别的一阶/二阶受益方之上再追一层, 而不是从原文重推一遍.
+export interface PriorInference {
+  summary?: string;
+  tags?: string[];
+  related_assets?: Array<{
+    ticker: string;
+    rationale: string;
+    order: "first" | "second" | "third";
+  }>;
 }
 
 // ─────────────────────────── Socratic Agent ───────────────────────────
@@ -269,6 +292,8 @@ export async function runSocratic(input: {
   training_focus_text?: string;
   /** 本轮按 lens 定向检索的 grounding 材料. 空时不注入. */
   round_research?: SearchResult[];
+  /** Analyst 已推的结论 (出题参照, 不照搬): summary + tags + related_assets(含 order). 空时不注入. */
+  prior_inference?: PriorInference;
   /** 分类上下文 (分类名 + 分析指引), 空时不注入. */
   project_name?: string;
   project_guidance?: string;
@@ -288,7 +313,9 @@ export async function runSocratic(input: {
       });
       if (res?.object) {
         if (res.object.round !== input.round) {
-          throw new Error(`socratic returned round=${res.object.round}, expected ${input.round}`);
+          throw new Error(
+            `socratic returned round=${res.object.round}, expected ${input.round}`,
+          );
         }
         return ensureUserInputOption(res.object);
       }
@@ -334,11 +361,26 @@ function ensureUserInputOption(q: Question): Question {
 
 /** 每一轮主导哪几个 lens. 与 instructions 里的 round 设计严格一致. */
 const ROUND_LENS: Record<number, { ids: LensId[]; why: string }> = {
-  1: { ids: ["L1", "L6"], why: "根因还原 + 护城河, 把表层信号反向追问到 enabling condition" },
-  2: { ids: ["L2", "L7"], why: "多元思维栅格 + 10x 拐点, 暴露用户只用 1-2 个学科 lens 的盲点" },
-  3: { ids: ["L3", "L4"], why: "二阶思考 + 反身性, 让用户排出 enabling → 表层 → 二阶 → 反身性反转 的时序" },
-  4: { ids: ["L4", "L5", "L10"], why: "反身性 + base rate + 叙事退潮, 让用户在 narrative 与 leading view 间选位置" },
-  5: { ids: ["L8", "L9"], why: "安全边际 + 凸性, 把退出条件锚成 margin of safety, 把持仓时长锚成 optionality 窗口" },
+  1: {
+    ids: ["L1", "L6"],
+    why: "根因还原 + 护城河, 把表层信号反向追问到 enabling condition",
+  },
+  2: {
+    ids: ["L2", "L7"],
+    why: "多元思维栅格 + 10x 拐点, 暴露用户只用 1-2 个学科 lens 的盲点",
+  },
+  3: {
+    ids: ["L3", "L4"],
+    why: "二阶思考 + 反身性, 让用户排出 enabling → 表层 → 二阶 → 反身性反转 的时序",
+  },
+  4: {
+    ids: ["L4", "L5", "L10"],
+    why: "反身性 + base rate + 叙事退潮, 让用户在 narrative 与 leading view 间选位置",
+  },
+  5: {
+    ids: ["L8", "L9"],
+    why: "安全边际 + 凸性, 把退出条件锚成 margin of safety, 把持仓时长锚成 optionality 窗口",
+  },
 };
 
 function buildSocraticPrompt(input: {
@@ -349,24 +391,57 @@ function buildSocraticPrompt(input: {
   training_focus_dim?: string;
   training_focus_text?: string;
   round_research?: SearchResult[];
+  prior_inference?: PriorInference;
   project_name?: string;
   project_guidance?: string;
   language?: string;
 }): string {
-  const catBlock = categoryContextBlock(input.project_name, input.project_guidance);
+  const catBlock = categoryContextBlock(
+    input.project_name,
+    input.project_guidance,
+  );
   const catPrefix = catBlock ? catBlock + "\n\n" : "";
-  const signals = input.signal_raw_texts.map((t, i) => `信号 ${i + 1}: ${t}`).join("\n");
-  const asset = input.primary_asset ? `\n推演主资产: ${input.primary_asset}\n` : "\n";
+  const signals = input.signal_raw_texts
+    .map((t, i) => `信号 ${i + 1}: ${t}`)
+    .join("\n");
+  const asset = input.primary_asset
+    ? `\n推演主资产: ${input.primary_asset}\n`
+    : "\n";
+  const inferenceBlock = buildInferenceBlock(input.prior_inference);
   const priorBlock = input.prior_rounds.length
     ? `\n已答过的轮次:\n${input.prior_rounds.map(formatPrior).join("\n\n")}\n`
     : "\n(还没答过任何轮)\n";
-  const focusBlock = (input.training_focus_dim && input.training_focus_text)
-    ? `\n上次复盘的训练重点 (来自 Diagnostician):\n  维度: ${input.training_focus_dim}\n  方向: ${input.training_focus_text}\n  出题时多注意这个维度, 但不要把题目变成"考训练点"——它只是隐性指引.\n`
-    : "";
+  const focusBlock =
+    input.training_focus_dim && input.training_focus_text
+      ? `\n上次复盘的训练重点 (来自 Diagnostician):\n  维度: ${input.training_focus_dim}\n  方向: ${input.training_focus_text}\n  出题时多注意这个维度, 但不要把题目变成"考训练点"——它只是隐性指引.\n`
+      : "";
   const roundLens = ROUND_LENS[input.round];
-  const lensBlock = roundLens ? lensFocusBlock(roundLens.ids, roundLens.why) : "";
+  const lensBlock = roundLens
+    ? lensFocusBlock(roundLens.ids, roundLens.why)
+    : "";
   const researchBlock = buildResearchBlock(input.round_research);
-  return `${languageDirective(input.language)}${catPrefix}${signals}${asset}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
+  return `${languageDirective(input.language)}${catPrefix}${signals}${asset}${inferenceBlock}${focusBlock}${lensBlock}${researchBlock}${priorBlock}\n现在请出 round ${input.round} 的题目. 严格按 schema 输出 JSON. 题面 / 选项 / open_prompts 里禁止出现人名, 也禁止直接复述检索片段或贴 url.`;
+}
+
+/**
+ * Analyst 推演结论块. 让 Socratic 把它当"已知的一阶/二阶判断"做出题起点 —— 在它之上
+ * 再追一层 (质疑哪个受益方停在表层 / 哪条二阶链漏了 lens / 排真实时序), 而不是从原文重推.
+ * 关键纪律: 不照搬复述进题面或选项, 也不假设它一定对.
+ */
+function buildInferenceBlock(inf?: PriorInference): string {
+  if (!inf) return "";
+  const lines: string[] = [];
+  if (inf.summary) lines.push(`  一句话: ${inf.summary}`);
+  if (inf.tags?.length) lines.push(`  标签: ${inf.tags.join(", ")}`);
+  if (inf.related_assets?.length) {
+    const assets = inf.related_assets
+      .slice(0, 6)
+      .map((a) => `    [${a.order}] ${a.ticker} — ${a.rationale}`)
+      .join("\n");
+    lines.push("  已推的受益方 (按认知层级 first/second/third):", assets);
+  }
+  if (lines.length === 0) return "";
+  return `\n本条信号的 AI 推演结论 (Analyst 已推, 仅作出题起点参照):\n${lines.join("\n")}\n用法: 把它当"已知的一阶/二阶判断", 你的题目要在这之上**再追一层** —— 让用户质疑这些受益方里哪个其实停在表层、哪条二阶链漏了某条 lens, 或排出它们的真实时序. 严禁把推演结论照搬进题面 / 选项原文, 也不要假设它一定对 (它可能正是要被追问的对象).\n`;
 }
 
 function buildResearchBlock(items?: SearchResult[]): string {
@@ -439,7 +514,10 @@ export async function runDiagnosis(input: {
     user_answer: input.user_answer,
   });
   const messages = [
-    { role: "user" as const, content: `${languageDirective(input.language)}${msg}` },
+    {
+      role: "user" as const,
+      content: `${languageDirective(input.language)}${msg}`,
+    },
   ];
 
   let lastErr: unknown;

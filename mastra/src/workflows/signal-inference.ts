@@ -5,7 +5,8 @@
  * Steps:
  *   1. research  — Exa.ai 搜 signal.raw_text, 拿到最新 3-5 条相关新闻 (失败不阻断).
  *                   把结果写到 Go server 的 signal_research 表 (供 mobile "学习卡片"读).
- *   2. analyze   — runAnalyst(raw_text, searchContext) — Exa 结果作 grounding.
+ *   2. analyze   — runAnalyst(raw_text, searchContext, …, ragCtx) — Exa 结果作 grounding,
+ *                   并按 ragCtx 召回该用户历史相关信号做跨信号线索汇总 (失败静默).
  *   3. persist   — POST inference 回 Go server.
  *
  * 三步独立 try/catch:
@@ -51,6 +52,12 @@ export async function runSignalInference(
       research,
       { name: input.project_name, guidance: input.project_guidance },
       input.candidate_projects ?? undefined,
+      // RAG: 召回该用户历史相关信号作跨信号线索. 当前信号此刻还没 index, 只会召回历史.
+      {
+        user_id: input.user_id,
+        signal_id: input.signal_id,
+        project_id: input.project_id ?? undefined,
+      },
     );
   } catch (err) {
     return {
@@ -143,7 +150,14 @@ async function researchSignal(input: SignalCaptured): Promise<SearchResult[]> {
 }
 
 function logWarn(msg: string, fields: Record<string, unknown> = {}): void {
-  console.warn(JSON.stringify({ ts: new Date().toISOString(), level: "warn", msg, ...fields }));
+  console.warn(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "warn",
+      msg,
+      ...fields,
+    }),
+  );
 }
 
 function errMsg(e: unknown): string {

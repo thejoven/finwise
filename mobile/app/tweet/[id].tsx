@@ -9,6 +9,7 @@ import { DoubleRule, Icon, Mono, Sans, SectionHeader, Serif, TapEffect } from "@
 import { theme } from "@/core/theme";
 import { formatShortDateTime } from "@/shared/format";
 import { PromoteSheet } from "@/features/subscriptions/PromoteSheet";
+import { QuotedCard } from "@/features/subscriptions/QuotedCard";
 import { useMarkTweetRead, useTweetDetail } from "@/features/subscriptions/hooks";
 
 /**
@@ -88,6 +89,9 @@ export default function TweetDetailScreen() {
             <Serif size={17} style={styles.fullText}>
               {tweet.text}
             </Serif>
+
+            {/* ── 转帖原文 (引用/转推) ── */}
+            {tweet.quoted ? <QuotedCard quoted={tweet.quoted} /> : null}
 
             {/* ── 媒体 ── */}
             {photos.map((m) => (

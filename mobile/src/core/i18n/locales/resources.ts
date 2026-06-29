@@ -19,6 +19,7 @@ import zhHans_notifications from "./zh-Hans/notifications.json";
 import zhHans_auth from "./zh-Hans/auth.json";
 import zhHans_components from "./zh-Hans/components.json";
 import zhHans_track from "./zh-Hans/track.json";
+import zhHans_morning from "./zh-Hans/morning.json";
 import zhHant_common from "./zh-Hant/common.json";
 import zhHant_settings from "./zh-Hant/settings.json";
 import zhHant_profile from "./zh-Hant/profile.json";
@@ -38,6 +39,7 @@ import zhHant_notifications from "./zh-Hant/notifications.json";
 import zhHant_auth from "./zh-Hant/auth.json";
 import zhHant_components from "./zh-Hant/components.json";
 import zhHant_track from "./zh-Hant/track.json";
+import zhHant_morning from "./zh-Hant/morning.json";
 import en_common from "./en/common.json";
 import en_settings from "./en/settings.json";
 import en_profile from "./en/profile.json";
@@ -57,6 +59,7 @@ import en_notifications from "./en/notifications.json";
 import en_auth from "./en/auth.json";
 import en_components from "./en/components.json";
 import en_track from "./en/track.json";
+import en_morning from "./en/morning.json";
 
 export const zhHans = {
   common: zhHans_common,
@@ -78,6 +81,7 @@ export const zhHans = {
   auth: zhHans_auth,
   components: zhHans_components,
   track: zhHans_track,
+  morning: zhHans_morning,
 };
 export const zhHant = {
   common: zhHant_common,
@@ -99,6 +103,7 @@ export const zhHant = {
   auth: zhHant_auth,
   components: zhHant_components,
   track: zhHant_track,
+  morning: zhHant_morning,
 };
 export const en = {
   common: en_common,
@@ -120,6 +125,7 @@ export const en = {
   auth: en_auth,
   components: en_components,
   track: en_track,
+  morning: en_morning,
 };
 
 export type Resources = typeof zhHans;

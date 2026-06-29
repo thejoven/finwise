@@ -15,10 +15,10 @@
   "modal": {
     "title": {
       "list": "Categories",
-      "create": "New Category",
-      "edit": "Edit Category"
+      "create": "New category",
+      "edit": "Edit category"
     },
-    "switchSection": "Switch Category"
+    "switchSection": "Switch category"
   },
   "field": {
     "name": "Name",
@@ -31,9 +31,9 @@
     "guidancePlaceholder": "What should the AI watch for in this category…"
   },
   "actions": {
-    "newCategory": "New Category",
+    "newCategory": "New category",
     "create": "Create",
-    "archive": "Archive This Category",
+    "archive": "Archive this category",
     "manageArchive": "Archived"
   },
   "toast": {
@@ -42,7 +42,7 @@
   },
   "archivedPage": {
     "navTitle": "Archived",
-    "title": "Archived Categories",
+    "title": "Archived categories",
     "hint": "Archived categories are hidden from your list to reduce distraction. Their data is kept as future training material and can be restored anytime.",
     "empty": "No archived categories",
     "archivedOn": "Archived {{date}}",

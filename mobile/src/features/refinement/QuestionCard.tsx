@@ -558,7 +558,6 @@ const styles = StyleSheet.create({
   },
   openInput: {
     minHeight: 140,
-    fontFamily: "SourceSerif4-Regular",
     fontSize: 15,
     lineHeight: 24,
     color: theme.color.ink,
@@ -584,7 +583,6 @@ const styles = StyleSheet.create({
   },
   userInputField: {
     minHeight: 90,
-    fontFamily: "SourceSerif4-Regular",
     fontSize: 14,
     lineHeight: 22,
     color: theme.color.ink,

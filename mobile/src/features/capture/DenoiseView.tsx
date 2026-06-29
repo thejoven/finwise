@@ -7,20 +7,22 @@ import { DoubleRule, Serif, TAB_BAR_CLEARANCE } from "@/shared/components";
 // 走具体文件而非 "@/features/capture" barrel: 该 barrel 同时导出本组件, 走 barrel 会形成
 // capture/index ⇄ DenoiseView 的自引用 require cycle. 具体路径切断回边.
 import { DenoisedRow } from "@/features/capture/DenoisedRow";
-import { useAllSignals, type MergedSignal } from "@/features/capture/hooks";
+import { useDenoisedSignals, type MergedSignal } from "@/features/capture/hooks";
 import { theme } from "@/core/theme";
 
 /**
- * 降噪 · 财知页第二张子页 · 降噪后推断、分析过的金融信号 (跨所有分类, 按时间倒序).
+ * 降噪 · 财知页第二张子页 · 降噪后推断、分析过的金融信号 (当前分类, 按时间倒序).
  *
  * 和信箱不同: 信箱把原始观察放主位; 这里只收"降噪后推演出相关标的"的信号
  * (server has_targets 过滤), 每行用 DenoisedRow 把"分析判断 + 各受益标的"放主位,
  * 原始观察只作小脚注 —— 看见自己 (哲学 6). 不是 dashboard, 不堆统计 / streak / 角标.
  *
+ * 分类: 跟报头分类格选定的 active 分类走 (同信箱/归档/统计), 切分类即重拉第一页.
+ *
  * 与旧 signals 屏唯一区别: 去掉大号「降噪」标题 (分段栏已标注), 只留一行 italic 副题;
  *   作为 PagerView 一页, 顶部紧接吸顶分段栏, 故无 safe-area top 留白.
  *
- * - useAllSignals: useInfiniteQuery, before 游标翻页 (每页 30)
+ * - useDenoisedSignals: useInfiniteQuery, before 游标翻页 (每页 30)
  * - 翻页 / 拉取用文字态, 不用 spinner (跟信箱一致)
  * - paddingBottom = insets.bottom + TAB_BAR_CLEARANCE, 给悬浮的灵动岛 tab bar 让位
  */
@@ -28,7 +30,7 @@ export function DenoiseView() {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useAllSignals();
+    useDenoisedSignals();
   const [refreshing, setRefreshing] = useState(false);
 
   const signals: MergedSignal[] = useMemo(

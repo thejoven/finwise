@@ -5,14 +5,26 @@ import (
 	"math"
 
 	"github.com/google/uuid"
+
+	"alphax/server/internal/infra/objstore"
+	"alphax/server/internal/module/settings"
 )
 
 type Service struct {
 	repo *Repository
+	// 对象存储后台配置依赖 (经 SetStorage 注入; 给 /v1/admin/settings/storage 用).
+	settings *settings.Service
+	storage  objstore.Storage
 }
 
 func NewService(repo *Repository) *Service {
 	return &Service{repo: repo}
+}
+
+// SetStorage 注入对象存储配置依赖 (settings + objstore). 装配期调用.
+func (s *Service) SetStorage(settingsSvc *settings.Service, storage objstore.Storage) {
+	s.settings = settingsSvc
+	s.storage = storage
 }
 
 // OverviewView = 原始计数 + 派生的过会率 (0..1).

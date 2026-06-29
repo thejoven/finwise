@@ -563,7 +563,6 @@ const decisionStyles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   noteText: {
-    fontFamily: "SourceSerif4-Regular",
     fontSize: 14,
     lineHeight: 22,
     color: theme.color.ink,

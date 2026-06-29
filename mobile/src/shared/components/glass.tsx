@@ -1,19 +1,11 @@
 /**
- * 底部悬浮栏的"玻璃胶囊"原语 —— tab 岛与分类格共用.
+ * 底部悬浮"tab 岛"的玻璃胶囊原语.
  *
- * 抽出来的理由: 底栏现在是**两颗分离的胶囊** (左「分类格」+ 右「tab 岛」), 二者要长得像
- *   一对 —— 同种玻璃材质、同样高度、同道描边. 把材质/高度/覆盖色收在这里, 两边各自
- *   引用, 避免复制粘贴走样, 也切断 `DynamicIslandTabBar` ↔ `BottomCategoryCell` 的循环引用.
+ * 抽出来的理由: 把底栏玻璃的材质/高度/圆角/留白常量收在一处, 供 `DynamicIslandTabBar`
+ *   引用, 免得这堆魔数散落各处走样.
  *
  * 材质: iOS 26+ 走 expo-glass-effect 的 GlassView (liquid glass), iOS 18 及以下 / Android
  *   降级到 expo-blur 的 BlurView.
- *
- * 容器而非背景 (本轮改): `IslandGlass` 现在**包裹**内容 (children 嵌在玻璃里), 不再是
- *   absoluteFill 背景层. 改这一下是为了吃到 iOS 26 的"交互玻璃" —— `isInteractive` 让玻璃
- *   对按压/长按起液态反应 (轻微缩放 + 微光跟手). 但这反应要求触摸**落到玻璃自身**:
- *   expo-glass-effect 把子视图挂进原生 `glassEffectView.contentView`, 故内容嵌在 GlassView
- *   内时, 触摸才会沿响应链冒泡到玻璃的交互手势. 旧版玻璃铺在内容下面 (兄弟层), 触摸被
- *   上层 Pressable 截走, 玻璃永远收不到 → isInteractive 形同虚设.
  *
  * 圆角由 GlassView 原生处理 (borderRadius → cornerConfiguration, 见原生 GlassView.swift).
  *   描边 (borderWidth/borderColor) 仍交给**外层 RCTView** 画: GlassView 只认圆角一类 prop
@@ -23,7 +15,6 @@
  * @see https://docs.expo.dev/versions/latest/sdk/glass-effect/
  */
 
-import { type ReactNode } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import Animated from "react-native-reanimated";
 import { GlassContainer, GlassView, isLiquidGlassAvailable } from "expo-glass-effect";
@@ -34,7 +25,7 @@ import { theme } from "@/core/theme";
 /** 选中"透镜"要随 tab 滑动, 故包成可动画的原生玻璃视图 (reanimated 直接驱动其 transform). */
 const AnimatedGlassView = Animated.createAnimatedComponent(GlassView);
 
-/** 两颗胶囊统一高度. tab 岛: tab 48 + 上下各 4 留白 = 56; 分类格也取此值, 视觉成对. */
+/** tab 岛胶囊高度: tab 48 + 上下各 4 留白 = 56. */
 export const PILL_HEIGHT = 56;
 
 /** 岛悬浮在安全区之上的高度 (tab bar host 的 bottom = insets.bottom + 此值). */
@@ -48,55 +39,13 @@ export const TAB_BAR_OFFSET = theme.spacing.sm; // 8
 export const TAB_BAR_CLEARANCE = PILL_HEIGHT + TAB_BAR_OFFSET + theme.spacing.base;
 
 /**
- * 胶囊圆角 = 半高 —— 让左右两侧成**完全圆形**(真半圆), 两颗胶囊共用.
+ * 胶囊圆角 = 半高 —— 让左右两侧成**完全圆形**(真半圆).
  *
  * 为什么钉成 PILL_HEIGHT/2 而非 radius.full(9999): 液态玻璃 GlassView 按 borderRadius 的
  *   字面值生成玻璃形状, 不像普通 CALayer 会把超大值夹到半高, 9999 下两端会渲染成圆角矩形
  *   而非正圆. 钉成半高 (= 28) 是 iOS capsule 的规范值, 左右两侧必为完整半圆.
  */
 export const PILL_RADIUS = PILL_HEIGHT / 2;
-
-/**
- * 胶囊玻璃容器 —— 把 children 包进玻璃里 (圆角由本层处理; 描边交外层 RCTView 画).
- *
- * `style` 应带 borderRadius (让 GlassView 走原生圆角, 边缘更"液态") + 内容的尺寸/排布.
- *
- * @param isInteractive iOS 26 交互玻璃: 按压/长按时玻璃液态反应 (缩放 + 微光). 仅 liquid
- *   glass 路径生效; 降级的 BlurView 无此特效 (这是 iOS 26 原生材质能力, 旧系统给不了).
- */
-export function IslandGlass({
-  isDark,
-  isInteractive = false,
-  style,
-  children,
-}: {
-  isDark: boolean;
-  isInteractive?: boolean;
-  style?: StyleProp<ViewStyle>;
-  children?: ReactNode;
-}) {
-  if (isLiquidGlassAvailable()) {
-    return (
-      <GlassView
-        style={style}
-        glassEffectStyle="regular"
-        colorScheme="auto"
-        isInteractive={isInteractive}
-      >
-        {children}
-      </GlassView>
-    );
-  }
-  return (
-    <BlurView
-      style={style}
-      tint={isDark ? "systemChromeMaterialDark" : "systemChromeMaterialLight"}
-      intensity={80}
-    >
-      {children}
-    </BlurView>
-  );
-}
 
 /** 选中"透镜"几何 (绝对定位 + 圆角) —— 由 DynamicIslandTabBar 按等宽栅格算好传入. */
 export interface LensGeom {

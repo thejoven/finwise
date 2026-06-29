@@ -75,6 +75,50 @@ type TweetView struct {
 	ClassifyStatus string
 	Read           bool
 	CapturedAt     time.Time
+	Quoted         json.RawMessage // 转帖原文 (引用/转推被转的原推); 无则 nil
+	RelatedAssets  []TweetAssetInfo
+}
+
+// quotedTweetJSON — 转帖原文的归一化存储形态 (tweets.quoted 列 + API 透传).
+// 只留渲染原推卡所需: 原作者 + 正文 + 媒体 + 时间.
+type quotedTweetJSON struct {
+	ID          string          `json:"id"`
+	Handle      string          `json:"handle"`
+	DisplayName string          `json:"display_name"`
+	AvatarURL   string          `json:"avatar_url"`
+	Text        string          `json:"text"`
+	Lang        string          `json:"lang,omitempty"`
+	CreatedAt   time.Time       `json:"created_at"`
+	Media       []xsource.Media `json:"media,omitempty"`
+}
+
+// marshalQuoted — 把采集层的 *xsource.Tweet 原推压成 quoted 列的 JSON (nil → nil, 不写列).
+func marshalQuoted(q *xsource.Tweet) []byte {
+	if q == nil {
+		return nil
+	}
+	b, err := json.Marshal(quotedTweetJSON{
+		ID:          q.ID,
+		Handle:      q.Author.Handle,
+		DisplayName: q.Author.DisplayName,
+		AvatarURL:   q.Author.AvatarURL,
+		Text:        q.Text,
+		Lang:        q.Lang,
+		CreatedAt:   q.CreatedAt,
+		Media:       q.Media,
+	})
+	if err != nil {
+		return nil
+	}
+	return b
+}
+
+// TweetAssetInfo — 推文相关标的 (feed 内聚合). tracked = 当前用户是否已通过自己的信号追踪该标的.
+type TweetAssetInfo struct {
+	Canonical string `json:"canonical"`
+	Name      string `json:"name"`
+	Market    string `json:"market"`
+	Tracked   bool   `json:"tracked"`
 }
 
 // ───────────────────────── 账号 / 订阅 ─────────────────────────
@@ -250,8 +294,8 @@ func (r *Repository) InsertTweets(ctx context.Context, accountID uuid.UUID, twee
 
 	const q = `
 		INSERT INTO tweets (id, twitter_account_id, text, lang, tweet_created_at,
-		                    is_retweet, is_quote, media, metrics, raw_payload)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		                    is_retweet, is_quote, media, metrics, raw_payload, quoted)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT (id) DO NOTHING
 	`
 	inserted := 0
@@ -265,10 +309,14 @@ func (r *Repository) InsertTweets(ctx context.Context, accountID uuid.UUID, twee
 			b, _ := json.Marshal(t.Media)
 			media = b
 		}
+		var quoted any
+		if b := marshalQuoted(t.Quoted); b != nil {
+			quoted = b
+		}
 		metricsJSON, _ := json.Marshal(t.Metrics)
 		tag, err := tx.Exec(ctx, q,
 			t.ID, accountID, t.Text, t.Lang, createdAt,
-			t.IsRetweet, t.IsQuote, media, metricsJSON, []byte(t.Raw))
+			t.IsRetweet, t.IsQuote, media, metricsJSON, []byte(t.Raw), quoted)
 		if err != nil {
 			return 0, fmt.Errorf("insert tweet %s: %w", t.ID, err)
 		}
@@ -358,12 +406,137 @@ func (r *Repository) RecordClassifyResult(ctx context.Context, tweetID string, t
 	return nil
 }
 
+// LinkTweetAsset 把归一后的 asset 链到推文 (P2). anchor_at 冻结于 tweets.captured_at; 幂等.
+// 推文不存在 → 子查询无行, 不写.
+func (r *Repository) LinkTweetAsset(ctx context.Context, tweetID string, assetID uuid.UUID, rationale string) error {
+	const q = `
+		INSERT INTO tweet_assets (tweet_id, asset_id, role, anchor_at, rationale)
+		SELECT $1, $2, 'related', t.captured_at, NULLIF($3, '')
+		FROM tweets t WHERE t.id = $1
+		ON CONFLICT (tweet_id, asset_id) DO NOTHING
+	`
+	if _, err := r.pool.Exec(ctx, q, tweetID, assetID, rationale); err != nil {
+		return fmt.Errorf("link tweet asset: %w", err)
+	}
+	return nil
+}
+
+// ListTweetsForAssetBackfill — 选已分类完成、相关度够、但还没链任何标的的推文 (P2 一次性回填用,
+// cmd/tweet-asset-backfill 消费). 只补标的, 不动 tags/summary; 按时间倒序优先回填近期.
+func (r *Repository) ListTweetsForAssetBackfill(ctx context.Context, limit int, minRelevance float64) ([]PendingTweet, error) {
+	const q = `
+		SELECT t.id, t.text, COALESCE(t.lang,''),
+		       COALESCE((SELECT handle FROM twitter_accounts a WHERE a.id = t.twitter_account_id), '')
+		FROM tweets t
+		WHERE t.classify_status = 'done'
+		  AND COALESCE(t.relevance, 0) >= $2
+		  AND NOT EXISTS (SELECT 1 FROM tweet_assets ta WHERE ta.tweet_id = t.id)
+		ORDER BY t.tweet_created_at DESC
+		LIMIT $1
+	`
+	rows, err := r.pool.Query(ctx, q, limit, minRelevance)
+	if err != nil {
+		return nil, fmt.Errorf("list tweets for asset backfill: %w", err)
+	}
+	defer rows.Close()
+	var out []PendingTweet
+	for rows.Next() {
+		var p PendingTweet
+		if err := rows.Scan(&p.ID, &p.Text, &p.Lang, &p.Handle); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
 // MarkClassifyFailed — 尝试次数耗尽, 停止重试. 前端照常展示原文 (降级阅读).
 func (r *Repository) MarkClassifyFailed(ctx context.Context, tweetID string) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE tweets SET classify_status = 'failed' WHERE id = $1 AND classify_status = 'pending'`,
 		tweetID)
 	return err
+}
+
+// ───────────────────────── 稍后读 / 内容偏好 ─────────────────────────
+
+// SaveTweet — 稍后读: 校验订阅范围 → 记 tweet_saved → 顺手标已读 (移出未读 deck). 幂等.
+func (r *Repository) SaveTweet(ctx context.Context, userID uuid.UUID, tweetID string) error {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	var inScope bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1 FROM tweets t
+			JOIN subscriptions s ON s.source_type = 'twitter' AND s.source_id = t.twitter_account_id
+			     AND s.user_id = $1 AND s.active
+			WHERE t.id = $2)`, userID, tweetID).Scan(&inScope)
+	if err != nil {
+		return fmt.Errorf("save tweet scope: %w", err)
+	}
+	if !inScope {
+		return ErrNotFound
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO tweet_saved (user_id, tweet_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		userID, tweetID); err != nil {
+		return fmt.Errorf("save tweet: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO tweet_reads (user_id, tweet_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`,
+		userID, tweetID); err != nil {
+		return fmt.Errorf("save tweet mark read: %w", err)
+	}
+	return tx.Commit(ctx)
+}
+
+// UnsaveTweet — 取消稍后读 (从 bucket 移除; 保持已读态).
+func (r *Repository) UnsaveTweet(ctx context.Context, userID uuid.UUID, tweetID string) error {
+	if _, err := r.pool.Exec(ctx,
+		`DELETE FROM tweet_saved WHERE user_id = $1 AND tweet_id = $2`, userID, tweetID); err != nil {
+		return fmt.Errorf("unsave tweet: %w", err)
+	}
+	return nil
+}
+
+// MutedTag — 已静音的内容标签 (内容偏好页).
+type MutedTag struct {
+	Tag    string
+	Weight int
+}
+
+// ListMutedTags — 该用户已静音的标签 (weight 降序).
+func (r *Repository) ListMutedTags(ctx context.Context, userID uuid.UUID) ([]MutedTag, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT tag, weight FROM user_tag_aversion WHERE user_id = $1 AND muted ORDER BY weight DESC, tag`,
+		userID)
+	if err != nil {
+		return nil, fmt.Errorf("list muted tags: %w", err)
+	}
+	defer rows.Close()
+	var out []MutedTag
+	for rows.Next() {
+		var m MutedTag
+		if err := rows.Scan(&m.Tag, &m.Weight); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// UnmuteTag — 取消静音 (muted=false + weight 归零, 之后重新累积过阈值才会再静音).
+func (r *Repository) UnmuteTag(ctx context.Context, userID uuid.UUID, tag string) error {
+	if _, err := r.pool.Exec(ctx,
+		`UPDATE user_tag_aversion SET muted = false, weight = 0, updated_at = now()
+		 WHERE user_id = $1 AND tag = $2`, userID, tag); err != nil {
+		return fmt.Errorf("unmute tag: %w", err)
+	}
+	return nil
 }
 
 // ───────────────────────── feed / 已读 ─────────────────────────
@@ -373,6 +546,7 @@ type FeedInput struct {
 	UserID         uuid.UUID
 	SubscriptionID *uuid.UUID
 	IncludeRead    bool
+	Saved          bool // true = 只看稍后读 bucket (无视已读 + 减噪过滤)
 	Cursor         string
 	Limit          int
 }
@@ -382,7 +556,16 @@ const tweetViewSelect = `
 	       COALESCE(a.display_name,''), COALESCE(a.avatar_url,''),
 	       t.text, COALESCE(t.lang,''), t.tweet_created_at, t.is_retweet, t.is_quote,
 	       t.media, t.metrics, t.tags, t.summary, t.category, t.relevance,
-	       t.classify_status, (r.tweet_id IS NOT NULL) AS read, t.captured_at
+	       t.classify_status, (r.tweet_id IS NOT NULL) AS read, t.captured_at, t.quoted,
+	       COALESCE((
+	         SELECT json_agg(json_build_object(
+	                  'canonical', ass.canonical, 'name', ass.name, 'market', ass.market,
+	                  'tracked', EXISTS (
+	                      SELECT 1 FROM signal_assets sa JOIN signals sg ON sg.id = sa.signal_id
+	                      WHERE sg.user_id = $1 AND sa.asset_id = ass.id))
+	                ORDER BY ass.canonical)
+	         FROM tweet_assets ta JOIN assets ass ON ass.id = ta.asset_id AND ass.status = 'active'
+	         WHERE ta.tweet_id = t.id), '[]'::json) AS related_assets
 	FROM tweets t
 	JOIN twitter_accounts a ON a.id = t.twitter_account_id
 	JOIN subscriptions s ON s.source_type = 'twitter' AND s.source_id = t.twitter_account_id
@@ -392,12 +575,12 @@ const tweetViewSelect = `
 
 func scanTweetView(rows pgx.Rows) (*TweetView, error) {
 	var v TweetView
-	var media, metrics []byte
+	var media, metrics, quoted, relatedAssets []byte
 	err := rows.Scan(&v.ID, &v.AccountID, &v.SubscriptionID, &v.Handle,
 		&v.DisplayName, &v.AvatarURL,
 		&v.Text, &v.Lang, &v.TweetCreatedAt, &v.IsRetweet, &v.IsQuote,
 		&media, &metrics, &v.Tags, &v.Summary, &v.Category, &v.Relevance,
-		&v.ClassifyStatus, &v.Read, &v.CapturedAt)
+		&v.ClassifyStatus, &v.Read, &v.CapturedAt, &quoted, &relatedAssets)
 	if err != nil {
 		return nil, err
 	}
@@ -406,6 +589,12 @@ func scanTweetView(rows pgx.Rows) (*TweetView, error) {
 	}
 	if metrics != nil {
 		v.Metrics = json.RawMessage(metrics)
+	}
+	if quoted != nil {
+		v.Quoted = json.RawMessage(quoted)
+	}
+	if len(relatedAssets) > 0 {
+		_ = json.Unmarshal(relatedAssets, &v.RelatedAssets)
 	}
 	return &v, nil
 }
@@ -430,9 +619,20 @@ func (r *Repository) FeedPage(ctx context.Context, in FeedInput) ([]TweetView, s
 		curTime, curID = &t, &id
 	}
 
+	// 默认 feed: 按 IncludeRead 过滤未读 + 排除不感兴趣/静音标签. 稍后读 bucket 则只看已存的,
+	// 无视已读与减噪过滤 (你存的就给你看). 两种模式共用同一组占位符 ($3 在 saved 模式下不引用, 无妨).
+	filter := `($3::boolean OR r.tweet_id IS NULL)
+	  AND NOT EXISTS (SELECT 1 FROM tweet_feedback fb WHERE fb.user_id = $1 AND fb.tweet_id = t.id)
+	  AND NOT EXISTS (SELECT 1 FROM user_tag_aversion av WHERE av.user_id = $1 AND av.muted AND av.tag = ANY(t.tags))`
+	if in.Saved {
+		// $3 (IncludeRead) 在 saved 模式逻辑上不用, 但占位符仍须被引用且有类型 ——
+		// 否则 PG 推不出 $3 类型, bind 失败. 用恒真的 ($3::boolean OR TRUE) 占位.
+		filter = `($3::boolean OR TRUE)
+	  AND EXISTS (SELECT 1 FROM tweet_saved ts WHERE ts.user_id = $1 AND ts.tweet_id = t.id)`
+	}
 	q := tweetViewSelect + `
 	WHERE ($2::uuid IS NULL OR s.id = $2)
-	  AND ($3::boolean OR r.tweet_id IS NULL)
+	  AND ` + filter + `
 	  AND ($4::timestamptz IS NULL OR (t.tweet_created_at, t.id) < ($4, $5))
 	ORDER BY t.tweet_created_at DESC, t.id DESC
 	LIMIT $6
@@ -541,12 +741,96 @@ func (r *Repository) UnreadCount(ctx context.Context, userID uuid.UUID) (int, er
 		     AND s.user_id = $1 AND s.active
 		LEFT JOIN tweet_reads r ON r.tweet_id = t.id AND r.user_id = $1
 		WHERE r.tweet_id IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM user_tag_aversion av WHERE av.user_id = $1 AND av.muted AND av.tag = ANY(t.tags))
 	`
 	var n int
 	if err := r.pool.QueryRow(ctx, q, userID).Scan(&n); err != nil {
 		return 0, fmt.Errorf("unread count: %w", err)
 	}
 	return n, nil
+}
+
+// ───────────────────────── 不感兴趣 (负反馈) ─────────────────────────
+
+// RecordNotInterested — 一个事务里: 取推文标签 (兼校验在订阅范围内) → 隐藏当条 →
+// 逐标签累积厌恶 weight → 跨阈值的标签置 muted → 顺手记已读.
+// 返回本次新静音的标签 (供客户端提示). 推文不在范围 → ErrNotFound.
+func (r *Repository) RecordNotInterested(ctx context.Context, userID uuid.UUID, tweetID string, muteThreshold int) ([]string, error) {
+	tx, err := r.pool.BeginTx(ctx, pgx.TxOptions{})
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// 1. 取标签 + 校验订阅范围.
+	var tags []string
+	err = tx.QueryRow(ctx, `
+		SELECT COALESCE(t.tags, '{}') FROM tweets t
+		WHERE t.id = $2 AND EXISTS (
+			SELECT 1 FROM subscriptions s
+			WHERE s.source_type = 'twitter' AND s.source_id = t.twitter_account_id
+			  AND s.user_id = $1 AND s.active)
+	`, userID, tweetID).Scan(&tags)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, fmt.Errorf("not-interested: load tags: %w", err)
+	}
+
+	// 2. 隐藏当条.
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO tweet_feedback (user_id, tweet_id, kind)
+		VALUES ($1, $2, 'not_interested')
+		ON CONFLICT (user_id, tweet_id) DO NOTHING`, userID, tweetID); err != nil {
+		return nil, fmt.Errorf("not-interested: feedback: %w", err)
+	}
+
+	// 3. 逐标签累积厌恶.
+	for _, tag := range tags {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO user_tag_aversion (user_id, tag, weight)
+			VALUES ($1, $2, 1)
+			ON CONFLICT (user_id, tag) DO UPDATE SET
+				weight = user_tag_aversion.weight + 1, updated_at = now()`,
+			userID, tag); err != nil {
+			return nil, fmt.Errorf("not-interested: aversion: %w", err)
+		}
+	}
+
+	// 4. 跨阈值 → 静音; 收集本次新静音的标签.
+	var muted []string
+	if len(tags) > 0 {
+		rows, err := tx.Query(ctx, `
+			UPDATE user_tag_aversion SET muted = true
+			WHERE user_id = $1 AND tag = ANY($2) AND weight >= $3 AND NOT muted
+			RETURNING tag`, userID, tags, muteThreshold)
+		if err != nil {
+			return nil, fmt.Errorf("not-interested: mute: %w", err)
+		}
+		for rows.Next() {
+			var tag string
+			if err := rows.Scan(&tag); err != nil {
+				rows.Close()
+				return nil, err
+			}
+			muted = append(muted, tag)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return nil, err
+		}
+	}
+
+	// 5. 顺手已读 — 不感兴趣的也读过了 (范围已在步骤 1 校验).
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO tweet_reads (user_id, tweet_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, tweet_id) DO NOTHING`, userID, tweetID); err != nil {
+		return nil, fmt.Errorf("not-interested: mark read: %w", err)
+	}
+
+	return muted, tx.Commit(ctx)
 }
 
 // ───────────────────────── cursor 编解码 ─────────────────────────

@@ -1,0 +1,21 @@
+{
+  "masthead": {
+    "title": "早報",
+    "subtitle": "AlphaX 嚴選"
+  },
+  "stamp": {
+    "signals": "收錄 {{count}} 條訊號"
+  },
+  "forYou": "為你導讀",
+  "assets": {
+    "heading": "標的觀察",
+    "meta": "{{count}} 條訊號"
+  },
+  "quiet": "安靜日",
+  "empty": {
+    "title": "今日早報還沒出爐",
+    "subtitle": "每天清晨 8 點更新，明早見。"
+  },
+  "error": "早報載入失敗，下拉重試。",
+  "footer": "AlphaX 編輯部"
+}

@@ -19,17 +19,19 @@ export type FontSizeToken = keyof typeof fontSize;
 
 /**
  * 字体文件名映射. 必须和 assets/fonts/ 里的实际文件名一致.
- * Text 组件 (Display/Serif/Mono) 引用这些 key, 不裸写字符串.
+ *
+ * 英文正文/标题 (Display 非 serif 态 / Serif / 输入框) 走系统字体 (iOS = SF Pro,
+ * Android = Roboto), **不在此表里** —— 不设 fontFamily 即可. 见 Text.tsx.
+ * 这里只留三类必须 bundle 的字体:
+ *   · display* (Playfair Display) —— 仅 AlphaX 品牌字 / masthead 报头副线还在用 (`<Display serif>`)
+ *   · cjk*     (Noto Serif SC)    —— 报名"财知"等中文报刊字
+ *   · mono*    (JetBrains Mono)   —— 数字 / ID / 时间戳
  */
 export const fontFamily = {
   displayRegular: "PlayfairDisplay-Regular",
   displayItalic: "PlayfairDisplay-Italic",
   displayBold: "PlayfairDisplay-Bold",
   displayBoldItalic: "PlayfairDisplay-BoldItalic",
-
-  serifRegular: "SourceSerif4-Regular",
-  serifItalic: "SourceSerif4-Italic",
-  serifSemibold: "SourceSerif4-SemiBold",
 
   cjkRegular: "NotoSerifSC-Regular",
   cjkBold: "NotoSerifSC-Bold",

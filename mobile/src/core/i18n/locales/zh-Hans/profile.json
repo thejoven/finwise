@@ -17,6 +17,54 @@
     "title": "偏好.",
     "topBar": "偏好 · PREFERENCES"
   },
+  "contentPrefs": {
+    "title": "内容偏好",
+    "topBar": "内容偏好 · CONTENT",
+    "hint": "下面这些内容标签已被静音, 不再出现在订阅里。取消静音即可让相关内容重新出现。",
+    "empty": "还没有静音的标签。在订阅里下滑「不感兴趣」, 同一标签累计够了会自动静音。",
+    "unmute": "取消静音"
+  },
+  "stats": {
+    "topBar": "数据统计 · STATS",
+    "stamp": "读者数据",
+    "title": "数据统计.",
+    "sectionTitle": "数据统计",
+    "viewAll": "查看活跃度点阵",
+    "metricsStamp": "汇总指标 · METRICS",
+    "activityStamp": "全年活跃度 · ACTIVITY",
+    "loading": "统计中…",
+    "error": "统计暂时拉取失败。",
+    "activityEmpty": "还没有可统计的活动。开始录入信号后，这里会逐日点亮。",
+    "legendLess": "少",
+    "legendMore": "多",
+    "activitySummary": "全年活跃 {{active}} 天 · 最长连续 {{longest}} 天",
+    "joinedDays": "入驻第 {{count}} 天",
+    "months": [
+      "一月",
+      "二月",
+      "三月",
+      "四月",
+      "五月",
+      "六月",
+      "七月",
+      "八月",
+      "九月",
+      "十月",
+      "十一月",
+      "十二月"
+    ],
+    "cards": {
+      "signals": "信号",
+      "matured": "已推演",
+      "gatePassed": "过会",
+      "projects": "分类",
+      "activeDays": "活跃天",
+      "currentStreak": "连续天",
+      "ofTotal": "共 {{total}}",
+      "ofTries": "共 {{total}} 次",
+      "longest": "最长 {{count}}"
+    }
+  },
   "joinedOn": "加入于 {{date}}",
   "bioEmpty": "还没写个人签名。",
   "syncing": "同步中…",
@@ -39,7 +87,21 @@
     "nameLabel": "昵称",
     "namePlaceholder": "想被怎么称呼",
     "bioLabel": "签名",
-    "bioPlaceholder": "一句话介绍自己"
+    "bioPlaceholder": "一句话介绍自己",
+    "avatar": {
+      "label": "头像",
+      "cta": "更换头像",
+      "add": "添加头像",
+      "menuTitle": "头像",
+      "library": "从相册选取",
+      "camera": "拍照",
+      "remove": "移除头像",
+      "cancel": "取消",
+      "uploading": "上传中…",
+      "permissionDenied": "相册访问未开启，请在系统设置中允许后再选取。",
+      "failed": "头像更新失败。",
+      "unavailable": "头像上传暂未开放。"
+    }
   },
   "password": {
     "topBar": "修改密码 · PASSWORD",

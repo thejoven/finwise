@@ -13,6 +13,8 @@ import (
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+
+	"alphax/server/internal/infra/objstore"
 )
 
 // SessionTTL 是 login 签发 session 的有效期. 单 host 个人 app, 给 30 天.
@@ -65,36 +67,46 @@ type Service struct {
 	invites InviteGate
 	// provisionDefaults 注册建好用户后为其预置默认分类 (best-effort). nil = 不预置.
 	provisionDefaults ProvisionDefaultsFn
+	// storage 头像对象存储 (R2). nil / 未配置 → 头像端点优雅回 503. 经 SetStorage 注入.
+	storage objstore.Storage
 }
 
 func NewService(repo *Repository, invites InviteGate, provisionDefaults ProvisionDefaultsFn) *Service {
 	return &Service{repo: repo, invites: invites, provisionDefaults: provisionDefaults}
 }
 
+// SetStorage 注入头像对象存储 (装配期调用; 与 signal.SetASR 同模式, 不动构造签名以免破坏 cmd/admin).
+func (s *Service) SetStorage(storage objstore.Storage) {
+	s.storage = storage
+}
+
 // ────── DTO ──────
 
 // PublicUser 是返回给客户端的 user 视图 — 不含 password_hash.
+// AvatarURL 由 handler 按 AvatarObjectKey 现签 (非 users.avatar_url 旧列), UpdatedAt 兼作签名版本号.
 type PublicUser struct {
-	ID          uuid.UUID
-	Email       string
-	DisplayName *string
-	AvatarURL   *string
-	Bio         *string
-	Language    *string
-	IsAdmin     bool
-	CreatedAt   time.Time
+	ID              uuid.UUID
+	Email           string
+	DisplayName     *string
+	AvatarObjectKey *string // nil = 无头像
+	Bio             *string
+	Language        *string
+	IsAdmin         bool
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func toPublic(u *User) *PublicUser {
 	return &PublicUser{
-		ID:          u.ID,
-		Email:       u.Email,
-		DisplayName: u.DisplayName,
-		AvatarURL:   u.AvatarURL,
-		Bio:         u.Bio,
-		Language:    u.Language,
-		IsAdmin:     u.IsAdmin,
-		CreatedAt:   u.CreatedAt,
+		ID:              u.ID,
+		Email:           u.Email,
+		DisplayName:     u.DisplayName,
+		AvatarObjectKey: u.AvatarObjectKey,
+		Bio:             u.Bio,
+		Language:        u.Language,
+		IsAdmin:         u.IsAdmin,
+		CreatedAt:       u.CreatedAt,
+		UpdatedAt:       u.UpdatedAt,
 	}
 }
 
@@ -241,10 +253,131 @@ func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (*PublicUser, err
 	return toPublic(u), nil
 }
 
+// ────── Stats (个人资料页指标 + 活动点阵图) ──────
+
+// activityWindowDays 是点阵图回看的天数 (今天往前数, 含今天). 53 周 × 7 ≈ 一年余.
+const activityWindowDays = 371
+
+// shanghaiLoc 是活动「日」折算用的时区. App 以 A 股 / 国内用户为主, 用东八区切日历日,
+// 凌晨录入不会被算到前一天. 退化: 极少数环境无 tzdata 时回退 UTC+8 固定偏移.
+var shanghaiLoc = func() *time.Location {
+	if loc, err := time.LoadLocation("Asia/Shanghai"); err == nil {
+		return loc
+	}
+	return time.FixedZone("CST", 8*3600)
+}()
+
+// StatsMetrics 是个人资料页顶部的汇总指标.
+type StatsMetrics struct {
+	SignalsTotal   int `json:"signals_total"`
+	SignalsMatured int `json:"signals_matured"`
+	GateTotal      int `json:"gate_total"`
+	GatePassed     int `json:"gate_passed"`
+	Projects       int `json:"projects"`
+	ActiveDays     int `json:"active_days"`    // 窗口内有活动的天数
+	CurrentStreak  int `json:"current_streak"` // 截至今天的连续活跃天数
+	LongestStreak  int `json:"longest_streak"` // 窗口内最长连续活跃天数
+	JoinedDays     int `json:"joined_days"`    // 注册至今的天数
+}
+
+// StatsActivityDay 是点阵图的一格 (稀疏: 只含有活动的日).
+type StatsActivityDay struct {
+	Date  string `json:"date"` // YYYY-MM-DD (Asia/Shanghai)
+	Count int    `json:"count"`
+}
+
+// Stats 是 GET /v1/me/stats 的完整返回.
+type Stats struct {
+	Metrics StatsMetrics       `json:"metrics"`
+	Start   string             `json:"start"` // 点阵图窗口起始日 (含), YYYY-MM-DD
+	End     string             `json:"end"`   // 点阵图窗口结束日 (今天, 含), YYYY-MM-DD
+	Days    []StatsActivityDay `json:"days"`  // 稀疏活动日, 升序
+}
+
+// GetStats 汇总个人资料页所需的指标与一年活动点阵.
+// streak / active_days 在 Go 侧从稀疏活动日推导 (避免 SQL 里 generate_series 的笨拙).
+func (s *Service) GetStats(ctx context.Context, userID uuid.UUID) (*Stats, error) {
+	u, err := s.repo.FindByID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	counts, err := s.repo.StatsCounts(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	today := time.Now().In(shanghaiLoc)
+	todayDay := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, shanghaiLoc)
+	startDay := todayDay.AddDate(0, 0, -(activityWindowDays - 1))
+	const dateFmt = "2006-01-02"
+
+	rows, err := s.repo.ActivitySince(ctx, userID, startDay.Format(dateFmt))
+	if err != nil {
+		return nil, err
+	}
+
+	// 稀疏 map: 日期串 → 计数. 同时收集成 day-key 集合算 streak.
+	present := make(map[string]int, len(rows))
+	days := make([]StatsActivityDay, 0, len(rows))
+	for _, r := range rows {
+		key := r.Day.Format(dateFmt)
+		present[key] = r.Count
+		days = append(days, StatsActivityDay{Date: key, Count: r.Count})
+	}
+
+	activeDays := len(present)
+
+	// current streak: 从今天往回数, 连续命中的天数. 今天没活动则看昨天起算 (不强制今天有).
+	current := 0
+	for d := todayDay; !d.Before(startDay); d = d.AddDate(0, 0, -1) {
+		if _, ok := present[d.Format(dateFmt)]; ok {
+			current++
+		} else if d.Equal(todayDay) {
+			continue // 今天还没活动不算断, 继续看昨天
+		} else {
+			break
+		}
+	}
+
+	// longest streak: 遍历整个窗口, 数最长连续命中段.
+	longest, run := 0, 0
+	for d := startDay; !d.After(todayDay); d = d.AddDate(0, 0, 1) {
+		if _, ok := present[d.Format(dateFmt)]; ok {
+			run++
+			if run > longest {
+				longest = run
+			}
+		} else {
+			run = 0
+		}
+	}
+
+	joinedDays := int(todayDay.Sub(
+		time.Date(u.CreatedAt.In(shanghaiLoc).Year(), u.CreatedAt.In(shanghaiLoc).Month(), u.CreatedAt.In(shanghaiLoc).Day(), 0, 0, 0, 0, shanghaiLoc),
+	).Hours()/24) + 1
+
+	return &Stats{
+		Metrics: StatsMetrics{
+			SignalsTotal:   counts.SignalsTotal,
+			SignalsMatured: counts.SignalsMatured,
+			GateTotal:      counts.GateTotal,
+			GatePassed:     counts.GatePassed,
+			Projects:       counts.Projects,
+			ActiveDays:     activeDays,
+			CurrentStreak:  current,
+			LongestStreak:  longest,
+			JoinedDays:     joinedDays,
+		},
+		Start: startDay.Format(dateFmt),
+		End:   todayDay.Format(dateFmt),
+		Days:  days,
+	}, nil
+}
+
 type UpdateMeCommand struct {
 	DisplayName *string
 	Bio         *string
-	AvatarURL   *string
 	Language    *string // nil = 不动; 否则须是受支持语言
 }
 
@@ -279,9 +412,6 @@ func (c *UpdateMeCommand) normalize() error {
 	if err := clamp(&c.Bio, 280, "bio"); err != nil {
 		return err
 	}
-	if err := clamp(&c.AvatarURL, 500, "avatar_url"); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -293,7 +423,6 @@ func (s *Service) UpdateMe(ctx context.Context, userID uuid.UUID, cmd UpdateMeCo
 	u, err := s.repo.UpdateProfile(ctx, userID, UpdateProfileInput{
 		DisplayName: cmd.DisplayName,
 		Bio:         cmd.Bio,
-		AvatarURL:   cmd.AvatarURL,
 		Language:    cmd.Language,
 	})
 	if err != nil {
@@ -352,16 +481,18 @@ func (s *Service) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
 }
 
 // AdminUserView 是 admin 用户列表的一行视图 — 不含 password_hash.
+// AvatarURL 由 handler 按 AvatarObjectKey 现签, UpdatedAt 兼作签名版本号.
 type AdminUserView struct {
-	ID          uuid.UUID
-	Email       string
-	DisplayName *string
-	AvatarURL   *string
-	Bio         *string
-	IsAdmin     bool
-	SignalCount int
-	LastSeenAt  *time.Time
-	CreatedAt   time.Time
+	ID              uuid.UUID
+	Email           string
+	DisplayName     *string
+	AvatarObjectKey *string
+	Bio             *string
+	IsAdmin         bool
+	SignalCount     int
+	LastSeenAt      *time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 // ListUsers 返回全部用户 (含活动指标), 给 admin "接入用户" 页用.
@@ -373,15 +504,16 @@ func (s *Service) ListUsers(ctx context.Context) ([]AdminUserView, error) {
 	out := make([]AdminUserView, 0, len(rows))
 	for _, r := range rows {
 		out = append(out, AdminUserView{
-			ID:          r.ID,
-			Email:       r.Email,
-			DisplayName: r.DisplayName,
-			AvatarURL:   r.AvatarURL,
-			Bio:         r.Bio,
-			IsAdmin:     r.IsAdmin,
-			SignalCount: r.SignalCount,
-			LastSeenAt:  r.LastSeenAt,
-			CreatedAt:   r.CreatedAt,
+			ID:              r.ID,
+			Email:           r.Email,
+			DisplayName:     r.DisplayName,
+			AvatarObjectKey: r.AvatarObjectKey,
+			Bio:             r.Bio,
+			IsAdmin:         r.IsAdmin,
+			SignalCount:     r.SignalCount,
+			LastSeenAt:      r.LastSeenAt,
+			CreatedAt:       r.CreatedAt,
+			UpdatedAt:       r.UpdatedAt,
 		})
 	}
 	return out, nil

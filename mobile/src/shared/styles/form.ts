@@ -21,7 +21,7 @@ const label: TextStyle = {
 };
 
 const input: TextStyle = {
-  fontFamily: theme.fontFamily.serifRegular,
+  // 无 fontFamily → 系统字体 (SF Pro / Roboto).
   fontSize: 16,
   lineHeight: 24,
   color: theme.color.ink,

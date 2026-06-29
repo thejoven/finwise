@@ -1,6 +1,6 @@
 export {
   useCaptureSignal,
-  useAllSignals,
+  useDenoisedSignals,
   useMergedSignals,
   useRetryPending,
   type MergedSignal,

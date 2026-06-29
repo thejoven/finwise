@@ -6,6 +6,7 @@ import {
   ArrowUp,
   ArrowUpRight,
   BookOpen,
+  Camera,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -13,6 +14,7 @@ import {
   ChevronUp,
   Eye,
   EyeOff,
+  Image as ImageGlyph,
   Mic,
   Pencil,
   Plus,
@@ -69,7 +71,9 @@ export type IconName =
   | "eye"
   | "eyeOff"
   | "mic"
-  | "stop";
+  | "stop"
+  | "camera"
+  | "photo";
 
 /** 语义名 → SF Symbol (iOS) + lucide 组件 (兜底). SF 名见 Apple「SF Symbols」app. */
 const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
@@ -97,6 +101,9 @@ const ICONS: Record<IconName, { sf: SFSymbol; lucide: LucideComponent }> = {
   // 语音输入 (录入页). mic = 开始录音, stop = 停止.
   mic: { sf: "mic.fill", lucide: Mic },
   stop: { sf: "stop.fill", lucide: Square },
+  // 头像上传 (编辑资料页). camera = 拍照/更换, photo = 从相册选.
+  camera: { sf: "camera.fill", lucide: Camera },
+  photo: { sf: "photo", lucide: ImageGlyph },
 };
 
 /** lucide strokeWidth → SF Symbol weight. 项目描边只用 1.5 / 1.75 / 2. */

@@ -5,7 +5,7 @@
  *   - inactive: paper2 + 细线 + ink 文字 (有 color 时用其作描边)
  *
  * 目前由 capture 的 CategoryPicker 复用. (历史上的 ProjectChipsRow 横滑分类条已下线,
- * 分类切换改走底栏 BottomCategoryCell + CategoryDropdown.)
+ * 分类切换改走财知报头 HeaderCategoryCell + CategoryDropdown.)
  */
 
 import { StyleSheet } from "react-native";

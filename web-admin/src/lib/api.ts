@@ -311,6 +311,28 @@ export interface AuthResponse {
   session: { token: string; expires_at: string };
 }
 
+// 对象存储 (R2) 后台配置. 读时不含明文 secret — 仅 secret_configured 标志.
+export interface StorageConfig {
+  enabled: boolean;
+  account_id: string;
+  endpoint: string;
+  region: string;
+  bucket: string;
+  access_key_id: string;
+  secret_configured: boolean;
+}
+
+// 保存入参. secret_access_key 留空/省略 = 保留原值 (不覆盖).
+export interface StorageConfigInput {
+  enabled: boolean;
+  account_id: string;
+  endpoint: string;
+  region: string;
+  bucket: string;
+  access_key_id: string;
+  secret_access_key?: string;
+}
+
 // ───────── 运营后台 admin 聚合 / 跨用户视图 (后端切片 1-2) ─────────
 
 export interface AdminOverview {
@@ -632,6 +654,22 @@ export const alphax = {
         api<InviteCodeRow>(`/v1/admin/invites/${id}/revoke`, {
           method: "POST",
         }),
+    },
+    settings: {
+      // 对象存储 (R2) 凭证. get 不回 secret; update 留空 secret = 保留; test = 连通性自检.
+      storage: {
+        get: () => api<StorageConfig>("/v1/admin/settings/storage"),
+        update: (input: StorageConfigInput) =>
+          api<StorageConfig>("/v1/admin/settings/storage", {
+            method: "PUT",
+            body: input,
+          }),
+        test: () =>
+          api<{ ok: boolean; error?: string }>(
+            "/v1/admin/settings/storage/test",
+            { method: "POST" },
+          ),
+      },
     },
   },
 

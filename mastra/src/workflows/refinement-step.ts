@@ -46,7 +46,9 @@ export interface RefinementStepResult {
   error?: string;
 }
 
-export async function runRefinementStep(input: RefinementStepInput): Promise<RefinementStepResult> {
+export async function runRefinementStep(
+  input: RefinementStepInput,
+): Promise<RefinementStepResult> {
   // Step 1: fetchState
   let view: SessionView;
   try {
@@ -100,7 +102,8 @@ export async function runRefinementStep(input: RefinementStepInput): Promise<Ref
   }));
 
   // Phase 2 v1 单信号: backend GET /v1/internal/refinement/sessions/:id 已经 join 出了 raw_text.
-  const signalRawText = view.primary_signal_raw_text ?? "(signal raw_text not loaded)";
+  const signalRawText =
+    view.primary_signal_raw_text ?? "(signal raw_text not loaded)";
 
   // Step 4: roundResearch — round 1-4 按 lens 定向检索, round 5 跳过.
   let roundResearch: SearchResult[] = [];
@@ -134,6 +137,12 @@ export async function runRefinementStep(input: RefinementStepInput): Promise<Ref
       training_focus_dim: view.training_focus_dim,
       training_focus_text: view.training_focus_text,
       round_research: roundResearch,
+      // Analyst 已推的结论 (summary + tags + related_assets) 作出题参照, 在已推层之上再追一层.
+      prior_inference: {
+        summary: view.primary_signal_summary,
+        tags: view.primary_signal_tags,
+        related_assets: view.primary_signal_related_assets,
+      },
       project_name: view.project_name,
       project_guidance: view.project_guidance,
       language: view.language,
@@ -187,10 +196,10 @@ export async function runRefinementStep(input: RefinementStepInput): Promise<Ref
  * round 5 不在这里 — commitment_setup 不需要 grounding.
  */
 const ROUND_QUERY_ANGLE: Record<number, string> = {
-  1: "上游 供应链 enabling 原因",                       // L1 根因 + L6 护城河
-  2: "监管 法律 政策 心理 博弈 历史",                   // L2 多元栅格 + L7 10x
-  3: "影响 二阶 后续 受益方 行业链",                    // L3 二阶 + L4 反身性
-  4: "市场共识 分析师 预期 narrative 反共识",           // L4 反身性 + L5 base rate + L10 叙事
+  1: "上游 供应链 enabling 原因", // L1 根因 + L6 护城河
+  2: "监管 法律 政策 心理 博弈 历史", // L2 多元栅格 + L7 10x
+  3: "影响 二阶 后续 受益方 行业链", // L3 二阶 + L4 反身性
+  4: "市场共识 分析师 预期 narrative 反共识", // L4 反身性 + L5 base rate + L10 叙事
 };
 
 interface RoundResearchInput {
@@ -205,7 +214,9 @@ interface RoundResearchInput {
 async function researchRound(in_: RoundResearchInput): Promise<SearchResult[]> {
   const angle = ROUND_QUERY_ANGLE[in_.round];
   if (!angle) return [];
-  const base = (in_.primary_asset ?? extractTopicHint(in_.signal_raw_text)).trim();
+  const base = (
+    in_.primary_asset ?? extractTopicHint(in_.signal_raw_text)
+  ).trim();
   if (!base) return [];
   const query = `${base} ${angle}`;
 
@@ -213,7 +224,9 @@ async function researchRound(in_: RoundResearchInput): Promise<SearchResult[]> {
   // 两者都是增强材料, 各自失败静默. market 排前, 与 Analyst/Socratic 的 slice 优先级一致.
   const [webResults, marketResults] = await Promise.all([
     webSearch(query, { count: 8, freshness: "month", type: "auto" }),
-    searchPredictionMarkets(in_.signal_raw_text).catch(() => [] as SearchResult[]),
+    searchPredictionMarkets(in_.signal_raw_text).catch(
+      () => [] as SearchResult[],
+    ),
   ]);
   const results = [...marketResults, ...webResults];
   if (results.length === 0) return results;
@@ -249,7 +262,14 @@ function extractTopicHint(rawText: string): string {
 }
 
 function logWarn(msg: string, fields: Record<string, unknown> = {}): void {
-  console.warn(JSON.stringify({ ts: new Date().toISOString(), level: "warn", msg, ...fields }));
+  console.warn(
+    JSON.stringify({
+      ts: new Date().toISOString(),
+      level: "warn",
+      msg,
+      ...fields,
+    }),
+  );
 }
 
 function errMsg(e: unknown): string {

@@ -2,7 +2,7 @@
  * 玻璃表面上的"覆盖层"颜色 —— 不在调色板里的 rgba, 按明暗手动给.
  * (图标 / 文字色直接用 theme.color.ink / muted, 已是动态色, 会自动随明暗翻.)
  *
- * 单独成 .ts 文件 (非组件): 与 glass.tsx 的玻璃组件 (IslandGlass / TabBarGlass) 分开,
+ * 单独成 .ts 文件 (非组件): 与 glass.tsx 的玻璃组件 (TabBarGlass) 分开,
  * 让组件文件只导出组件 —— 保住 Fast Refresh (见 react-doctor only-export-components).
  */
 export function glassOverlay(isDark: boolean) {

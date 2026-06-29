@@ -56,15 +56,18 @@ function useSignals() {
 }
 
 /**
- * useAllSignals — "信号" tab 用: 拉**全部**信号 (跨所有分类) 的完整时间线, 翻页加载.
+ * useDenoisedSignals — 降噪子页用: 拉**当前分类**下、降噪后推演出相关标的的信号时间线, 翻页加载.
  *
- * 跟 useSignals 不同: 不按当前 active 分类过滤 — 这是"看见自己"的完整账本
- * (哲学 6 / 12), 要的就是全部. before 游标取上一页最后一条的 captured_at.
+ * 按报头分类格选定的 active 分类过滤 (project_id 进 queryKey, 切分类即重拉第一页);
+ * has_targets 只收"降噪后有相关标的"的信号. before 游标取上一页最后一条的 captured_at.
+ * (activeId == null = 全部; 但新 IA 下分类格恒停在一个真实分类, 故实际总按分类过滤.)
  */
-export function useAllSignals() {
+export function useDenoisedSignals() {
+  const activeId = useActiveProject((s) => s.activeId);
   return useInfiniteQuery({
-    queryKey: [...SIGNALS_KEY, "all"],
-    queryFn: ({ pageParam }) => listSignals({ limit: 30, before: pageParam, has_targets: true }),
+    queryKey: [...SIGNALS_KEY, "denoised", activeId],
+    queryFn: ({ pageParam }) =>
+      listSignals({ limit: 30, before: pageParam, has_targets: true, project_id: activeId }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) =>
       lastPage.has_more && lastPage.signals.length > 0

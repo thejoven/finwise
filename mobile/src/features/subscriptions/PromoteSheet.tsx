@@ -161,7 +161,6 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
     minHeight: 64,
     textAlignVertical: "top",
-    fontFamily: theme.fontFamily.serifRegular,
     fontSize: 13,
     color: theme.color.ink,
     backgroundColor: theme.color.paper2,

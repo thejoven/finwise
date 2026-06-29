@@ -31,8 +31,19 @@ import { runThicknessJudge } from "../agents/thickness.js";
 import { runTimingCheck } from "../agents/timing.js";
 import { runCompetenceCheck } from "../agents/competence.js";
 import { runTweetClassifier } from "../agents/tweet-classifier.js";
-import { runAnalystChat, type AnalystChatInput } from "../agents/analyst-chat.js";
+import {
+  runAnalystChat,
+  type AnalystChatInput,
+} from "../agents/analyst-chat.js";
 import { runSymbolResolver } from "../agents/symbol-resolver.js";
+import {
+  runMorningReport,
+  runMorningReportForYou,
+  runMorningReportPersonal,
+  type MorningReportInput,
+  type MorningReportForYouInput,
+  type MorningReportPersonalInput,
+} from "../agents/morning-report.js";
 
 export interface HttpHandle {
   stop(): Promise<void>;
@@ -435,6 +446,93 @@ async function handle(
         reference: input.reference,
         err: String(err),
       });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/morning-report") {
+    const input = body as Partial<MorningReportInput>;
+    const start = Date.now();
+    try {
+      const result = await runMorningReport({
+        language: input.language,
+        top_assets: Array.isArray(input.top_assets) ? input.top_assets : [],
+        top_tags: Array.isArray(input.top_tags) ? input.top_tags : [],
+        summaries: Array.isArray(input.summaries) ? input.summaries : [],
+        is_quiet: !!input.is_quiet,
+      });
+      log("info", "morning-report done", {
+        lang: input.language,
+        quiet: !!input.is_quiet,
+        sections: result.sections.length,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "morning-report failed", {
+        lang: input.language,
+        err: String(err),
+      });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/morning-report-for-you") {
+    const input = body as Partial<MorningReportForYouInput>;
+    const start = Date.now();
+    try {
+      const result = await runMorningReportForYou({
+        language: input.language,
+        tracked_tokens: Array.isArray(input.tracked_tokens)
+          ? input.tracked_tokens
+          : [],
+        top_assets: Array.isArray(input.top_assets) ? input.top_assets : [],
+        top_tags: Array.isArray(input.top_tags) ? input.top_tags : [],
+        summaries: Array.isArray(input.summaries) ? input.summaries : [],
+        is_quiet: !!input.is_quiet,
+      });
+      log("info", "morning-report-for-you done", {
+        lang: input.language,
+        quiet: !!input.is_quiet,
+        sections: result.sections.length,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "morning-report-for-you failed", {
+        lang: input.language,
+        err: String(err),
+      });
+      writeJSON(res, 502, { error: String(err) });
+    }
+    return;
+  }
+
+  if (url === "/morning-report-personal") {
+    const input = body as Partial<MorningReportPersonalInput>;
+    if (!Array.isArray(input.sections) || input.sections.length === 0) {
+      writeJSON(res, 400, { error: "sections required" });
+      return;
+    }
+    const start = Date.now();
+    try {
+      const result = await runMorningReportPersonal({
+        language: input.language,
+        sections: input.sections,
+        tracked_tokens: Array.isArray(input.tracked_tokens)
+          ? input.tracked_tokens
+          : [],
+      });
+      log("info", "morning-report-personal done", {
+        lang: input.language,
+        relevant: result.relevant_assets.length,
+        dur_ms: Date.now() - start,
+      });
+      writeJSON(res, 200, result);
+    } catch (err) {
+      log("warn", "morning-report-personal failed", { err: String(err) });
       writeJSON(res, 502, { error: String(err) });
     }
     return;

@@ -51,7 +51,7 @@ export default function ColophonScreen() {
           <RNText allowFontScaling={false} style={styles.nameplateCJK}>
             财知
           </RNText>
-          <Display size={18} italic style={styles.nameplateEN}>
+          <Display size={18} italic serif style={styles.nameplateEN}>
             AlphaX
           </Display>
         </View>
@@ -266,7 +266,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   bodyBold: {
-    fontFamily: theme.fontFamily.cjkBold,
+    // 正文里的强调词 — 跟随父级 <Serif> 的系统字体 (SF Pro), 仅加粗.
+    // 不用 cjkBold: Noto Serif SC 自带拉丁字形, 英文强调词会变成中文衬线, 与正文不一致.
+    fontWeight: "600",
     color: theme.color.ink,
   },
   para: {

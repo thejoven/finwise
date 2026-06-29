@@ -9,10 +9,26 @@ const LOCALES = join(HERE, "..", "src", "core", "i18n", "locales");
 
 const LANGS = ["zh-Hans", "zh-Hant", "en"];
 const NAMESPACES = [
-  "common", "settings", "profile", "nav", "errors",
-  "capture", "caizhi", "refinement", "gate", "archive",
-  "project", "subscriptions", "commitment", "retrospect",
-  "attention", "notifications", "auth", "components", "track",
+  "common",
+  "settings",
+  "profile",
+  "nav",
+  "errors",
+  "capture",
+  "caizhi",
+  "refinement",
+  "gate",
+  "archive",
+  "project",
+  "subscriptions",
+  "commitment",
+  "retrospect",
+  "attention",
+  "notifications",
+  "auth",
+  "components",
+  "track",
+  "morning",
 ];
 
 for (const lang of LANGS) {
@@ -43,4 +59,6 @@ lines.push("export type Resources = typeof zhHans;");
 lines.push("");
 writeFileSync(join(LOCALES, "resources.ts"), lines.join("\n"));
 
-console.log(`scaffold: ${LANGS.length} langs × ${NAMESPACES.length} namespaces; resources.ts written`);
+console.log(
+  `scaffold: ${LANGS.length} langs × ${NAMESPACES.length} namespaces; resources.ts written`,
+);

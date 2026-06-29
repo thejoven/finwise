@@ -14,8 +14,8 @@
  *   的固定 CaizhiHeader / SegmentedTabs, 故本视图不再自带 SafeAreaView top 留白, 也去掉大号
  *   「统计」标题 (分段栏已标注, 与 DenoiseView 去标题同理). 顶部只留一行戳记 + 时间窗 pills.
  *
- * 分类: 统计跟随底栏「分类格」(BottomCategoryCell) 选定的全局项目 —— 该格现仅在财知显示
- *   (见 GOAL 本轮调整), 恰好统计也住在财知里, 故仍能跟着切换. 仅在报刊头标注当前分类.
+ * 分类: 统计跟随财知报头「分类格」(HeaderCategoryCell) 选定的全局项目 —— 分类格只在财知
+ *   出现 (见 GOAL 本轮调整), 统计也住在财知里, 故跟着切换. 仅在报刊头标注当前分类.
  */
 
 import { useMemo, useState } from "react";

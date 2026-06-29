@@ -12,6 +12,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PendingFlush, usePendingSignals } from "@/features/capture";
 import { SplashCover } from "@/features/splash";
 import { useAuth } from "@/core/auth/store";
+import { useBilling } from "@/core/billing";
 import { useNotifications } from "@/features/notifications";
 import { useActiveProject } from "@/features/project/store";
 import { useFavoriteAssets, useHiddenAssets } from "@/features/track";
@@ -61,13 +62,12 @@ const queryClient = new QueryClient({
 });
 
 const FONTS = {
+  // Playfair Display: 仅 AlphaX 品牌字 / 报头副线 (`<Display serif>`) 在用. 英文正文/标题
+  // 已改系统字体 (SF Pro / Roboto), 故不再 bundle Source Serif 4.
   "PlayfairDisplay-Regular": require("../assets/fonts/PlayfairDisplay-Regular.ttf"),
   "PlayfairDisplay-Italic": require("../assets/fonts/PlayfairDisplay-Italic.ttf"),
   "PlayfairDisplay-Bold": require("../assets/fonts/PlayfairDisplay-Bold.ttf"),
   "PlayfairDisplay-BoldItalic": require("../assets/fonts/PlayfairDisplay-BoldItalic.ttf"),
-  "SourceSerif4-Regular": require("../assets/fonts/SourceSerif4-Regular.ttf"),
-  "SourceSerif4-Italic": require("../assets/fonts/SourceSerif4-Italic.ttf"),
-  "SourceSerif4-SemiBold": require("../assets/fonts/SourceSerif4-SemiBold.ttf"),
   "NotoSerifSC-Regular": require("../assets/fonts/NotoSerifSC-Regular.ttf"),
   "NotoSerifSC-Bold": require("../assets/fonts/NotoSerifSC-Bold.ttf"),
   "JetBrainsMono-Regular": require("../assets/fonts/JetBrainsMono-Regular.ttf"),
@@ -117,6 +117,9 @@ export default function RootLayout() {
       }),
     ]).finally(() => {
       if (mounted) setStorageReady(true);
+      // billing 不阻塞首屏: auth 此刻已 hydrate, init 能拿到正确 user id 当 RevenueCat
+      // appUserID. 没配 RevenueCat key 时内部直接降级, 不报错.
+      void useBilling.getState().init();
     });
     return () => {
       mounted = false;
@@ -167,8 +170,11 @@ export default function RootLayout() {
             <Stack.Screen name="profile/edit" options={bottomModalScreen} />
             <Stack.Screen name="profile/password" options={bottomModalScreen} />
             <Stack.Screen name="profile/preferences" options={pushDetailScreen} />
+            <Stack.Screen name="profile/content-prefs" options={pushDetailScreen} />
+            <Stack.Screen name="profile/stats" options={pushDetailScreen} />
             <Stack.Screen name="search" options={bottomModalScreen} />
             <Stack.Screen name="subscriptions/manage" options={bottomModalScreen} />
+            <Stack.Screen name="subscriptions/saved" options={pushDetailScreen} />
             <Stack.Screen name="projects/archived" options={pushDetailScreen} />
             <Stack.Screen name="signal/[id]" options={pushDetailScreen} />
             <Stack.Screen name="tweet/[id]" options={pushDetailScreen} />

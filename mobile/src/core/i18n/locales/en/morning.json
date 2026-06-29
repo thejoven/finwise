@@ -1,0 +1,21 @@
+{
+  "masthead": {
+    "title": "Daily Briefing",
+    "subtitle": "AlphaX Select"
+  },
+  "stamp": {
+    "signals": "{{count}} signals logged"
+  },
+  "forYou": "For You",
+  "assets": {
+    "heading": "Watching",
+    "meta": "{{count}} signals"
+  },
+  "quiet": "Quiet day",
+  "empty": {
+    "title": "No briefing yet",
+    "subtitle": "Updated every morning at 8. See you tomorrow."
+  },
+  "error": "Couldn't load the briefing. Pull down to retry.",
+  "footer": "AlphaX Editorial"
+}

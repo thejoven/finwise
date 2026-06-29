@@ -74,11 +74,59 @@ export async function getMe(): Promise<UserDTO> {
 export interface UpdateMeInput {
   display_name?: string | null;
   bio?: string | null;
-  avatar_url?: string | null;
+  // avatar_url 不在此 — 头像走 /v1/me/avatar/* 上传链路 (见下), DTO 的 avatar_url 由后端现签.
 }
 
 export async function updateMe(input: UpdateMeInput): Promise<UserDTO> {
   const json = await api.patch("v1/me", { json: input }).json();
+  return UserSchema.parse(json);
+}
+
+// ────── avatar (预签名直传 R2 + 后端签名 URL 私有读) ──────
+
+const AvatarUploadURLSchema = z.object({
+  upload_url: z.string(),
+  method: z.string(),
+  expires_at: z.string(),
+});
+export type AvatarUploadURL = z.infer<typeof AvatarUploadURLSchema>;
+
+/** 取预签名 PUT URL (客户端直传 R2). 未配置存储 → 503. */
+export async function requestAvatarUploadUrl(): Promise<AvatarUploadURL> {
+  const json = await api.post("v1/me/avatar/upload-url").json();
+  return AvatarUploadURLSchema.parse(json);
+}
+
+/**
+ * 把本地图片直传到预签名 URL —— 绕过后端用裸 fetch (目标是 R2 直链, 不能带 bearer/prefixUrl).
+ * RN 把本地 file:// 先读成 blob 再 PUT; Content-Type 须与后端 confirm 校验白名单一致.
+ */
+export async function putAvatarBytes(
+  uploadUrl: string,
+  localUri: string,
+  contentType: string,
+): Promise<void> {
+  const fileRes = await fetch(localUri);
+  const blob = await fileRes.blob();
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: blob,
+  });
+  if (!res.ok) {
+    throw new Error(`avatar upload failed: ${res.status}`);
+  }
+}
+
+/** 直传完成后让后端校验 (大小/类型) 并落库, 返回更新后的用户 (含现签 avatar_url). */
+export async function confirmAvatar(): Promise<UserDTO> {
+  const json = await api.post("v1/me/avatar/confirm").json();
+  return UserSchema.parse(json);
+}
+
+/** 移除头像. */
+export async function removeAvatar(): Promise<UserDTO> {
+  const json = await api.delete("v1/me/avatar").json();
   return UserSchema.parse(json);
 }
 
@@ -88,6 +136,41 @@ export async function updateMe(input: UpdateMeInput): Promise<UserDTO> {
  */
 export async function updateLanguage(language: string): Promise<void> {
   await api.patch("v1/me", { json: { language } });
+}
+
+// ────── stats (个人资料页) ──────
+
+const StatsMetricsSchema = z.object({
+  signals_total: z.number(),
+  signals_matured: z.number(),
+  gate_total: z.number(),
+  gate_passed: z.number(),
+  projects: z.number(),
+  active_days: z.number(),
+  current_streak: z.number(),
+  longest_streak: z.number(),
+  joined_days: z.number(),
+});
+
+const StatsDaySchema = z.object({
+  date: z.string(), // YYYY-MM-DD (Asia/Shanghai)
+  count: z.number(),
+});
+
+const StatsSchema = z.object({
+  metrics: StatsMetricsSchema,
+  start: z.string(), // 点阵图窗口起始日 (含)
+  end: z.string(), // 今天 (含)
+  days: z.array(StatsDaySchema), // 稀疏: 只含有活动的日, 升序
+});
+export type StatsDTO = z.infer<typeof StatsSchema>;
+export type StatsMetricsDTO = z.infer<typeof StatsMetricsSchema>;
+export type StatsDayDTO = z.infer<typeof StatsDaySchema>;
+
+/** 拉个人资料页的汇总指标 + 一年活动点阵. */
+export async function getMyStats(): Promise<StatsDTO> {
+  const json = await api.get("v1/me/stats").json();
+  return StatsSchema.parse(json);
 }
 
 export interface ChangePasswordInput {
