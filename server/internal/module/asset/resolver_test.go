@@ -55,11 +55,12 @@ func TestClassifyByRule_codes(t *testing.T) {
 }
 
 func TestClassifyByRule_defersLettersAndNames(t *testing.T) {
-	// 裸字母 (美股 ticker / 加密) 与公司名 / 模糊板块: 规则层不猜, 交给 LLM (返回 nil).
+	// 裸字母美股 ticker、公司名、模糊板块: 规则层不猜, 交给 LLM (返回 nil).
+	// (头部加密如 BTC/ETH 现由 classifyCrypto 规则命中, 已挪到 TestClassifyCrypto.)
 	defer_ := []string{
 		"NVDA", "MSFT", "AMD", "TSM", // 美股 ticker
-		"BTC", "ETH", "HYPE", "ZEC", // 加密
 		"宁德时代", "北方华创", "英伟达", // 中文名
+		"FOOBARCOIN", "SCAMTOKEN", // 长尾/山寨加密 (不在白名单) → defer
 		"Strategy (MSTR)", "中芯国际 (SMIC)", "港交所 (HKEX)", "黄金 (GLD/IAU)", // 括号内非数字代码
 		"国内存储模组厂", "云厂 (MSFT/GOOGL/AMZN)", "AI应用层公司", // 模糊板块/篮子
 		"DeepSeek (未上市)", "OpenAI (未上市)", // 未上市
@@ -69,6 +70,46 @@ func TestClassifyByRule_defersLettersAndNames(t *testing.T) {
 		if r := classifyByRule(in); r != nil {
 			t.Errorf("classifyByRule(%q) = %+v, want nil (defer to LLM)", in, r)
 		}
+	}
+}
+
+func TestClassifyCrypto(t *testing.T) {
+	cases := []struct {
+		in        string
+		canonical string
+		typ       string
+	}{
+		{"BTC", "BTC", "crypto"},
+		{"比特币", "BTC", "crypto"},
+		{"bitcoin", "BTC", "crypto"},
+		{"以太坊", "ETH", "crypto"},
+		{" ETH ", "ETH", "crypto"},
+		{"索拉纳", "SOL", "crypto"},
+		{"HYPE", "HYPE", "crypto"},
+		{"泰达币", "USDT", "stablecoin"}, // 稳定币 type
+		{"usdc", "USDC", "stablecoin"},
+		{"狗狗币", "DOGE", "crypto"},
+	}
+	for _, c := range cases {
+		r := classifyCrypto(c.in)
+		if r == nil {
+			t.Errorf("classifyCrypto(%q) = nil, want %s", c.in, c.canonical)
+			continue
+		}
+		if r.Market != MarketCrypto || r.Canonical != c.canonical || r.Type != c.typ ||
+			r.ProviderSymbol != c.canonical+"-USDT" || r.Status != StatusActive || r.Exchange != "" {
+			t.Errorf("classifyCrypto(%q) = %+v", c.in, r)
+		}
+	}
+	// 长尾/山寨/非币: 白名单不命中 → nil (交给 LLM, 但 LLM 也会被白名单复核挡下).
+	for _, in := range []string{"FOOBARCOIN", "SCAMTOKEN", "宁德时代", ""} {
+		if r := classifyCrypto(in); r != nil {
+			t.Errorf("classifyCrypto(%q) = %+v, want nil", in, r)
+		}
+	}
+	// 走完整规则入口也应命中 (classifyByRule 内含 classifyCrypto).
+	if r := classifyByRule("比特币"); r == nil || r.Canonical != "BTC" {
+		t.Errorf("classifyByRule(比特币) = %+v, want BTC", r)
 	}
 }
 
@@ -111,6 +152,9 @@ func TestResolutionFromLLM(t *testing.T) {
 		{mastra.SymbolResolveResponse{Resolvable: true, Market: "hk", Symbol: "700", Name: "腾讯"}, MarketHK, "00700", "HKEX"},
 		// 美股交易所留空 (拿不准不谎报)
 		{mastra.SymbolResolveResponse{Resolvable: true, Market: "us", Symbol: "MSTR"}, MarketUS, "MSTR", ""},
+		// 加密: 白名单内 ticker 接受 (交易所恒空)
+		{mastra.SymbolResolveResponse{Resolvable: true, Market: "crypto", Symbol: "btc", Name: "Bitcoin", Type: "crypto"}, MarketCrypto, "BTC", ""},
+		{mastra.SymbolResolveResponse{Resolvable: true, Market: "crypto", Symbol: "SOL"}, MarketCrypto, "SOL", ""},
 	}
 	for _, c := range ok {
 		r := resolutionFromLLM(&c.resp)
@@ -128,10 +172,12 @@ func TestResolutionFromLLM(t *testing.T) {
 
 	// 结构校验: 代码格式与 market 不符 → nil (兜住格式型幻觉)
 	bad := []mastra.SymbolResolveResponse{
-		{Resolvable: true, Market: "a", Symbol: "NVDA"},    // A股须 6 位数字
-		{Resolvable: true, Market: "us", Symbol: "123456"}, // 美股须字母
-		{Resolvable: true, Market: "kr", Symbol: "005930"}, // market 非 a|hk|us
-		{Resolvable: true, Market: "a", Symbol: ""},        // 空代码
+		{Resolvable: true, Market: "a", Symbol: "NVDA"},          // A股须 6 位数字
+		{Resolvable: true, Market: "us", Symbol: "123456"},       // 美股须字母
+		{Resolvable: true, Market: "kr", Symbol: "005930"},       // market 非 a|hk|us|crypto
+		{Resolvable: true, Market: "a", Symbol: ""},              // 空代码
+		{Resolvable: true, Market: "crypto", Symbol: "FOOBAR"},   // 加密: 不在白名单 → fail-closed
+		{Resolvable: true, Market: "crypto", Symbol: "btc-usdt"}, // 结构不符 (含连字符/小写以外字符)
 	}
 	for _, resp := range bad {
 		if r := resolutionFromLLM(&resp); r != nil {
@@ -181,6 +227,16 @@ func TestManualResolution(t *testing.T) {
 			t.Errorf("canonical=%q, want 00700", r.Canonical)
 		}
 	})
+	t.Run("crypto uppercases + provider pair", func(t *testing.T) {
+		// 人工兜底不受白名单约束 (运营可强制冷门币), 只做结构校验.
+		r, err := manualResolution("crypto", "hype", "", "Hyperliquid")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Market != MarketCrypto || r.Canonical != "HYPE" || r.ProviderSymbol != "HYPE-USDT" || r.Name != "Hyperliquid" {
+			t.Errorf("got %+v", r)
+		}
+	})
 
 	errCases := []struct {
 		market, canonical string
@@ -191,6 +247,8 @@ func TestManualResolution(t *testing.T) {
 		{"", "300750", ErrMissingFields},
 		{"kr", "005930", ErrInvalidMarket},
 		{"a", "", ErrMissingFields},
+		{"crypto", "x", ErrInvalidCode},   // 单字符不满足 crypto ticker 结构 (2-15)
+		{"crypto", "b/c", ErrInvalidCode}, // 含非法字符
 	}
 	for _, c := range errCases {
 		_, err := manualResolution(c.market, c.canonical, "", "")

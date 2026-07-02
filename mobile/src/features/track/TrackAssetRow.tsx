@@ -18,7 +18,7 @@ import { Sparkline } from "./Sparkline";
 import { ChangeBadge } from "./ChangeBadge";
 import { changeColor } from "./format";
 
-const KNOWN_MARKETS = new Set(["a", "hk", "us", "other"]);
+const KNOWN_MARKETS = new Set(["a", "hk", "us", "crypto", "other"]);
 
 interface TrackAssetRowProps {
   track: Track;

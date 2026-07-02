@@ -7,8 +7,9 @@
  *
  * 诚实是第一约束 (呼应"信号永不未分类"式兜底): **错的代码比没有代码更有害**.
  *   - 高度确信才给代码; 否则 resolvable=false + 一句 reason.
- *   - 加密货币 / 未上市 / 海外主上市 / 行业篮子 / 同名歧义 → 一律 false, 不硬凑.
- * Go 侧还会做结构校验 (symbol 格式须与 market 匹配), 兜住格式型幻觉.
+ *   - 头部加密货币 (BTC/ETH/SOL…) 现可归一到 market="crypto"; 但长尾/山寨/当日 meme 币 → false.
+ *   - 未上市 / 海外主上市 / 行业篮子 / 同名歧义 → 一律 false, 不硬凑.
+ * Go 侧还会做结构校验 (symbol 格式须与 market 匹配), 且加密 ticker 会再过一遍白名单复核 —— 兜住格式型/长尾幻觉.
  *
  * 归一是确定性任务, temperature 0 —— 要可复现、不要发挥.
  */
@@ -21,11 +22,11 @@ import { defaultModel } from "../llm/model.js";
 // ─────────────────────── Schema ───────────────────────
 
 export const SymbolResolutionSchema = z.object({
-  /** 能否归一到 A股/港股/美股的单一在市标的. false → 看 reason. */
+  /** 能否归一到 A股/港股/美股的单一在市标的, 或头部加密货币. false → 看 reason. */
   resolvable: z.boolean(),
   /** 交易市场. resolvable=true 必给. */
-  market: z.enum(["a", "hk", "us"]).optional(),
-  /** 规范代码: A股=6位数字 / 港股=数字代码 / 美股=ticker. resolvable=true 必给. */
+  market: z.enum(["a", "hk", "us", "crypto"]).optional(),
+  /** 规范代码: A股=6位数字 / 港股=数字代码 / 美股=ticker / 加密=大写ticker. resolvable=true 必给. */
   symbol: z.string().max(24).optional(),
   /** 交易所 SSE/SZSE/BSE/HKEX/NASDAQ/NYSE. 拿不准 (尤其美股) 留空. */
   exchange: z.string().max(16).optional(),
@@ -44,27 +45,29 @@ export const symbolResolver = new Agent({
   name: "symbol-resolver",
   instructions: `
 你是 AlphaX 的标的归一器 (symbol resolver). 给你一段对某投资标的的自由文本指称
-(可能是公司名、股票代码、混写、或一个模糊的板块/篮子), 判断它**能否**归一到
-A股 / 港股 / 美股 三大市场之一的**单一、当前在市**的上市标的, 并给出规范代码.
+(可能是公司名、股票代码、加密货币、混写、或一个模糊的板块/篮子), 判断它**能否**归一到
+A股 / 港股 / 美股 / 加密货币 之一的**单一、当前在市/在流通**的标的, 并给出规范代码.
 
 第一约束 —— 诚实: 只在你**高度确信**时给代码; 否则标 resolvable=false. **错的代码比没有代码更有害.**
 
-resolvable=true 仅当: 它明确指向 A股(沪/深/北) 或 港股 或 美股的**一只**上市证券, 且你确信其规范代码.
-给 market(a|hk|us) / symbol(规范代码) / exchange / name / type:
-  - A股 symbol = 6 位数字 (宁德时代→300750, 北方华创→002371, 中芯国际→688981); exchange = SSE(沪)/SZSE(深)/BSE(北).
-  - 港股 symbol = 数字代码 (腾讯→0700, 泡泡玛特→9992); exchange = HKEX.
-  - 美股 symbol = ticker (英伟达→NVDA, 苹果→AAPL); exchange = NASDAQ/NYSE —— 拿不准就**留空 exchange**, 别猜.
+resolvable=true 仅当: 它明确指向 A股(沪/深/北) 或 港股 或 美股的**一只**上市证券, 或一个**头部加密货币**, 且你确信其规范代码.
+给 market(a|hk|us|crypto) / symbol(规范代码) / exchange / name / type:
+  - A股 symbol = 6 位数字 (宁德时代→300750, 北方华创→002371, 中芯国际→688981); exchange = SSE(沪)/SZSE(深)/BSE(北); type=equity.
+  - 港股 symbol = 数字代码 (腾讯→0700, 泡泡玛特→9992); exchange = HKEX; type=equity.
+  - 美股 symbol = ticker (英伟达→NVDA, 苹果→AAPL); exchange = NASDAQ/NYSE —— 拿不准就**留空 exchange**, 别猜; type=equity.
+  - 加密 symbol = 大写 ticker (比特币→BTC, 以太坊→ETH, 索拉纳→SOL, Hyperliquid→HYPE); market=crypto; exchange 留空; type=crypto (稳定币 USDT/USDC → type=stablecoin). **只对市值头部、广为人知的币**给代码.
 
 resolvable=false (给一句 reason) 当**任意一条**成立:
-  - 加密货币 (BTC/ETH/BNB/HYPE/XMR/ZEC/USDT/USDC…) —— 不是 A/HK/US 股票.
+  - 长尾/山寨/当日 meme 加密货币, 或你对其是否为主流币没把握 (只有头部币才 resolvable).
   - 未上市 / 私有公司 (OpenAI / SpaceX / xAI / 字节跳动 / DeepSeek / 智谱AI / MiniMax / Anthropic…).
   - 主上市在韩/台/日/欧等非 A/HK/US 市场 (三星电子 / SK海力士 / 台积电本体). 例外: 指称本身就是其**美股 ADR ticker** 且你确信 (如 TSM), 才按美股给.
   - 行业篮子 / 模糊板块 / 多标的并列 ("国内存储模组厂" / "云厂(MSFT/GOOGL/AMZN)" / "A厂 / B厂 / C厂" / "AI应用层公司").
   - 同名歧义无法确定是哪一只, 或你对规范代码没把握.
 
-铁律: **绝不编造代码**. 拿不准 → resolvable=false. 宁缺毋滥.
+铁律: **绝不编造代码**. 拿不准 → resolvable=false. 宁缺毋滥. (加密尤其: 长尾币宁可 false —— Go 侧还有白名单复核, 编的会被丢弃.)
 
-输出 JSON: 可追踪 { "resolvable": true, "market": "a", "symbol": "300750", "exchange": "SZSE", "name": "宁德时代", "type": "equity" }
+输出 JSON: 股票 { "resolvable": true, "market": "a", "symbol": "300750", "exchange": "SZSE", "name": "宁德时代", "type": "equity" }
+          加密 { "resolvable": true, "market": "crypto", "symbol": "BTC", "name": "Bitcoin", "type": "crypto" }
           不可追踪 { "resolvable": false, "reason": "未上市公司" }. 不要 markdown 包裹.
   `.trim(),
   model: defaultModel,

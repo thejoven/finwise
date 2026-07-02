@@ -3,10 +3,11 @@
 // 复用 PricePoller.SyncDue 循环至排空 —— 首次给 pending 标的从锚点回填日线, 已 active 的日更.
 // 同 systemd 里常驻的 price poller 同一套逻辑, 这个只是"立即跑一遍"的入口 (验证 / 补数).
 //
-// 用法 (需 DATABASE_URL; 行情源默认 eastmoney, 国内可达不需翻墙):
+// 用法 (需 DATABASE_URL; 股票源默认 tencent 国内可达, 加密源默认 okx):
 //
 //	go run ./cmd/asset-price-sync
 //	go run ./cmd/asset-price-sync -provider eastmoney -batch 200
+//	CRYPTO_MARKETDATA_PROVIDER=binance go run ./cmd/asset-price-sync
 package main
 
 import (
@@ -34,7 +35,7 @@ func main() {
 func run() error {
 	var (
 		dsn      = flag.String("dsn", os.Getenv("DATABASE_URL"), "Postgres DSN (默认 $DATABASE_URL)")
-		provName = flag.String("provider", os.Getenv("MARKETDATA_PROVIDER"), "行情源 (默认 eastmoney)")
+		provName = flag.String("provider", os.Getenv("MARKETDATA_PROVIDER"), "股票行情源 tencent|eastmoney (默认 tencent)")
 		batch    = flag.Int("batch", 200, "每轮认领标的数")
 		timeout  = flag.Duration("timeout", 30*time.Minute, "整体超时")
 	)
@@ -58,9 +59,13 @@ func run() error {
 	}
 	defer pool.Close()
 
-	provider := marketdata.New(*provName)
+	provider := marketdata.NewWithCrypto(*provName, os.Getenv("CRYPTO_MARKETDATA_PROVIDER"))
 	poller := assetmod.NewPricePoller(assetmod.NewRepository(pool), provider, logger)
-	logger.Info("price sync start", zap.String("provider", provider.Name()))
+	eq, cr := provider.Name(), provider.Name()
+	if nm, ok := provider.(interface{ NameFor(string) string }); ok {
+		eq, cr = nm.NameFor(marketdata.MarketA), nm.NameFor(marketdata.MarketCrypto)
+	}
+	logger.Info("price sync start", zap.String("equity_provider", eq), zap.String("crypto_provider", cr))
 
 	var totalAssets, totalBars int
 	// 循环至排空: 每轮认领即置 checked_at=now, 已同步的本轮内不再被认领, 故几轮内收敛.

@@ -38,7 +38,7 @@
     "error": "走势暂时读不到。",
     "empty": "这条还没指向可追踪的标的。",
     "untrackable": "无法追踪此标的",
-    "untrackableHint": "加密、未上市、海外或篮子标的，暂未接入行情。",
+    "untrackableHint": "冷门加密、未上市、海外或篮子标的，暂未接入行情。",
     "noBars": "暂无行情数据。"
   },
   "asOf": "数据截至 {{date}} · {{source}}",
@@ -50,6 +50,7 @@
     "a": "A股",
     "hk": "港股",
     "us": "美股",
+    "crypto": "加密",
     "other": "其他"
   },
   "role": {

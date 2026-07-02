@@ -55,8 +55,11 @@ type Config struct {
 	// SubscriptionPollEnabled — 显式关闭采集 worker (调试/省配额), 默认 true.
 	SubscriptionPollEnabled bool
 
-	// MarketDataProvider — 行情源 adapter 名 (标的追踪 P1). 空/未知 → tencent (默认).
+	// MarketDataProvider — 股票行情源 adapter 名 (A/HK/US). 空/未知 → tencent (默认).
 	MarketDataProvider string
+
+	// CryptoMarketDataProvider — 加密行情源 adapter 名 (okx|binance). 空/未知 → okx (默认).
+	CryptoMarketDataProvider string
 
 	// AssetPricePollEnabled — 行情同步 worker 开关 (调试/省请求), 默认 true.
 	AssetPricePollEnabled bool
@@ -81,12 +84,15 @@ type Config struct {
 	// 默认本机 loopback; 服务未起/未配时 POST /v1/signals/transcribe 返回 502/503.
 	ASRServiceURL string
 
-	// 早报 (Daily Morning Report) — 每日 08:00 当地把"前一天信号"去标识化聚合成编者早报.
-	ReportEnabled      bool          // REPORT_ENABLED, default true
-	ReportScanInterval time.Duration // REPORT_SCAN_MS, default 60000 (1min) — 轮询是否到点/已生成
-	ReportHourLocal    int           // REPORT_HOUR_LOCAL, default 8 (当地小时 0-23)
-	ReportTimezone     string        // REPORT_TZ, default "Asia/Shanghai"
-	ReportMinAssets    int           // REPORT_MIN_ASSETS, default 1 — 低于此为"安静日"短版
+	// 叙事 (Living Narratives) — 取代早报. 持续把去标识化资讯策展成长期演进的活体叙事集.
+	NarrativeEnabled       bool          // NARRATIVE_ENABLED, default true
+	NarrativeScanInterval  time.Duration // NARRATIVE_SCAN_MS, default 60000 (1min) — 增量游标扫
+	NarrativeSweepInterval time.Duration // NARRATIVE_SWEEP_MS, default 300000 (5min) — 维护 sweep
+	NarrativeKAnon         int           // NARRATIVE_KANON, default 5 — signal_count 可见门
+	NarrativeKAnonUsers    int           // NARRATIVE_KANON_USERS, default 1 — source_user_count 可见门
+	NarrativeBatch         int           // NARRATIVE_BATCH, default 20 — 每来源每轮扫多少
+	NarrativeProseMinHours int           // NARRATIVE_PROSE_MIN_HOURS, default 12 — 文稿 debounce 小时
+	NarrativeProseDelta    int           // NARRATIVE_PROSE_DELTA, default 5 — 自上次文稿起成员增量阈值
 }
 
 func Load() (*Config, error) {
@@ -148,7 +154,8 @@ func Load() (*Config, error) {
 		c.SubscriptionPollEnabled = true
 	}
 
-	c.MarketDataProvider = os.Getenv("MARKETDATA_PROVIDER") // optional; factory 默认 tencent
+	c.MarketDataProvider = os.Getenv("MARKETDATA_PROVIDER")              // optional; factory 默认 tencent
+	c.CryptoMarketDataProvider = os.Getenv("CRYPTO_MARKETDATA_PROVIDER") // optional; factory 默认 okx
 
 	c.RevenueCatWebhookAuth = os.Getenv("REVENUECAT_WEBHOOK_AUTH") // optional; 空 → billing webhook fail closed
 	c.ASRServiceURL = getDefault("ASR_SERVICE_URL", "http://127.0.0.1:18900")
@@ -206,35 +213,53 @@ func Load() (*Config, error) {
 	}
 	c.RecCandidateWindowDays = recWindow
 
-	if v := os.Getenv("REPORT_ENABLED"); v != "" {
-		c.ReportEnabled = strings.EqualFold(v, "true") || v == "1"
+	if v := os.Getenv("NARRATIVE_ENABLED"); v != "" {
+		c.NarrativeEnabled = strings.EqualFold(v, "true") || v == "1"
 	} else {
-		c.ReportEnabled = true
+		c.NarrativeEnabled = true
 	}
 
-	reportScanMs, err := strconv.Atoi(getDefault("REPORT_SCAN_MS", "60000"))
-	if err != nil || reportScanMs < 1000 {
-		return nil, fmt.Errorf("REPORT_SCAN_MS must be int ≥ 1000: %v", err)
+	narrScanMs, err := strconv.Atoi(getDefault("NARRATIVE_SCAN_MS", "60000"))
+	if err != nil || narrScanMs < 1000 {
+		return nil, fmt.Errorf("NARRATIVE_SCAN_MS must be int ≥ 1000: %v", err)
 	}
-	c.ReportScanInterval = time.Duration(reportScanMs) * time.Millisecond
+	c.NarrativeScanInterval = time.Duration(narrScanMs) * time.Millisecond
 
-	reportHour, err := strconv.Atoi(getDefault("REPORT_HOUR_LOCAL", "8"))
-	if err != nil || reportHour < 0 || reportHour > 23 {
-		return nil, fmt.Errorf("REPORT_HOUR_LOCAL must be int in [0,23]: %v", err)
+	narrSweepMs, err := strconv.Atoi(getDefault("NARRATIVE_SWEEP_MS", "300000"))
+	if err != nil || narrSweepMs < 1000 {
+		return nil, fmt.Errorf("NARRATIVE_SWEEP_MS must be int ≥ 1000: %v", err)
 	}
-	c.ReportHourLocal = reportHour
+	c.NarrativeSweepInterval = time.Duration(narrSweepMs) * time.Millisecond
 
-	// fail-fast 校验时区, 让 worker 永不静默退化成 UTC.
-	c.ReportTimezone = getDefault("REPORT_TZ", "Asia/Shanghai")
-	if _, err := time.LoadLocation(c.ReportTimezone); err != nil {
-		return nil, fmt.Errorf("REPORT_TZ invalid: %w", err)
+	narrKAnon, err := strconv.Atoi(getDefault("NARRATIVE_KANON", "5"))
+	if err != nil || narrKAnon < 1 {
+		return nil, fmt.Errorf("NARRATIVE_KANON must be int ≥ 1: %v", err)
 	}
+	c.NarrativeKAnon = narrKAnon
 
-	reportMinAssets, err := strconv.Atoi(getDefault("REPORT_MIN_ASSETS", "1"))
-	if err != nil || reportMinAssets < 0 {
-		return nil, fmt.Errorf("REPORT_MIN_ASSETS must be int ≥ 0: %v", err)
+	narrKAnonUsers, err := strconv.Atoi(getDefault("NARRATIVE_KANON_USERS", "1"))
+	if err != nil || narrKAnonUsers < 1 {
+		return nil, fmt.Errorf("NARRATIVE_KANON_USERS must be int ≥ 1: %v", err)
 	}
-	c.ReportMinAssets = reportMinAssets
+	c.NarrativeKAnonUsers = narrKAnonUsers
+
+	narrBatch, err := strconv.Atoi(getDefault("NARRATIVE_BATCH", "20"))
+	if err != nil || narrBatch < 1 || narrBatch > 1000 {
+		return nil, fmt.Errorf("NARRATIVE_BATCH must be int in [1, 1000]: %v", err)
+	}
+	c.NarrativeBatch = narrBatch
+
+	narrProseHours, err := strconv.Atoi(getDefault("NARRATIVE_PROSE_MIN_HOURS", "12"))
+	if err != nil || narrProseHours < 1 {
+		return nil, fmt.Errorf("NARRATIVE_PROSE_MIN_HOURS must be int ≥ 1: %v", err)
+	}
+	c.NarrativeProseMinHours = narrProseHours
+
+	narrProseDelta, err := strconv.Atoi(getDefault("NARRATIVE_PROSE_DELTA", "5"))
+	if err != nil || narrProseDelta < 1 {
+		return nil, fmt.Errorf("NARRATIVE_PROSE_DELTA must be int ≥ 1: %v", err)
+	}
+	c.NarrativeProseDelta = narrProseDelta
 
 	var missing []string
 	if c.DatabaseURL == "" {

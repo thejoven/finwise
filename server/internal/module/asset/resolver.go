@@ -7,10 +7,10 @@
 //
 // 归一顺序 (resolveReference):
 //  1. asset_aliases 命中 → 直接复用, 省 LLM (§7 全局去重).
-//  2. 规则: 纯数字 A股(6位) / 港股(4-5位) 代码、括号内嵌代码 —— 确定性, 不调 LLM.
-//  3. (可选) Mastra symbol-resolver: 规则啃不动的中文名 / 裸字母 ticker / 模糊板块.
+//  2. 规则: 纯数字 A股(6位) / 港股(4-5位) 代码、头部加密货币白名单、括号内嵌代码 —— 确定性, 不调 LLM.
+//  3. (可选) Mastra symbol-resolver: 规则啃不动的中文名 / 裸字母 ticker / 模糊板块 (含长尾加密, 但受白名单复核).
 //  4. 诚实兜底: 归一不了一律 status='untrackable' —— 宁可留空也不模糊匹配凑一个可能错的代码
-//     (§7 / 呼应"信号永不未分类"式诚实兜底). 加密 / 未上市 / 海外主上市 / 篮子都落这里.
+//     (§7 / 呼应"信号永不未分类"式诚实兜底). 长尾/山寨加密 / 未上市 / 海外主上市 / 篮子都落这里.
 //
 // 派生 / 缓存数据, 不写 events (同 distillations / subscriptions 先例).
 package asset
@@ -29,10 +29,11 @@ import (
 
 // market 取值.
 const (
-	MarketA     = "a"
-	MarketHK    = "hk"
-	MarketUS    = "us"
-	MarketOther = "other" // untrackable 专用: 非 A/HK/US (crypto / 未上市 / 海外 / 篮子).
+	MarketA      = "a"
+	MarketHK     = "hk"
+	MarketUS     = "us"
+	MarketCrypto = "crypto" // 加密货币 (BTC/ETH…), 行情走 OKX (见 infra/marketdata/okx.go).
+	MarketOther  = "other"  // untrackable 专用: 非 A/HK/US/crypto (未上市 / 海外 / 篮子).
 )
 
 // status 取值.
@@ -68,10 +69,59 @@ var (
 	reSpaces       = regexp.MustCompile(`\s+`)
 
 	// LLM/人工输出的结构校验 (代码格式须与 market 匹配, 兜住格式型幻觉).
-	reCodeA  = regexp.MustCompile(`^\d{6}$`)
-	reCodeHK = regexp.MustCompile(`^\d{1,5}$`)
-	reCodeUS = regexp.MustCompile(`^[A-Za-z][A-Za-z.\-]{0,6}$`)
+	reCodeA      = regexp.MustCompile(`^\d{6}$`)
+	reCodeHK     = regexp.MustCompile(`^\d{1,5}$`)
+	reCodeUS     = regexp.MustCompile(`^[A-Za-z][A-Za-z.\-]{0,6}$`)
+	reCodeCrypto = regexp.MustCompile(`^[A-Z0-9]{2,15}$`) // 加密 ticker 结构 (BTC/ETH/1000SATS…)
 )
+
+// cryptoTopCoins — 头部加密货币指称 → 规范 ticker 的确定性映射 (不调 LLM).
+// key 为归一化 (lower+trim) 后的中英文别名; value 为大写 ticker.
+// 这套白名单同时是 LLM 归一的复核集 (resolutionFromLLM crypto 分支只接白名单内的 ticker,
+// 长尾/山寨/当日 meme 币一律 fail-closed, 呼应"错的代码比没有代码更有害").
+var cryptoTopCoins = map[string]string{
+	"比特币": "BTC", "bitcoin": "BTC", "btc": "BTC", "大饼": "BTC",
+	"以太坊": "ETH", "以太币": "ETH", "ethereum": "ETH", "eth": "ETH",
+	"泰达币": "USDT", "tether": "USDT", "usdt": "USDT",
+	"美元币": "USDC", "usd coin": "USDC", "usdc": "USDC",
+	"币安币": "BNB", "binance coin": "BNB", "bnb": "BNB",
+	"瑞波币": "XRP", "ripple": "XRP", "xrp": "XRP",
+	"索拉纳": "SOL", "solana": "SOL", "sol": "SOL",
+	"狗狗币": "DOGE", "dogecoin": "DOGE", "doge": "DOGE",
+	"艾达币": "ADA", "卡尔达诺": "ADA", "cardano": "ADA", "ada": "ADA",
+	"波场": "TRX", "特隆": "TRX", "tron": "TRX", "trx": "TRX",
+	"雪崩币": "AVAX", "avalanche": "AVAX", "avax": "AVAX",
+	"波卡": "DOT", "polkadot": "DOT", "dot": "DOT",
+	"柴犬币": "SHIB", "shiba inu": "SHIB", "shib": "SHIB",
+	"莱特币": "LTC", "litecoin": "LTC", "ltc": "LTC",
+	"chainlink": "LINK", "link": "LINK",
+	"比特币现金": "BCH", "bitcoin cash": "BCH", "bch": "BCH",
+	"恒星币": "XLM", "stellar": "XLM", "xlm": "XLM",
+	"门罗币": "XMR", "monero": "XMR", "xmr": "XMR",
+	"大零币": "ZEC", "零币": "ZEC", "zcash": "ZEC", "zec": "ZEC",
+	"matic": "POL", "polygon": "POL", "pol": "POL",
+	"uniswap": "UNI", "uni": "UNI",
+	"aptos": "APT", "apt": "APT",
+	"near":   "NEAR",
+	"cosmos": "ATOM", "阿童木": "ATOM", "atom": "ATOM",
+	"hyperliquid": "HYPE", "hype": "HYPE",
+	"ton": "TON", "toncoin": "TON",
+	"sui":  "SUI",
+	"pepe": "PEPE",
+	"ondo": "ONDO",
+}
+
+// cryptoAllowedTickers — 白名单里所有合法 ticker 的集合 (LLM 复核用). 由 cryptoTopCoins 派生.
+var cryptoAllowedTickers = func() map[string]bool {
+	m := make(map[string]bool, len(cryptoTopCoins))
+	for _, t := range cryptoTopCoins {
+		m[t] = true
+	}
+	return m
+}()
+
+// cryptoStablecoins — 稳定币 (≈1 USD): type 标 stablecoin, 曲线接近水平仍可追踪 (非 untrackable).
+var cryptoStablecoins = map[string]bool{"USDT": true, "USDC": true}
 
 // normalizeAlias 归一化别名 key: trim + 折叠内部空白 + 转小写. 用作 asset_aliases.alias_lower.
 func normalizeAlias(reference string) string {
@@ -85,6 +135,10 @@ func normalizeAlias(reference string) string {
 func classifyByRule(reference string) *resolution {
 	ref := strings.TrimSpace(reference)
 	if r := classifyCode(ref); r != nil {
+		return r
+	}
+	// 头部加密货币 (BTC / 比特币 / ETH…) —— 确定性白名单, 不调 LLM.
+	if r := classifyCrypto(ref); r != nil {
 		return r
 	}
 	// 括号内嵌代码: "泡泡玛特 (9992.HK)" / "安集科技 (688019.SH)" / "鼎龙股份 (300054.SZ)".
@@ -144,6 +198,32 @@ func hkShare(code string) *resolution {
 	}
 }
 
+// classifyCrypto 用头部币种白名单归一自由文本 → 加密标的. 命中返回 resolution, 否则 nil.
+func classifyCrypto(reference string) *resolution {
+	key := normalizeAlias(reference)
+	if key == "" {
+		return nil
+	}
+	if ticker, ok := cryptoTopCoins[key]; ok {
+		return cryptoRes(ticker, "rule")
+	}
+	return nil
+}
+
+// cryptoRes 构造加密标的 resolution. canonical = 大写 ticker (BTC); provider_symbol = BTC-USDT
+// (报价对锚 USDT ≈ USD); 稳定币 type=stablecoin, 其余 crypto. exchange 留空 (加密无交易所归属).
+func cryptoRes(ticker, source string) *resolution {
+	ticker = strings.ToUpper(strings.TrimSpace(ticker))
+	typ := "crypto"
+	if cryptoStablecoins[ticker] {
+		typ = "stablecoin"
+	}
+	return &resolution{
+		Canonical: ticker, Exchange: "", Market: MarketCrypto, Name: ticker,
+		ProviderSymbol: ticker + "-USDT", Type: typ, Status: StatusActive, Source: source,
+	}
+}
+
 // resolutionFromLLM 把 Mastra 输出转 resolution; 结构校验失败 (代码格式与 market 不符)
 // 返回 nil → 调用方当 untrackable, 兜住格式型幻觉.
 func resolutionFromLLM(r *mastra.SymbolResolveResponse) *resolution {
@@ -175,6 +255,14 @@ func resolutionFromLLM(r *mastra.SymbolResolveResponse) *resolution {
 			Canonical: c, Market: MarketUS, Name: c,
 			ProviderSymbol: c, Type: "equity", Status: StatusActive,
 		}
+	case MarketCrypto:
+		c := strings.ToUpper(sym)
+		// 结构校验 + 白名单复核: LLM 只能确认头部币种, 长尾/山寨一律 fail-closed
+		// (防 DeepSeek 为冷门/骗局代币编一个像样的 ticker).
+		if !reCodeCrypto.MatchString(c) || !cryptoAllowedTickers[c] {
+			return nil
+		}
+		res = cryptoRes(c, "llm")
 	default:
 		return nil
 	}

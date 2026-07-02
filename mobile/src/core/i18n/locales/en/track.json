@@ -38,7 +38,7 @@
     "error": "Price path is unavailable right now.",
     "empty": "No trackable asset on this one yet.",
     "untrackable": "Can't track this asset",
-    "untrackableHint": "Crypto, pre-IPO, overseas or basket names aren't wired to a feed yet.",
+    "untrackableHint": "Long-tail crypto, pre-IPO, overseas or basket names aren't wired to a feed yet.",
     "noBars": "No price data yet."
   },
   "asOf": "As of {{date}} · {{source}}",
@@ -50,6 +50,7 @@
     "a": "A-shares",
     "hk": "HK",
     "us": "US",
+    "crypto": "Crypto",
     "other": "Other"
   },
   "role": {

@@ -115,7 +115,7 @@ func (p *PricePoller) syncTarget(ctx context.Context, t PriceTarget) (int, error
 			return 0, err
 		}
 	}
-	n, err := p.repo.InsertBars(ctx, t.ID, bars, p.provider.Name())
+	n, err := p.repo.InsertBars(ctx, t.ID, bars, p.sourceName(t.Market))
 	if err != nil {
 		_ = p.repo.MarkPriceFailed(ctx, t.ID, priceMaxAttempts)
 		return 0, err
@@ -124,6 +124,15 @@ func (p *PricePoller) syncTarget(ctx context.Context, t PriceTarget) (int, error
 		return n, err
 	}
 	return n, nil
+}
+
+// sourceName 给出该 market 实际命中的源标识落进 asset_prices.source (a/hk/us→tencent, crypto→okx).
+// Router 实现 NameFor(market) 时用它 (Router.Name() 恒为 "router" 不适合落库); 单源 provider 回落 Name().
+func (p *PricePoller) sourceName(market string) string {
+	if nm, ok := p.provider.(interface{ NameFor(string) string }); ok {
+		return nm.NameFor(market)
+	}
+	return p.provider.Name()
 }
 
 // window 定同步区间 [from,to]: to=今日; from = 已有最新 bar (日更, 重取末日以吸收前复权漂移)

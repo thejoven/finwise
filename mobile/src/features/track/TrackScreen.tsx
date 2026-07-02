@@ -23,13 +23,7 @@
  */
 
 import { useCallback, useMemo, useRef, type ReactNode } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  Text as RNText,
-  View,
-  type NativeSyntheticEvent,
-} from "react-native";
+import { ScrollView, StyleSheet, View, type NativeSyntheticEvent } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useSharedValue } from "react-native-reanimated";
 import { router } from "expo-router";
@@ -45,6 +39,7 @@ import {
   Sans,
   SegmentedTabs,
   Serif,
+  TabMasthead,
   TAB_BAR_CLEARANCE,
   TapEffect,
 } from "@/shared/components";
@@ -58,7 +53,7 @@ import { formatClose } from "./format";
 import { useFavoriteAssets, useIsFavorite } from "./favorites";
 import { useHiddenAssets } from "./hidden";
 
-const KNOWN_MARKETS = new Set(["a", "hk", "us", "other"]);
+const KNOWN_MARKETS = new Set(["a", "hk", "us", "crypto", "other"]);
 
 /** 有最新价可展示 = 非 untrackable 且后端给了 latest_close. 决定行内画价还是"无法追踪/暂无价". */
 function isPriced(a: TrackedAsset): boolean {
@@ -173,16 +168,7 @@ export default function TrackScreen() {
 /** 标的页固定报头 —— 仅刊名「标的追踪」, 不带搜索/记录 (那是财知的录入动作). */
 function TrackHeader() {
   const { t } = useTranslation();
-  const insets = useSafeAreaInsets();
-  return (
-    <View style={[styles.header, { paddingTop: insets.top }]}>
-      <View style={styles.nameplateRow}>
-        <RNText allowFontScaling={false} style={styles.nameplate}>
-          {t("track.nameplate")}
-        </RNText>
-      </View>
-    </View>
-  );
+  return <TabMasthead title={t("track.nameplate")} />;
 }
 
 /** 三页共用的滚动容器: loading / error / 本页为空各显一行居中状态, 否则列出 children.
@@ -340,25 +326,6 @@ const styles = StyleSheet.create({
   },
   page: {
     flex: 1,
-  },
-
-  // 报头
-  header: {
-    backgroundColor: theme.color.paper,
-    paddingHorizontal: theme.spacing.lg,
-  },
-  nameplateRow: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 6,
-  },
-  nameplate: {
-    fontFamily: theme.fontFamily.cjkBold,
-    fontSize: 22,
-    lineHeight: 28,
-    color: theme.color.ink,
-    letterSpacing: 3,
-    paddingLeft: 3, // 抵消尾部 letterSpacing 让视觉居中
   },
 
   // 页 / 列表

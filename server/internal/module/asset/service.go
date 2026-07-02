@@ -15,9 +15,9 @@ import (
 var (
 	// ErrEmptyReference — 待归一的指称为空.
 	ErrEmptyReference = errors.New("asset: empty reference")
-	// ErrInvalidMarket — 人工指定的 market 不是 a|hk|us.
-	ErrInvalidMarket = errors.New("asset: market must be a|hk|us")
-	// ErrInvalidCode — 人工指定的 canonical 格式与 market 不符 (A=6位 / HK=数字 / US=ticker).
+	// ErrInvalidMarket — 人工指定的 market 不是 a|hk|us|crypto.
+	ErrInvalidMarket = errors.New("asset: market must be a|hk|us|crypto")
+	// ErrInvalidCode — 人工指定的 canonical 格式与 market 不符 (A=6位 / HK=数字 / US=ticker / crypto=大写ticker).
 	ErrInvalidCode = errors.New("asset: canonical does not match market format")
 	// ErrMissingFields — 非 untrackable 时缺 canonical / market.
 	ErrMissingFields = errors.New("asset: canonical + market required unless untrackable")
@@ -124,6 +124,13 @@ func manualResolution(market, canonical, exchange, name string) (*resolution, er
 			Canonical: c, Market: MarketUS, Name: c,
 			ProviderSymbol: c, Type: "equity", Status: StatusActive,
 		}
+	case MarketCrypto:
+		// 人工兜底允许强制任意 ticker (运营纠错), 只做结构校验, 不受白名单约束.
+		c := strings.ToUpper(canonical)
+		if !reCodeCrypto.MatchString(c) {
+			return nil, ErrInvalidCode
+		}
+		res = cryptoRes(c, "manual")
 	case "":
 		return nil, ErrMissingFields
 	default:

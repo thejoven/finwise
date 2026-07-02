@@ -7,6 +7,8 @@
 //   - POST /competence-check   (能力圈分析师 · 原 G4 能力圈, 替代关键词启发式)
 //   - POST /editor             (M9)
 //   - POST /diagnostician      (M11)
+//   - POST /narrative-curate   (叙事 · 模糊带分配裁决 assign/spawn/skip)
+//   - POST /narrative-write    (叙事 · 写/刷新某语言文稿 + 标的缘由)
 //
 // 设计:
 //   - 短超时 (10s for consensus / thickness, 30s for editor/diagnostician)
@@ -336,10 +338,10 @@ type SymbolResolveRequest struct {
 }
 
 // SymbolResolveResponse 镜像 mastra symbol-resolver agent 输出.
-// Resolvable=false → 不可追踪 (加密/未上市/海外/篮子/歧义), Reason 说明原因.
+// Resolvable=false → 不可追踪 (长尾加密/未上市/海外/篮子/歧义), Reason 说明原因.
 type SymbolResolveResponse struct {
 	Resolvable bool   `json:"resolvable"`
-	Market     string `json:"market,omitempty"` // a|hk|us
+	Market     string `json:"market,omitempty"` // a|hk|us|crypto
 	Symbol     string `json:"symbol,omitempty"`
 	Exchange   string `json:"exchange,omitempty"`
 	Name       string `json:"name,omitempty"`
@@ -359,31 +361,37 @@ func (c *Client) ResolveSymbol(ctx context.Context, req SymbolResolveRequest) (*
 	return &resp, nil
 }
 
-// ───── MorningReport (早报 · 平台每日去标识化编者早报) ─────
+// ───── Narrative (叙事 · 活体叙事策展 + 编者文稿) ─────
+//
+// 两个端点 (镜像早报, 但服务于活体叙事而非每日快照):
+//   - POST /narrative-curate  模糊带分配裁决: 新素材该并入某候选 / 新建叙事 / 跳过.
+//   - POST /narrative-write   按语言写/刷新某叙事的编者文稿 + 标的缘由 (k-匿名过门后).
+//
+// 共享中性的 AssetStat / TagStat / AssetNote (原早报形状, 改中性名复用) + Section 形状.
 
-// ReportAssetStat — 昨日某标的的去标识聚合计数 (跨用户, 仅 AI 蒸馏层).
-type ReportAssetStat struct {
+// AssetStat — 某标的的去标识聚合计数 (跨用户, 仅 AI 蒸馏层).
+type AssetStat struct {
 	Ticker      string `json:"ticker"`
 	Name        string `json:"name,omitempty"`
 	Mentions    int    `json:"mentions"`
 	SignalCount int    `json:"signal_count"`
 }
 
-// ReportTagStat — 昨日某标签的去标识聚合计数.
-type ReportTagStat struct {
+// TagStat — 某标签的去标识聚合计数.
+type TagStat struct {
 	Tag         string `json:"tag"`
 	Mentions    int    `json:"mentions"`
 	SignalCount int    `json:"signal_count"`
 }
 
-// ReportAssetNote — 送 LLM 的去标识摘要语料 (已 k-匿名过滤; 只含 AI 摘要, 无原文/无用户身份).
-type ReportAssetNote struct {
+// AssetNote — 送 LLM 的去标识摘要语料 (已 k-匿名过滤; 只含 AI 摘要, 无原文/无用户身份).
+type AssetNote struct {
 	Ticker  string `json:"ticker"`
 	Summary string `json:"summary"`
 }
 
-// MorningReportSection — 早报一个主题板块. ID 稳定, 供 per-user 重排引用.
-type MorningReportSection struct {
+// NarrativeSection — 叙事文稿一个板块. 形状同早报 section (body jsonb 直接存这个数组).
+type NarrativeSection struct {
 	ID      string   `json:"id"`
 	Heading string   `json:"heading"`
 	Body    string   `json:"body"`
@@ -391,84 +399,130 @@ type MorningReportSection struct {
 	Tags    []string `json:"tags"`
 }
 
-type MorningReportRequest struct {
-	Language  string            `json:"language,omitempty"` // zh-Hans|zh-Hant|en
-	TopAssets []ReportAssetStat `json:"top_assets"`
-	TopTags   []ReportTagStat   `json:"top_tags"`
-	Summaries []ReportAssetNote `json:"summaries"`
-	IsQuiet   bool              `json:"is_quiet"`
-}
+// ─── NarrativeCurate (模糊带分配裁决) ───
 
-type MorningReportResponse struct {
-	Headline string                 `json:"headline"`
-	Dek      string                 `json:"dek"`
-	Sections []MorningReportSection `json:"sections"`
-}
-
-// MorningReport 生成某语言的共享去标识化社论 (一天最多 3 次/语言). 走 hcLong (长文本).
-func (c *Client) MorningReport(ctx context.Context, req MorningReportRequest) (*MorningReportResponse, error) {
-	if !c.IsConfigured() {
-		metrics.MastraCalls.WithLabelValues("morning_report", "skip").Inc()
-		return nil, ErrNotConfigured
-	}
-	var resp MorningReportResponse
-	if err := c.postWith(ctx, c.hcLong, "/morning-report", "morning_report", req, &resp, 90*time.Second); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-// MorningReportForUserRequest — 为单个用户写整份个性化简报. 聚合已按其关注过滤 (top_assets/
-// top_tags/summaries 只含命中该用户的标的/主题; k-匿名由服务层先做). 复用整份社论结构.
-type MorningReportForUserRequest struct {
-	Language      string            `json:"language,omitempty"`
-	TrackedTokens []string          `json:"tracked_tokens"`
-	TopAssets     []ReportAssetStat `json:"top_assets"`
-	TopTags       []ReportTagStat   `json:"top_tags"`
-	Summaries     []ReportAssetNote `json:"summaries"`
-	IsQuiet       bool              `json:"is_quiet"`
-}
-
-// MorningReportForUser 生成某用户的整份个性化简报. 懒加载 + 缓存, 故每用户每天最多 1 次. 走 hcLong.
-func (c *Client) MorningReportForUser(ctx context.Context, req MorningReportForUserRequest) (*MorningReportResponse, error) {
-	if !c.IsConfigured() {
-		metrics.MastraCalls.WithLabelValues("morning_report_for_you", "skip").Inc()
-		return nil, ErrNotConfigured
-	}
-	var resp MorningReportResponse
-	// 整份社论可重试 3 次 (mastra 侧), 单轮中文长稿可达 ~25s, 故给 120s 上限避免末轮被取消.
-	if err := c.postWith(ctx, c.hcLong, "/morning-report-for-you", "morning_report_for_you", req, &resp, 120*time.Second); err != nil {
-		return nil, err
-	}
-	return &resp, nil
-}
-
-// ReportPersonalAsset — "为你导读"里命中用户关注的标的 + 一句缘由.
-type ReportPersonalAsset struct {
+// CuratorItemAsset — 待策展素材已解析的一只标的 (ticker + 可选角色).
+type CuratorItemAsset struct {
 	Ticker string `json:"ticker"`
-	Reason string `json:"reason"`
+	Role   string `json:"role,omitempty"`
 }
 
-// MorningReportPersonalRequest — 为单个用户写"为你导读" (只给全局 sections + 用户关注标的 token,
-// 无用户身份、无原文). 这一调用是早报唯一的 per-user LLM, 故懒加载 + 缓存 + 无命中即跳过.
-type MorningReportPersonalRequest struct {
-	Language      string                 `json:"language,omitempty"`
-	Sections      []MorningReportSection `json:"sections"`
-	TrackedTokens []string               `json:"tracked_tokens"`
+// CuratorItem — 待策展的去标识化素材 (摘要 + 标签 + 标的).
+type CuratorItem struct {
+	Summary string             `json:"summary"`
+	Tags    []string           `json:"tags"`
+	Assets  []CuratorItemAsset `json:"assets"`
 }
 
-type MorningReportPersonalResponse struct {
-	PersonalIntro  string                `json:"personal_intro"`
-	RelevantAssets []ReportPersonalAsset `json:"relevant_assets"`
+// CuratorCandidate — 一个候选叙事 (overlap 召回的 top-K 之一).
+type CuratorCandidate struct {
+	ID     string   `json:"id"`
+	Title  string   `json:"title"`
+	Dek    string   `json:"dek,omitempty"`
+	Tags   []string `json:"tags"`
+	Assets []string `json:"assets"`
 }
 
-func (c *Client) MorningReportPersonal(ctx context.Context, req MorningReportPersonalRequest) (*MorningReportPersonalResponse, error) {
+type NarrativeCurateRequest struct {
+	Language   string             `json:"language,omitempty"`
+	Item       CuratorItem        `json:"item"`
+	Candidates []CuratorCandidate `json:"candidates"`
+}
+
+// NarrativeCurateResponse — action assign|spawn|skip. assign 时给 narrative_id (候选里的);
+// spawn 时给 proposed_slug + proposed_title.
+type NarrativeCurateResponse struct {
+	Action        string `json:"action"`
+	NarrativeID   string `json:"narrative_id,omitempty"`
+	ProposedSlug  string `json:"proposed_slug,omitempty"`
+	ProposedTitle string `json:"proposed_title,omitempty"`
+	Reason        string `json:"reason"`
+}
+
+// NarrativeCurate 裁决一条新素材的归属. 走 hcLong (LLM 自由文本 + 容错解析, 偶发慢).
+func (c *Client) NarrativeCurate(ctx context.Context, req NarrativeCurateRequest) (*NarrativeCurateResponse, error) {
 	if !c.IsConfigured() {
-		metrics.MastraCalls.WithLabelValues("morning_report_personal", "skip").Inc()
+		metrics.MastraCalls.WithLabelValues("narrative_curate", "skip").Inc()
 		return nil, ErrNotConfigured
 	}
-	var resp MorningReportPersonalResponse
-	if err := c.postWith(ctx, c.hcLong, "/morning-report-personal", "morning_report_personal", req, &resp, 60*time.Second); err != nil {
+	var resp NarrativeCurateResponse
+	if err := c.postWith(ctx, c.hcLong, "/narrative-curate", "narrative_curate", req, &resp, 60*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ─── NarrativeWrite (按语言写/刷新叙事文稿) ───
+
+// NarrativeTargetInput — 写作时供 writer 的一只标的 (Go 已算好 conviction; writer 出 rationale).
+type NarrativeTargetInput struct {
+	Ticker     string  `json:"ticker"`
+	Role       string  `json:"role"`
+	Conviction float64 `json:"conviction"`
+}
+
+type NarrativeWriteRequest struct {
+	Language        string                 `json:"language,omitempty"`
+	Slug            string                 `json:"slug"`
+	AgeDays         int                    `json:"age_days"`
+	ItemCount       int                    `json:"item_count"`
+	MemberSummaries []AssetNote            `json:"member_summaries"`
+	TopAssets       []AssetStat            `json:"top_assets"`
+	TopTags         []TagStat              `json:"top_tags"`
+	Targets         []NarrativeTargetInput `json:"targets"`
+}
+
+// NarrativeTargetRationale — writer 给某标的的一句去标识化缘由, 回写 narrative_assets.rationale.
+type NarrativeTargetRationale struct {
+	Ticker    string `json:"ticker"`
+	Rationale string `json:"rationale"`
+}
+
+type NarrativeWriteResponse struct {
+	Title            string                     `json:"title"`
+	Dek              string                     `json:"dek"`
+	Sections         []NarrativeSection         `json:"sections"`
+	TargetRationales []NarrativeTargetRationale `json:"target_rationales"`
+}
+
+// NarrativeWrite 写/刷新某叙事某语言的文稿 (k-匿名过门后, 每语言一次, debounce). 走 hcLong.
+func (c *Client) NarrativeWrite(ctx context.Context, req NarrativeWriteRequest) (*NarrativeWriteResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("narrative_write", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp NarrativeWriteResponse
+	// 长稿可重试 (mastra 侧自由文本 4 次兜底), 给 120s 上限避免末轮被取消.
+	if err := c.postWith(ctx, c.hcLong, "/narrative-write", "narrative_write", req, &resp, 120*time.Second); err != nil {
+		return nil, err
+	}
+	return &resp, nil
+}
+
+// ─── NarrativeCover (叙事头图 · 找一张 og:image) ───
+//
+// mastra 按叙事 title/tags/tickers 做联网搜索 (Exa), 取相关文章的 og:image, 只负责"找图".
+// Go worker 拿 image_url 下载字节并上传 R2 (复用头像那套 minio-go). 两字段均可能为空 (没找到).
+
+type NarrativeCoverRequest struct {
+	Title   string   `json:"title"`
+	Tags    []string `json:"tags"`
+	Tickers []string `json:"tickers"`
+}
+
+type NarrativeCoverResponse struct {
+	ImageURL  string `json:"image_url"`  // og:image 直链 (空 = 没找到)
+	SourceURL string `json:"source_url"` // 来源页 URL (溯源)
+}
+
+// NarrativeCover 给某叙事找一张头图候选 URL. 联网搜索 + 抓页取 og:image, 偶发慢 → 走 hcLong.
+func (c *Client) NarrativeCover(ctx context.Context, req NarrativeCoverRequest) (*NarrativeCoverResponse, error) {
+	if !c.IsConfigured() {
+		metrics.MastraCalls.WithLabelValues("narrative_cover", "skip").Inc()
+		return nil, ErrNotConfigured
+	}
+	var resp NarrativeCoverResponse
+	if err := c.postWith(ctx, c.hcLong, "/narrative-cover", "narrative_cover", req, &resp, 30*time.Second); err != nil {
 		return nil, err
 	}
 	return &resp, nil

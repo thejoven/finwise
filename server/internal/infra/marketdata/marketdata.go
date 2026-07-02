@@ -19,6 +19,14 @@ import (
 	"time"
 )
 
+// market 取值 (与 asset 模块 resolver 的常量对齐; 此处独立定义避免反向依赖).
+const (
+	MarketA      = "a"
+	MarketHK     = "hk"
+	MarketUS     = "us"
+	MarketCrypto = "crypto"
+)
+
 var (
 	// ErrUnsupported — provider 不支持该 market (P1: eastmoney 只支持 A股).
 	ErrUnsupported = errors.New("marketdata: market not supported by provider")
@@ -44,14 +52,27 @@ type Bar struct {
 type Provider interface {
 	// Name 是源标识, 落进 asset_prices.source (UI 标数据出处).
 	Name() string
-	// Supports 报告是否能取该 market (a|hk|us) 的行情.
+	// Supports 报告是否能取该 market (a|hk|us|crypto) 的行情.
 	Supports(market string) bool
-	// DailyBars 返回 [from, to] 区间日线 (前复权), 按日期升序; 无数据返回空切片 (非错误).
+	// DailyBars 返回 [from, to] 区间日线 (股票前复权 / 加密 UTC 日线), 按日期升序;
+	// 无数据返回空切片 (非错误).
 	DailyBars(ctx context.Context, market, canonical string, from, to time.Time) ([]Bar, error)
 }
 
-// New 按名字造 Provider. 空 / 未知名 → 回落默认 tencent. 加新源时在此扩 case.
+// New 按名字造 Provider (股票腿), crypto 腿取默认. 保留旧签名给单市场调用方.
+// 空 / 未知名 → 回落默认 tencent.
 func New(name string) Provider {
+	return NewWithCrypto(name, "")
+}
+
+// NewWithCrypto 组装按 market 分流的 Router: equityName 选股票源 (a/hk/us),
+// cryptoName 选加密源. 换源哲学不变 —— 每腿各一个 env, 只改 adapter.
+func NewWithCrypto(equityName, cryptoName string) Provider {
+	return NewRouter(newEquity(equityName), newCrypto(cryptoName))
+}
+
+// newEquity 造股票源 (A股/港股/美股同一家). 空 / 未知 → tencent (国内可达, 见 tencent.go).
+func newEquity(name string) Provider {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "", "tencent":
 		return NewTencent()
@@ -59,5 +80,17 @@ func New(name string) Provider {
 		return NewEastMoney()
 	default:
 		return NewTencent()
+	}
+}
+
+// newCrypto 造加密源. 空 / 未知 → okx (Chinese-origin, 205 可达性需实测, 见 okx.go).
+func newCrypto(name string) Provider {
+	switch strings.ToLower(strings.TrimSpace(name)) {
+	case "", "okx":
+		return NewOKX()
+	case "binance":
+		return NewBinance()
+	default:
+		return NewOKX()
 	}
 }

@@ -30,11 +30,11 @@ import (
 	exitmod "alphax/server/internal/module/exit"
 	gatemod "alphax/server/internal/module/gate"
 	invitemod "alphax/server/internal/module/invite"
+	narrativemod "alphax/server/internal/module/narrative"
 	projectmod "alphax/server/internal/module/project"
 	recommendmod "alphax/server/internal/module/recommend"
 	recoverymod "alphax/server/internal/module/recovery"
 	refinementmod "alphax/server/internal/module/refinement"
-	reportmod "alphax/server/internal/module/report"
 	researchmod "alphax/server/internal/module/research"
 	retrospectmod "alphax/server/internal/module/retrospect"
 	settingsmod "alphax/server/internal/module/settings"
@@ -197,13 +197,22 @@ func assemble(ctx context.Context, cfg *config.Config, logger *zap.Logger, pool 
 	billingSvc := billingmod.NewService(billingRepo, cfg.RevenueCatWebhookAuth, logger)
 	billingHandler := billingmod.NewHandler(billingSvc)
 
-	// report: 早报. 每日 08:00 (REPORT_TZ) 把"前一天转为信号"的内容跨用户去标识化聚合成编者早报.
-	reportRepo := reportmod.NewRepository(pool)
-	reportLoc, _ := time.LoadLocation(cfg.ReportTimezone) // config.Load 已 fail-fast 校验, 此处不会 err
-	reportSvc := reportmod.NewService(reportRepo, mastraClient,
-		reportDeps(assetSvc, projectSvc, accountSvc),
-		reportmod.ServiceConfig{MinAssets: cfg.ReportMinAssets, Loc: reportLoc}, logger)
-	reportHandler := reportmod.NewHandler(reportSvc)
+	// narrative: 叙事 (取代早报). 持续把去标识化资讯 (信号/推文/降噪) 策展成长期演进的活体叙事集.
+	// 复用 asset.Service 取标的价格走势; narrativeDeps 注入个性化闭包 (与早报同形, 原样复用).
+	narrativeRepo := narrativemod.NewRepository(pool)
+	narrativeSvc := narrativemod.NewService(narrativeRepo, mastraClient, assetSvc,
+		narrativeDeps(assetSvc, projectSvc, accountSvc),
+		narrativemod.ServiceConfig{
+			KAnon:         cfg.NarrativeKAnon,
+			KAnonUsers:    cfg.NarrativeKAnonUsers,
+			Batch:         cfg.NarrativeBatch,
+			ProseMinHours: cfg.NarrativeProseMinHours,
+			ProseDelta:    cfg.NarrativeProseDelta,
+		}, logger)
+	narrativeSvc.SetStorage(objStorage) // 叙事头图下载入 R2 + 私有读代理 (复用头像那套 objstore)
+	narrativeCoverSigner := narrativemod.NewCoverSigner(cfg.InternalToken, 24*time.Hour)
+	narrativeSvc.SetCoverSigner(narrativeCoverSigner) // DTO 现签 cover_url + 读代理校验
+	narrativeHandler := narrativemod.NewHandler(narrativeSvc)
 
 	router := httpapi.NewRouter(httpapi.Deps{
 		Logger:           logger,
@@ -232,12 +241,14 @@ func assemble(ctx context.Context, cfg *config.Config, logger *zap.Logger, pool 
 			recommendHandler.Register(v1, internal)
 			billingHandler.Register(anon, v1)
 			assetHandler.Register(v1)
-			reportHandler.Register(v1, internal, admin)
+			narrativeHandler.Register(v1, internal, admin)
+			// 头图私有读代理挂 anon (签名自证, 同 /v1/avatars/:id).
+			narrativeHandler.RegisterPublic(anon)
 		},
 	})
 
 	workers := buildWorkers(cfg, logger, pool, iiiClient,
-		retrospectSvc, subscriptionSvc, xProvider, assetRepo, reportSvc, reportLoc)
+		retrospectSvc, subscriptionSvc, xProvider, assetRepo, narrativeSvc)
 
 	return router, workers, nil
 }
@@ -253,8 +264,7 @@ func buildWorkers(
 	subscriptionSvc *subscriptionmod.Service,
 	xProvider xsource.Provider,
 	assetRepo *assetmod.Repository,
-	reportSvc *reportmod.Service,
-	reportLoc *time.Location,
+	narrativeSvc *narrativemod.Service,
 ) []worker {
 	var workers []worker
 
@@ -300,23 +310,26 @@ func buildWorkers(
 			zap.Bool("provider_configured", xProvider.IsConfigured()))
 	}
 
-	// 行情同步 (标的追踪 P1): pending 标的从锚点回填日线、active 日更; 显式关闭则不起.
+	// 行情同步 (标的追踪): pending 标的从锚点回填日线、active 日更; 显式关闭则不起.
+	// 按 market 分流 —— 股票 (A/HK/US) 走 MarketDataProvider, 加密走 CryptoMarketDataProvider.
 	if cfg.AssetPricePollEnabled {
-		pricePoller := assetmod.NewPricePoller(assetRepo, marketdatax.New(cfg.MarketDataProvider), logger)
+		pricePoller := assetmod.NewPricePoller(assetRepo,
+			marketdatax.NewWithCrypto(cfg.MarketDataProvider, cfg.CryptoMarketDataProvider), logger)
 		workers = append(workers, worker{"asset-price-poller", pricePoller.Run})
 	} else {
 		logger.Info("asset price poller disabled")
 	}
 
-	// 早报生成 — 每日 08:00 (REPORT_TZ) 把前一天信号去标识化聚合成编者早报. REPORT_ENABLED=false 可关.
-	if cfg.ReportEnabled {
-		reportGen := reportmod.NewGenerator(reportSvc, reportLoc, reportmod.GenConfig{
-			ScanInterval: cfg.ReportScanInterval,
-			HourLocal:    cfg.ReportHourLocal,
+	// 叙事策展 — 双节奏: 快增量游标扫 (CurateBatch) + 慢维护 sweep (热度/生命周期/文稿).
+	// NARRATIVE_ENABLED=false 可关 (关掉后读 API 仍可用, 只是不再增量策展/维护).
+	if cfg.NarrativeEnabled {
+		narrativeWorker := narrativemod.NewWorker(narrativeSvc, narrativemod.WorkerConfig{
+			ScanInterval:  cfg.NarrativeScanInterval,
+			SweepInterval: cfg.NarrativeSweepInterval,
 		}, logger)
-		workers = append(workers, worker{"morning-report", reportGen.Run})
+		workers = append(workers, worker{"narrative", narrativeWorker.Run})
 	} else {
-		logger.Info("morning report generator disabled (REPORT_ENABLED=false)")
+		logger.Info("narrative worker disabled (NARRATIVE_ENABLED=false)")
 	}
 
 	return workers

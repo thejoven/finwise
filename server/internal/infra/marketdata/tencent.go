@@ -12,16 +12,17 @@ import (
 	"time"
 )
 
-// Tencent — 腾讯财经 ifzq 日线 adapter (P1 默认 A股源).
+// Tencent — 腾讯财经 ifzq 日线 adapter (默认股票源: A股 + 港股 + 美股).
 //
 // 选它而非东方财富: 实测 (2026-06-16, 205) 东方财富在连续请求后封了 205 的 IP (非官方源
 // 脆弱, 规格 §3 表已警示); 腾讯同样免费 / 国内可达 / 前复权 / 支持日期段, 且当时未封.
 // 两个 adapter 都留着, MARKETDATA_PROVIDER 可切 —— 抽象层就是为换源.
 //
-// 端点: GET /appstock/app/fqkline/get?param=<symbol>,day,<from>,<to>,<count>,qfq
-//   - symbol: 沪 sh / 深 sz / 北 bj + 6 位代码.
-//   - 返回 {code,data:{<symbol>:{qfqday:[[date,open,close,high,low,volume,…], …]}}} (前复权).
-//   - 字段序同东方财富: date, open, **close**, high, low, volume.
+// 端点: GET /appstock/app/fqkline/get?param=<symbol>,day,<from>,<to>,<count>,qfq (三市场共用).
+//   - symbol: A股 sh/sz/bj+6位; 港股 hk+5位补零码 (hk00700); 美股 us+ticker+路透后缀 (usAAPL.OQ / usKO.N).
+//   - 返回 {code,data:{<symbol>:{qfqday|day:[[date,open,close,high,low,volume,…], …]}}} (前复权).
+//   - 字段序: date, open, **close**, high, low, volume (港股行尾多一个除权事件 dict, 已被 len 检查忽略).
+//   - 实测坑: 港股 4 位 (hk0700) 返空须补零; 美股裸 usAAPL 只返 2 根须带 .OQ/.N 后缀 (见 tencentSymbols).
 type Tencent struct {
 	baseURL string
 	hc      *http.Client
@@ -41,19 +42,26 @@ func NewTencentWithBaseURL(baseURL string) *Tencent {
 
 func (t *Tencent) Name() string { return "tencent" }
 
-// Supports — P1 只接 A股 (腾讯也能 hk/us, 但市场范围/交易日历差异留 P2+ 再接).
-func (t *Tencent) Supports(market string) bool { return market == "a" }
+// Supports — A股 + 港股 + 美股 (同一 gtimg fqkline 端点, 国内可达; 实测 hk/us 皆前复权可取).
+func (t *Tencent) Supports(market string) bool {
+	switch market {
+	case MarketA, MarketHK, MarketUS:
+		return true
+	default:
+		return false
+	}
+}
 
 func (t *Tencent) DailyBars(ctx context.Context, market, canonical string, from, to time.Time) ([]Bar, error) {
-	if market != "a" {
+	if !t.Supports(market) {
 		return nil, ErrUnsupported
 	}
-	symbol, err := tencentSymbol(canonical)
+	symbols, err := tencentSymbols(market, canonical)
 	if err != nil {
 		return nil, err
 	}
 	// count 是返回上限 (腾讯实测 >2000 会 "param error"). 按日历天 + 余量估, clamp 到 [1,2000];
-	// 腾讯只返 [from,to] 区间内的 bar, count 仅作上限, 故 P1 的近期锚点窗口绰绰有余.
+	// 腾讯只返 [from,to] 区间内的 bar, count 仅作上限, 故近期锚点窗口绰绰有余.
 	count := int(to.Sub(from).Hours()/24) + 5
 	if count > 2000 {
 		count = 2000
@@ -61,13 +69,59 @@ func (t *Tencent) DailyBars(ctx context.Context, market, canonical string, from,
 	if count < 1 {
 		count = 1
 	}
-	param := fmt.Sprintf("%s,day,%s,%s,%d,qfq",
-		symbol, from.Format("2006-01-02"), to.Format("2006-01-02"), count)
-	body, err := t.get(ctx, "/appstock/app/fqkline/get", url.Values{"param": {param}})
-	if err != nil {
-		return nil, err
+	// 美股要试两个交易所后缀 (.OQ 纳斯达克 / .N 纽交所): 首选返空再试次选.
+	// 港股/A股只有一个 symbol, 空即空.
+	var lastErr error
+	for _, symbol := range symbols {
+		param := fmt.Sprintf("%s,day,%s,%s,%d,qfq",
+			symbol, from.Format("2006-01-02"), to.Format("2006-01-02"), count)
+		body, err := t.get(ctx, "/appstock/app/fqkline/get", url.Values{"param": {param}})
+		if err != nil {
+			lastErr = err
+			continue // 网络/限流: 试下一个候选; 若无候选则回落 lastErr
+		}
+		bars, perr := parseTencentKline(body, symbol)
+		if perr != nil {
+			lastErr = perr
+			continue
+		}
+		if len(bars) > 0 {
+			return bars, nil
+		}
 	}
-	return parseTencentKline(body, symbol)
+	if lastErr != nil {
+		return nil, lastErr
+	}
+	return nil, nil // 各候选皆无数据 (查无此标的 / 区间空), 诚实返回空
+}
+
+// tencentSymbols 由 market + 规范代码给出待查的腾讯 symbol 候选 (美股返回两个交易所后缀候选).
+func tencentSymbols(market, canonical string) ([]string, error) {
+	switch market {
+	case MarketA:
+		s, err := tencentSymbol(canonical)
+		if err != nil {
+			return nil, err
+		}
+		return []string{s}, nil
+	case MarketHK:
+		// 港股必须 5 位补零 (hk0700 返空, hk00700 才有数据).
+		code := canonical
+		for len(code) < 5 {
+			code = "0" + code
+		}
+		return []string{"hk" + code}, nil
+	case MarketUS:
+		// 裸 usAAPL 只返 2 根 (最早+最新); 必须带路透交易所后缀才有全量.
+		// 交易所未知 → 先试纳斯达克 .OQ 再试纽交所 .N.
+		t := strings.ToUpper(strings.TrimSpace(canonical))
+		if t == "" {
+			return nil, fmt.Errorf("%w: empty US ticker", ErrNotFound)
+		}
+		return []string{"us" + t + ".OQ", "us" + t + ".N"}, nil
+	default:
+		return nil, ErrUnsupported
+	}
 }
 
 // tencentSymbol 由 6 位 A股代码定前缀: 沪 (6/9)=sh, 北(4/8)=bj, 深(0/2/3)=sz.
